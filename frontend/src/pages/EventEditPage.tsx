@@ -6,6 +6,7 @@ import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 import { useToast } from '../lib/useToast';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function EventEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +14,7 @@ export default function EventEditPage() {
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const goBack = useSmartBack();
   const queryClient = useQueryClient();
 
   const isTrainer = user?.role === 'trainer';
@@ -524,9 +526,15 @@ export default function EventEditPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-3">
-        <Link to={`/events/${eventId}`} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+        <button
+          type="button"
+          onClick={() => goBack(`/events/${eventId}`)}
+          className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          aria-label="Zurück"
+          title="Zurück"
+        >
           <ArrowLeft className="w-6 h-6" />
-        </Link>
+        </button>
         <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Termin bearbeiten</h1>
       </div>
 

@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { statsAPI } from '../lib/api';
 import { ArrowLeft, TrendingUp, Calendar } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function StatsPage() {
   const { id } = useParams<{ id: string }>();
   const teamId = parseInt(id!);
   const { user } = useAuthStore();
+  const goBack = useSmartBack();
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['team-stats', teamId],
@@ -31,9 +33,15 @@ export default function StatsPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center space-x-3 sm:space-x-4">
-        <Link to={`/teams/${teamId}`} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+        <button
+          type="button"
+          onClick={() => goBack(`/teams/${teamId}`)}
+          className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          aria-label="Zurück"
+          title="Zurück"
+        >
           <ArrowLeft className="w-6 h-6" />
-        </Link>
+        </button>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <TrendingUp className="w-6 h-6 text-primary-600 shrink-0" />
           <span>Statistiken</span>

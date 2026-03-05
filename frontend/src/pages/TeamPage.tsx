@@ -4,11 +4,13 @@ import { teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, Users, BarChart, ArrowLeft, Settings } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function TeamPage() {
   const { id } = useParams<{ id: string }>();
   const teamId = parseInt(id!);
   const { user } = useAuthStore();
+  const goBack = useSmartBack();
 
   const { data: team, isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
@@ -155,9 +157,15 @@ export default function TeamPage() {
     <div className="space-y-5 sm:space-y-6">
       <div className="card">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-          <Link to="/" className="mt-0.5 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+          <button
+            type="button"
+            onClick={() => goBack('/')}
+            className="mt-0.5 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            aria-label="Zurück"
+            title="Zurück"
+          >
             <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-          </Link>
+          </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{team?.name}</h1>
             {team?.description && (

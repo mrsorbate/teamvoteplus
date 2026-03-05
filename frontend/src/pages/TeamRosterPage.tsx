@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { teamsAPI } from '../lib/api';
 import { ArrowLeft, Users, X } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import PlayerInviteManager from '../components/PlayerInviteManager';
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function TeamRosterPage() {
   const { id } = useParams<{ id: string }>();
   const teamId = parseInt(id!);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const { user } = useAuthStore();
+  const goBack = useSmartBack();
 
   const { data: team, isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
@@ -47,12 +49,15 @@ export default function TeamRosterPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-        <Link
-          to={`/teams/${teamId}`}
+        <button
+          type="button"
+          onClick={() => goBack(`/teams/${teamId}`)}
           className="mt-1 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          aria-label="Zurück"
+          title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
-        </Link>
+        </button>
         <div className="flex-1">
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-2">
             <Users className="w-6 h-6 text-primary-600 shrink-0" />

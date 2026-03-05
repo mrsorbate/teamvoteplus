@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ArrowLeft, ClipboardList } from 'lucide-react';
 import { eventsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 const MATCH_LINEUP_LAYOUT: Array<{ slot: string; className: string }> = [
   { slot: 'TW', className: 'left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3' },
@@ -36,7 +37,7 @@ export default function EventSquadPage() {
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const goBack = useSmartBack();
 
   const isTrainer = user?.role === 'trainer';
 
@@ -217,7 +218,7 @@ export default function EventSquadPage() {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/events/${eventId}`)}
+            onClick={() => goBack(`/events/${eventId}`)}
             aria-label="Zurück zum Termin"
             title="Zurück zum Termin"
             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -234,9 +235,15 @@ export default function EventSquadPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="flex items-center gap-3">
-        <Link to={`/events/${eventId}`} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+        <button
+          type="button"
+          onClick={() => goBack(`/events/${eventId}`)}
+          className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          aria-label="Zurück"
+          title="Zurück"
+        >
           <ArrowLeft className="w-6 h-6" />
-        </Link>
+        </button>
         <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <ClipboardList className="w-7 h-7 text-primary-600" />
           Kader & Aufstellung

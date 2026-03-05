@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Camera, Settings, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 import { teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function TeamSettingsPage() {
   const { id } = useParams<{ id: string }>();
   const teamId = parseInt(id || '', 10);
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const goBack = useSmartBack();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -489,9 +491,15 @@ export default function TeamSettingsPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
-        <Link to={`/teams/${teamId}`} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+        <button
+          type="button"
+          onClick={() => goBack(`/teams/${teamId}`)}
+          className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          aria-label="Zurück"
+          title="Zurück"
+        >
           <ArrowLeft className="w-6 h-6" />
-        </Link>
+        </button>
         <div className="min-w-0">
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-2">
             <Settings className="w-6 h-6 text-primary-600 shrink-0" />

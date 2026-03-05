@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat } from 'lucide-react';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 import { useToast } from '../lib/useToast';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function EventCreatePage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export default function EventCreatePage() {
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const goBack = useSmartBack();
   const queryClient = useQueryClient();
 
   const isTrainer = user?.role === 'trainer';
@@ -505,9 +507,15 @@ export default function EventCreatePage() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
-          <Link to={effectiveTeamId ? `/teams/${effectiveTeamId}/events` : '/events'} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+          <button
+            type="button"
+            onClick={() => goBack(effectiveTeamId ? `/teams/${effectiveTeamId}/events` : '/events')}
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            aria-label="Zurück"
+            title="Zurück"
+          >
             <ArrowLeft className="w-6 h-6" />
-          </Link>
+          </button>
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">Neuen Termin erstellen</h1>
         </div>
       </div>

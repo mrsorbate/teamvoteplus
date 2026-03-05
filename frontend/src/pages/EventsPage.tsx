@@ -5,6 +5,7 @@ import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { Calendar, Plus, ArrowLeft, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function EventsPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +14,7 @@ export default function EventsPage() {
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const goBack = useSmartBack();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
   const isTrainer = user?.role === 'trainer';
@@ -419,12 +421,15 @@ export default function EventsPage() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-          <Link
-            to={teamId ? `/teams/${teamId}` : '/'}
+          <button
+            type="button"
+            onClick={() => goBack(teamId ? `/teams/${teamId}` : '/')}
             className="mt-1 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            aria-label="Zurück"
+            title="Zurück"
           >
             <ArrowLeft className="w-6 h-6" />
-          </Link>
+          </button>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 min-w-0">
             <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600 shrink-0" />
             <span className="truncate">Terminübersicht</span>
