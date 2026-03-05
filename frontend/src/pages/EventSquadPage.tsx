@@ -371,6 +371,8 @@ export default function EventSquadPage() {
     const handlePointerUp = () => {
       if (dragPosition?.insideBoard) {
         placePlayerOnBoard(draggingPlayerId, dragPosition.x_pct, dragPosition.y_pct);
+      } else if (draggingSource === 'board') {
+        movePlayerToBench(draggingPlayerId);
       }
 
       setDraggingPlayerId(null);
@@ -444,8 +446,8 @@ export default function EventSquadPage() {
   }
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => goBack(`/events/${eventId}`)}
@@ -453,90 +455,61 @@ export default function EventSquadPage() {
           aria-label="Zurück"
           title="Zurück"
         >
-          <ArrowLeft className="w-6 h-6" />
+          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
-        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <ClipboardList className="w-7 h-7 text-primary-600" />
+        <h1 className="text-lg sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <ClipboardList className="w-5 h-5 sm:w-7 sm:h-7 text-primary-600" />
           Kader & Aufstellung
         </h1>
       </div>
 
       <div className="card">
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{event.title}</h2>
           <span className={`text-xs px-2 py-1 rounded-full ${matchSquad?.is_released === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>
             {matchSquad?.is_released === 1 ? 'Freigegeben' : 'Entwurf'}
           </span>
         </div>
+      </div>
 
-        {isMatchSquadLoading ? (
+      {isMatchSquadLoading ? (
+        <div className="card">
           <p className="text-sm text-gray-600 dark:text-gray-300">Kader wird geladen...</p>
-        ) : canViewMatchSquad ? (
-          <div className="space-y-4">
-            {isTrainer && (
-              <>
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Kader festlegen (nur Spieler)</p>
-                  {squadCandidatePlayers.length > 0 ? (
-                    <div className="space-y-3">
-                      {responseStatusModules.map((module) => {
-                        const groupPlayers = playersByResponseStatus[module.status] || [];
-                        if (groupPlayers.length === 0) return null;
+        </div>
+      ) : canViewMatchSquad ? (
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
+          <div className={`${isTrainer ? 'xl:col-span-8' : 'xl:col-span-12'} card p-0 overflow-hidden`}>
+            <div className="px-4 sm:px-5 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Taktik-Board</p>
+            </div>
 
-                        return (
-                          <div key={module.status} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 sm:p-3">
-                            <h3 className={`font-semibold text-sm mb-2 flex items-center justify-between ${module.titleClass}`}>
-                              <span className="flex items-center">
-                                <span className="mr-2">{module.icon}</span>
-                                {module.title}
-                              </span>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                                {groupPlayers.length}
-                              </span>
-                            </h3>
+            <div className="p-2 sm:p-3 lg:p-4">
+              <div
+                ref={boardRef}
+                className="relative h-[20rem] min-[390px]:h-[22rem] sm:h-[34rem] lg:h-[40rem] overflow-hidden"
+                style={{
+                  backgroundColor: '#0f8f44',
+                  backgroundImage:
+                    'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%), repeating-linear-gradient(180deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 34px, rgba(255,255,255,0.02) 34px, rgba(255,255,255,0.02) 68px)',
+                }}
+              >
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-2 sm:inset-3 border-2 border-white/80 rounded-[14px] sm:rounded-[18px]" />
+                  <div className="absolute left-1/2 top-2 sm:top-3 bottom-2 sm:bottom-3 w-0.5 -translate-x-1/2 bg-white/75" />
+                  <div className="absolute left-1/2 top-1/2 h-16 w-16 sm:h-24 sm:w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80" />
+                  <div className="absolute left-1/2 top-1/2 h-2 w-2 sm:h-2.5 sm:w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" />
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {groupPlayers.map((player) => {
-                                const checked = editableSquadUserIds.includes(player.id);
-                                return (
-                                  <label key={player.id} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-2">
-                                    <input type="checkbox" checked={checked} onChange={(event) => toggleSquadPlayer(player.id, event.target.checked)} className="h-4 w-4" />
-                                    <span className="inline-flex items-center gap-2 min-w-0 flex-1">
-                                      {renderAvatar(player.name, player.profile_picture, 'w-7 h-7')}
-                                      <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{player.name}</span>
-                                    </span>
-                                    <span className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                      {getResponseStatusLabel(module.status)}
-                                    </span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Keine Spieler im Team gefunden.</p>
-                  )}
+                  <div className="absolute left-1/2 top-2 sm:top-3 h-14 sm:h-20 w-32 sm:w-44 -translate-x-1/2 border-2 border-t-0 border-white/80" />
+                  <div className="absolute left-1/2 top-2 sm:top-3 h-7 sm:h-9 w-16 sm:w-20 -translate-x-1/2 border-2 border-t-0 border-white/80" />
+                  <div className="absolute left-1/2 top-[13%] h-2 w-2 sm:h-2.5 sm:w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" />
+                  <div className="absolute left-1/2 top-0.5 sm:top-1 h-1.5 sm:h-2 w-8 sm:w-12 -translate-x-1/2 rounded-b bg-white/80" />
+
+                  <div className="absolute left-1/2 bottom-2 sm:bottom-3 h-14 sm:h-20 w-32 sm:w-44 -translate-x-1/2 border-2 border-b-0 border-white/80" />
+                  <div className="absolute left-1/2 bottom-2 sm:bottom-3 h-7 sm:h-9 w-16 sm:w-20 -translate-x-1/2 border-2 border-b-0 border-white/80" />
+                  <div className="absolute left-1/2 top-[87%] h-2 w-2 sm:h-2.5 sm:w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85" />
+                  <div className="absolute left-1/2 bottom-0.5 sm:bottom-1 h-1.5 sm:h-2 w-8 sm:w-12 -translate-x-1/2 rounded-t bg-white/80" />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button type="button" onClick={() => saveMatchSquad()} disabled={saveMatchSquadMutation.isPending || releaseMatchSquadMutation.isPending || !squadChanged} className="btn btn-secondary w-full sm:w-auto">
-                    {saveMatchSquadMutation.isPending ? 'Speichert...' : 'Kader speichern'}
-                  </button>
-                  <button type="button" onClick={() => releaseMatchSquad()} disabled={saveMatchSquadMutation.isPending || releaseMatchSquadMutation.isPending || editableSquadUserIds.length === 0} className="btn btn-primary w-full sm:w-auto">
-                    {releaseMatchSquadMutation.isPending ? 'Gibt frei...' : 'Kader freigeben'}
-                  </button>
-                </div>
-              </>
-            )}
-
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Taktik-Board (flexibel)</p>
-              </div>
-              <div ref={boardRef} className="relative h-72 sm:h-80 bg-green-50 dark:bg-green-900/20 overflow-hidden">
                 {boardPlayers.map((entry) => {
                   const player = entry.player;
                   if (!player) return null;
@@ -547,28 +520,16 @@ export default function EventSquadPage() {
                   return (
                     <div
                       key={entry.slot}
-                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                       style={{ left: `${left}%`, top: `${top}%` }}
                     >
                       <div
-                        className={`rounded-lg border border-green-200 dark:border-green-800 bg-white/95 dark:bg-gray-800/95 px-2 py-1.5 shadow-sm min-w-[120px] ${isTrainer ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
+                        className={`rounded-full border-2 border-white/90 ring-2 ring-green-300/70 dark:ring-green-800/80 shadow-md bg-white/90 dark:bg-gray-900/80 p-0.5 ${isTrainer ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
                         onPointerDown={isTrainer ? (event) => startDrag(player.id, 'board', event) : undefined}
+                        title={player.name}
+                        aria-label={player.name}
                       >
-                        <div className="flex items-center gap-2">
-                          {renderAvatar(player.name, player.profile_picture, 'w-6 h-6')}
-                          <p className="text-[11px] text-gray-800 dark:text-gray-100 truncate flex-1">{player.name}</p>
-                          {isTrainer && (
-                            <button
-                              type="button"
-                              onClick={() => movePlayerToBench(player.id)}
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-                              title="Zur Bank"
-                              aria-label="Zur Bank"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
+                        {renderAvatar(player.name, player.profile_picture, 'w-8 h-8 min-[390px]:w-9 min-[390px]:h-9 sm:w-12 sm:h-12')}
                       </div>
                     </div>
                   );
@@ -576,46 +537,110 @@ export default function EventSquadPage() {
 
                 {isTrainer && dragPosition?.insideBoard && draggingPlayerId && (
                   <div
-                    className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
                     style={{ left: `${dragPosition.x_pct}%`, top: `${dragPosition.y_pct}%` }}
                   >
-                    <div className="rounded-lg border border-primary-300 bg-primary-50/90 dark:bg-primary-900/60 px-2 py-1.5 shadow-sm min-w-[120px]">
-                      <p className="text-[11px] text-primary-700 dark:text-primary-200 truncate">
-                        {getPlayerNameById(draggingPlayerId)}
-                      </p>
+                    <div className="rounded-full border-2 border-primary-300 dark:border-primary-500 ring-2 ring-primary-200 dark:ring-primary-700 shadow-md bg-primary-50/80 dark:bg-primary-900/60 p-0.5">
+                      {renderAvatar(getPlayerNameById(draggingPlayerId), undefined, 'w-8 h-8 min-[390px]:w-9 min-[390px]:h-9 sm:w-12 sm:h-12')}
                     </div>
                   </div>
                 )}
               </div>
+            </div>
 
-              {isTrainer && (
-                <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Bank</p>
-                  {benchPlayers.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+            {isTrainer && (
+              <div className="px-4 sm:px-5 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Bank</p>
+                {benchPlayers.length > 0 ? (
+                  <div className="-mx-1 px-1 overflow-x-auto">
+                    <div className="flex sm:flex-wrap gap-2 min-w-max sm:min-w-0">
                       {benchPlayers.map((player) => (
                         <button
                           key={player.id}
                           type="button"
                           onPointerDown={(event) => startDrag(player.id, 'bench', event)}
-                          className="inline-flex items-center gap-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 cursor-grab active:cursor-grabbing touch-none"
+                          className="inline-flex items-center gap-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 cursor-grab active:cursor-grabbing touch-none whitespace-nowrap"
                         >
                           {renderAvatar(player.name, player.profile_picture, 'w-5 h-5')}
                           <span>{player.name}</span>
                         </button>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Keine Spieler auf der Bank.</p>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Keine Spieler auf der Bank.</p>
+                )}
+              </div>
+            )}
           </div>
-        ) : (
+
+          {isTrainer && (
+            <div className="xl:col-span-4 space-y-4 sm:space-y-6">
+              <div className="card">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Kader festlegen (nur Spieler)</p>
+                {squadCandidatePlayers.length > 0 ? (
+                  <div className="space-y-3 lg:max-h-[62vh] lg:overflow-y-auto lg:pr-1">
+                    {responseStatusModules.map((module) => {
+                      const groupPlayers = playersByResponseStatus[module.status] || [];
+                      if (groupPlayers.length === 0) return null;
+
+                      return (
+                        <div key={module.status} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 sm:p-3">
+                          <h3 className={`font-semibold text-sm mb-2 flex items-center justify-between ${module.titleClass}`}>
+                            <span className="flex items-center">
+                              <span className="mr-2">{module.icon}</span>
+                              {module.title}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                              {groupPlayers.length}
+                            </span>
+                          </h3>
+
+                          <div className="grid grid-cols-1 gap-2">
+                            {groupPlayers.map((player) => {
+                              const checked = editableSquadUserIds.includes(player.id);
+                              return (
+                                <label key={player.id} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2">
+                                  <input type="checkbox" checked={checked} onChange={(event) => toggleSquadPlayer(player.id, event.target.checked)} className="h-4 w-4" />
+                                  <span className="inline-flex items-center gap-2 min-w-0 flex-1">
+                                    {renderAvatar(player.name, player.profile_picture, 'w-7 h-7')}
+                                    <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{player.name}</span>
+                                  </span>
+                                  <span className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {getResponseStatusLabel(module.status)}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Keine Spieler im Team gefunden.</p>
+                )}
+              </div>
+
+              <div className="card">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Aktionen</p>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => saveMatchSquad()} disabled={saveMatchSquadMutation.isPending || releaseMatchSquadMutation.isPending || !squadChanged} className="btn btn-secondary w-full">
+                    {saveMatchSquadMutation.isPending ? 'Speichert...' : 'Kader speichern'}
+                  </button>
+                  <button type="button" onClick={() => releaseMatchSquad()} disabled={saveMatchSquadMutation.isPending || releaseMatchSquadMutation.isPending || editableSquadUserIds.length === 0} className="btn btn-primary w-full">
+                    {releaseMatchSquadMutation.isPending ? 'Gibt frei...' : 'Kader freigeben'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="card">
           <p className="text-sm text-gray-600 dark:text-gray-300">Der Kader wurde noch nicht freigegeben.</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
