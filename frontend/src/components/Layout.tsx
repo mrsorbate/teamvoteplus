@@ -9,6 +9,7 @@ import { profileAPI, teamsAPI } from '../lib/api';
 interface Organization {
   id: number;
   name: string;
+  short_name?: string | null;
   logo?: string;
   timezone: string;
   setup_completed: number;

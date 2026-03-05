@@ -22,6 +22,7 @@ const TIMEZONES = [
 
 interface SetupData {
   organizationName: string;
+  organizationShortName: string;
   adminUsername: string;
   adminEmail: string;
   adminPassword: string;
@@ -34,6 +35,7 @@ export default function SetupWizardPage() {
   const [step, setStep] = useState(1);
   const [setupData, setSetupData] = useState<SetupData>({
     organizationName: '',
+    organizationShortName: '',
     adminUsername: '',
     adminEmail: '',
     adminPassword: '',
@@ -52,6 +54,7 @@ export default function SetupWizardPage() {
       // Step 1: Setup organization
       const setupResponse = await axios.post(`${API_URL}/api/admin/settings/setup`, {
         organizationName: setupData.organizationName,
+        organizationShortName: setupData.organizationShortName.trim() ? setupData.organizationShortName.trim() : null,
         timezone: setupData.timezone,
       }, { headers });
 
@@ -219,6 +222,23 @@ export default function SetupWizardPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Kurzer Vereinsname (mobil, optional)
+                </label>
+                <input
+                  type="text"
+                  value={setupData.organizationShortName}
+                  onChange={(e) => setSetupData({ ...setupData, organizationShortName: e.target.value })}
+                  placeholder="z.B. SVM"
+                  className="input"
+                  maxLength={32}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Wird bei Bedarf in der mobilen Navigation statt des langen Namens verwendet.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <Upload className="w-4 h-4 inline mr-2" />
                   Vereins-Logo (optional)
                 </label>
@@ -344,6 +364,9 @@ export default function SetupWizardPage() {
                 <div className="space-y-1 text-sm text-primary-800 dark:text-primary-300">
                   <p>
                     <strong>Verein:</strong> {setupData.organizationName}
+                  </p>
+                  <p>
+                    <strong>Kurzname:</strong> {setupData.organizationShortName.trim() || 'Nicht gesetzt'}
                   </p>
                   <p>
                     <strong>Admin:</strong> {setupData.adminUsername} ({setupData.adminEmail})

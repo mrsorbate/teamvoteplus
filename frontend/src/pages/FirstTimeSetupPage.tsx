@@ -22,6 +22,7 @@ const TIMEZONES = [
 
 export default function FirstTimeSetupPage() {
   const [organizationName, setOrganizationName] = useState('');
+  const [organizationShortName, setOrganizationShortName] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState('');
   const [adminUsername, setAdminUsername] = useState('');
@@ -63,6 +64,7 @@ export default function FirstTimeSetupPage() {
 
       const response = await axios.post(`${API_URL}/api/admin/first-setup`, {
         organizationName,
+        organizationShortName: organizationShortName.trim() ? organizationShortName.trim() : null,
         adminUsername: adminUsername.trim().toLowerCase(),
         adminEmail,
         adminPassword: currentAdminPassword,
@@ -225,6 +227,24 @@ export default function FirstTimeSetupPage() {
               </div>
 
               <div>
+                <label htmlFor="org-short-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Kurzer Vereinsname (mobil, optional)
+                </label>
+                <input
+                  id="org-short-name"
+                  type="text"
+                  value={organizationShortName}
+                  onChange={(e) => setOrganizationShortName(e.target.value)}
+                  className="input mt-1"
+                  placeholder="z.B. SVM"
+                  maxLength={32}
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Wird bei Bedarf in der mobilen Navigation statt des langen Namens verwendet.
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="org-logo" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Vereinslogo (optional)
                 </label>
@@ -362,6 +382,7 @@ export default function FirstTimeSetupPage() {
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 space-y-2">
                 <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Finale Zusammenfassung:</h3>
                 <p className="text-sm text-gray-700 dark:text-gray-300"><strong>Verein:</strong> {organizationName}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300"><strong>Kurzname:</strong> {organizationShortName.trim() || 'Nicht gesetzt'}</p>
                 <p className="text-sm text-gray-700 dark:text-gray-300"><strong>Logo:</strong> {logoFile ? 'Wird hochgeladen' : 'Kein Logo (optional)'}</p>
                 <p className="text-sm text-gray-700 dark:text-gray-300"><strong>Admin:</strong> {adminUsername} ({adminEmail})</p>
                 <p className="text-sm text-gray-700 dark:text-gray-300"><strong>Zeitzone:</strong> {timezone}</p>
