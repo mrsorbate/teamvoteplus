@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, ClipboardList } from 'lucide-react';
-import { eventsAPI } from '../lib/api';
+import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
@@ -29,6 +29,7 @@ type SquadPlayer = {
   name: string;
   profile_picture?: string;
   jersey_number?: number | null;
+  response_status?: 'accepted' | 'declined' | 'tentative' | 'pending';
 };
 
 export default function EventSquadPage() {
@@ -52,6 +53,15 @@ export default function EventSquadPage() {
       return response.data;
     },
     enabled: Number.isFinite(eventId),
+  });
+
+  const { data: teamMembers } = useQuery({
+    queryKey: ['team-members', Number(event?.team_id)],
+    queryFn: async () => {
+      const response = await teamsAPI.getMembers(Number(event?.team_id));
+      return response.data;
+    },
+    enabled: Number.isFinite(Number(event?.team_id)) && Number(event?.team_id) > 0,
   });
 
   const { data: matchSquad, isLoading: isMatchSquadLoading } = useQuery({
@@ -87,19 +97,42 @@ export default function EventSquadPage() {
     },
   });
 
-  const squadCandidatePlayers: SquadPlayer[] = Array.from(
-    new Map<number, SquadPlayer>(
-      (event?.responses || []).map((response: any) => [
-        Number(response.user_id),
-        {
-          id: Number(response.user_id),
-          name: String(response.user_name || ''),
-          profile_picture: response.user_profile_picture || undefined,
-        },
-      ])
-    ).values()
-  )
-    .filter((player) => Number.isInteger(player.id))
+  const teamMembersById = new Map<number, any>(
+    Array.isArray(teamMembers)
+      ? teamMembers
+          .map((member: any) => [Number(member?.id), member] as const)
+          .filter(([memberId]) => Number.isInteger(memberId))
+      : []
+  );
+
+  const playerMemberIds = new Set<number>(
+    Array.isArray(teamMembers)
+      ? teamMembers
+          .filter((member: any) => String(member?.role || '').toLowerCase() !== 'trainer')
+          .map((member: any) => Number(member?.id))
+          .filter((memberId: number) => Number.isInteger(memberId))
+      : []
+  );
+
+  const responseByUserId = new Map<number, any>(
+    (event?.responses || [])
+      .map((response: any) => [Number(response?.user_id), response] as const)
+      .filter((entry: readonly [number, any]) => Number.isInteger(entry[0]))
+  );
+
+  const squadCandidatePlayers: SquadPlayer[] = Array.from(playerMemberIds)
+    .map((playerId) => {
+      const member = teamMembersById.get(playerId);
+      const response = responseByUserId.get(playerId);
+      const status = String(response?.status || 'pending').toLowerCase();
+
+      return {
+        id: playerId,
+        name: String(response?.user_name || member?.name || `Spieler ${playerId}`),
+        profile_picture: response?.user_profile_picture || member?.profile_picture || undefined,
+        response_status: status === 'accepted' || status === 'declined' || status === 'tentative' ? status : 'pending',
+      } as SquadPlayer;
+    })
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
   const squadPlayerMeta: SquadPlayer[] = Array.isArray(matchSquad?.squad_players)
@@ -115,14 +148,43 @@ export default function EventSquadPage() {
 
   useEffect(() => {
     if (!matchSquad) return;
+
+    const onlyPlayerIds = (input: any[]) =>
+      input
+        .map((entry: any) => Number(entry))
+        .filter((entry: number) => Number.isInteger(entry) && playerMemberIds.has(entry));
+
+    const safeSquadUserIds = Array.isArray(matchSquad.squad_user_ids)
+      ? onlyPlayerIds(matchSquad.squad_user_ids)
+      : [];
+
     setEditableSquadUserIds(
-      Array.isArray(matchSquad.squad_user_ids)
-        ? matchSquad.squad_user_ids.map((entry: any) => Number(entry)).filter((entry: number) => Number.isInteger(entry))
+      safeSquadUserIds
+    );
+    setEditableLineupSlots(
+      Array.isArray(matchSquad.lineup_slots)
+        ? matchSquad.lineup_slots.map((entry: any) => ({
+            ...entry,
+            user_id: safeSquadUserIds.includes(Number(entry?.user_id)) ? Number(entry?.user_id) : null,
+          }))
         : []
     );
-    setEditableLineupSlots(Array.isArray(matchSquad.lineup_slots) ? matchSquad.lineup_slots : []);
     setSquadChanged(false);
-  }, [matchSquad?.event_id, matchSquad?.updated_at]);
+  }, [matchSquad?.event_id, matchSquad?.updated_at, playerMemberIds.size]);
+
+  const getResponseStatusBadgeClass = (status: SquadPlayer['response_status']) => {
+    if (status === 'accepted') return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
+    if (status === 'declined') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+    if (status === 'tentative') return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+  };
+
+  const getResponseStatusLabel = (status: SquadPlayer['response_status']) => {
+    if (status === 'accepted') return 'Zugesagt';
+    if (status === 'declined') return 'Abgesagt';
+    if (status === 'tentative') return 'Vielleicht';
+    return 'Keine Antwort';
+  };
 
   const getPlayerNameById = (userId: number | null | undefined) => {
     if (!userId) return '';
@@ -265,7 +327,7 @@ export default function EventSquadPage() {
             {isTrainer && (
               <>
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Kader festlegen</p>
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Kader festlegen (nur Spieler)</p>
                   {squadCandidatePlayers.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {squadCandidatePlayers.map((player) => {
@@ -273,16 +335,19 @@ export default function EventSquadPage() {
                         return (
                           <label key={player.id} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2">
                             <input type="checkbox" checked={checked} onChange={(event) => toggleSquadPlayer(player.id, event.target.checked)} className="h-4 w-4" />
-                            <span className="inline-flex items-center gap-2 min-w-0">
+                            <span className="inline-flex items-center gap-2 min-w-0 flex-1">
                               {renderAvatar(player.name, player.profile_picture, 'w-7 h-7')}
                               <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{player.name}</span>
+                            </span>
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${getResponseStatusBadgeClass(player.response_status)}`}>
+                              {getResponseStatusLabel(player.response_status)}
                             </span>
                           </label>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Noch keine Teilnehmer vorhanden.</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Keine Spieler im Team gefunden.</p>
                   )}
                 </div>
 
