@@ -6,6 +6,29 @@ import App from './App'
 import { ToastProvider } from './lib/useToast'
 import './index.css'
 
+const lockMobileOrientation = async () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const isSmallScreen = window.matchMedia('(max-width: 1024px)').matches
+  const supportsOrientationLock = typeof screen !== 'undefined' && !!screen.orientation?.lock
+
+  if (!isSmallScreen || !supportsOrientationLock) {
+    return
+  }
+
+  try {
+    await screen.orientation.lock('portrait')
+  } catch {
+  }
+}
+
+void lockMobileOrientation()
+window.addEventListener('orientationchange', () => {
+  void lockMobileOrientation()
+})
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
