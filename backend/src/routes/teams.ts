@@ -62,6 +62,38 @@ const parseInternalScore = (title: unknown, description: unknown): { home: numbe
   return null;
 };
 
+const parseInternalLeagueName = (matches: any[]): string | null => {
+  const normalize = (value: unknown): string => String(value || '').trim();
+
+  for (const match of matches) {
+    const description = normalize(match?.description);
+    if (description) {
+      const lines = description.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      for (const line of lines) {
+        const competitionMatch = line.match(/^Wettbewerb:\s*(.+)$/i);
+        if (competitionMatch?.[1]) {
+          return competitionMatch[1].trim();
+        }
+      }
+    }
+
+    const fallbackCandidates = [
+      match?.competition,
+      match?.competition_short,
+      match?.league,
+      match?.staffel,
+    ];
+    for (const candidate of fallbackCandidates) {
+      const value = normalize(candidate);
+      if (value) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+};
+
 const buildInternalTableRows = (team: any, matches: any[]) => {
   const rows = new Map<string, { team: string; games: number; won: number; draw: number; lost: number; gf: number; ga: number; points: number }>();
 
@@ -73,9 +105,39 @@ const buildInternalTableRows = (team: any, matches: any[]) => {
     return rows.get(key)!;
   };
 
+  const ownTeamName = String(team?.fussballde_team_name || team?.name || '').trim();
+
+  const parseParticipantFallback = (match: any): { homeTeam: string; awayTeam: string } | null => {
+    const parsedTitle = parseInternalParticipants(match?.title);
+    if (parsedTitle) {
+      return parsedTitle;
+    }
+
+    const opponent = String(match?.title || '')
+      .replace(/^spiel\s+gegen\s+/i, '')
+      .trim();
+    if (!opponent || !ownTeamName) {
+      return null;
+    }
+
+    const isHomeMatch = Number(match?.is_home_match) === 1;
+    return isHomeMatch
+      ? { homeTeam: ownTeamName, awayTeam: opponent }
+      : { homeTeam: opponent, awayTeam: ownTeamName };
+  };
+
+  const parseStructuredScore = (match: any): { home: number; away: number } | null => {
+    const home = Number(match?.home_goals);
+    const away = Number(match?.away_goals);
+    if (Number.isInteger(home) && Number.isInteger(away) && home >= 0 && away >= 0) {
+      return { home, away };
+    }
+    return null;
+  };
+
   for (const match of matches) {
-    const participants = parseInternalParticipants(match.title);
-    const score = parseInternalScore(match.title, match.description);
+    const participants = parseParticipantFallback(match);
+    const score = parseStructuredScore(match) || parseInternalScore(match.title, match.description);
     if (!participants || !score) continue;
 
     const home = ensureRow(participants.homeTeam);
@@ -104,7 +166,6 @@ const buildInternalTableRows = (team: any, matches: any[]) => {
     }
   }
 
-  const ownTeamName = String(team?.fussballde_team_name || team?.name || '').trim();
   if (ownTeamName) ensureRow(ownTeamName);
 
   return Array.from(rows.values())
@@ -1496,7 +1557,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
     }
 
     const internalMatches = db.prepare(
-      `SELECT title, description, end_time
+      `SELECT title, description, end_time, is_home_match, home_goals, away_goals
        FROM events
        WHERE team_id = ?
          AND type = 'match'
@@ -1505,10 +1566,11 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
     ).all(teamId) as any[];
 
     const table = buildInternalTableRows(team, internalMatches);
+    const leagueName = parseInternalLeagueName(internalMatches) || 'Interne Tabelle';
 
     return res.json({
       table,
-      leagueName: null,
+      leagueName,
       source: 'internal',
     });
 
