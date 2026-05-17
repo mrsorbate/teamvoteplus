@@ -320,6 +320,17 @@ export default function EventDetailPage() {
 
   const eventDateLabel = safeFormatDate(event?.start_time, 'PPP');
   const eventTimeRangeLabel = `${safeFormatDate(event?.start_time, 'p')} - ${safeFormatDate(event?.end_time, 'p')}`;
+  const homeGoals = Number.isInteger(Number(event?.home_goals)) ? Number(event?.home_goals) : null;
+  const awayGoals = Number.isInteger(Number(event?.away_goals)) ? Number(event?.away_goals) : null;
+  const hasMatchResult = event?.type === 'match' && homeGoals !== null && awayGoals !== null;
+  const resultToneClass =
+    hasMatchResult && homeGoals !== null && awayGoals !== null
+      ? homeGoals > awayGoals
+        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+        : homeGoals < awayGoals
+          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
   const locationParts = [
     normalizeLocationValue(event?.location_venue),
     normalizeLocationValue(event?.location_street),
@@ -479,6 +490,17 @@ export default function EventDetailPage() {
                 <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Uhrzeit</p>
                 <p className="mt-1 font-semibold text-gray-900 dark:text-white">{eventTimeRangeLabel}</p>
               </div>
+
+              {event?.type === 'match' && (
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ergebnis</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-semibold ${resultToneClass}`}>
+                      {hasMatchResult ? `${homeGoals}:${awayGoals}` : 'Noch offen'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {shouldShowAddressBlock && (
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
