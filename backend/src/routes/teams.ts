@@ -1070,6 +1070,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       skipped.push({ reason: 'invalid_date', game: pickFirstString(game?.id, game?.match_id, game?.game_id, game?.title) || 'unknown' });
       continue;
     }
+    const gameDateSafe = gameDate as Date;
 
     let homeTeam = pickFirstString(game?.homeTeam, game?.home_team, game?.home, game?.hometeam, game?.heim, game?.team_home);
     let awayTeam = pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away);
@@ -1167,14 +1168,15 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       game?.event_id,
     );
 
-    const syntheticId = `${team.fussballde_id}:${gameDate.toISOString()}:${homeTeam}:${awayTeam}`;
+    const syntheticId = `${team.fussballde_id}:${gameDateSafe.toISOString()}:${homeTeam}:${awayTeam}`;
     const externalGameId = gameIdRaw || syntheticId;
 
-    const endDate = new Date(gameDate.getTime() + 120 * 60 * 1000);
-    const rsvpDeadline =
-      defaultRsvpHours === null
-        ? null
-        : new Date(gameDate.getTime() - defaultRsvpHours * 60 * 60 * 1000).toISOString();
+    const endDate = new Date(gameDateSafe.getTime() + 120 * 60 * 1000);
+    const rsvpHours = defaultRsvpHours;
+    let rsvpDeadline: string | null = null;
+    if (rsvpHours != null) {
+      rsvpDeadline = new Date(gameDateSafe.getTime() - rsvpHours * 60 * 60 * 1000).toISOString();
+    }
 
     const locationObjects = [
       game?.location,
@@ -1267,9 +1269,9 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       pickFromLocationObjects('zip_city', 'zipCity', 'postleitzahl_stadt', 'plz_ort', 'plzOrt'),
     ) || (zip || city ? `${zip ? `${zip} ` : ''}${city || ''}`.trim() : null);
 
-    const resolvedVenue = venue || (isHomeMatch && defaultHomeVenue?.name ? defaultHomeVenue.name : null);
-    const resolvedStreet = street || (isHomeMatch && defaultHomeVenue?.street ? defaultHomeVenue.street : null);
-    const resolvedZipCity = zipCity || (isHomeMatch && defaultHomeVenue?.zip_city ? defaultHomeVenue.zip_city : null);
+    const resolvedVenue = venue || (isHomeMatch ? defaultHomeVenue?.name ?? null : null);
+    const resolvedStreet = street || (isHomeMatch ? defaultHomeVenue?.street ?? null : null);
+    const resolvedZipCity = zipCity || (isHomeMatch ? defaultHomeVenue?.zip_city ?? null : null);
     const description = pickFirstString(game?.competition, game?.competition_short, game?.league, game?.staffel) || null;
 
     importDebugLog('Resolved game address fields', {
@@ -1302,7 +1304,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       location_zip_city: string | null;
     } | undefined;
     const legacyMatch = !exists
-      ? (existingLegacyMatchStmt.get(teamId, gameDate.toISOString()) as {
+      ? (existingLegacyMatchStmt.get(teamId, gameDateSafe.toISOString()) as {
           id: number;
           location: string | null;
           location_venue: string | null;
@@ -1312,22 +1314,29 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       : undefined;
     const eventToUpdate = exists || legacyMatch;
     if (eventToUpdate) {
+      const eventToUpdateSafe = eventToUpdate as {
+        id: number;
+        location: string | null;
+        location_venue: string | null;
+        location_street: string | null;
+        location_zip_city: string | null;
+      };
       const fallbackFromDefaultHomeVenue = Boolean(isHomeMatch && !venue && defaultHomeVenue?.name);
       const locationForUpdate =
-        fallbackFromDefaultHomeVenue && eventToUpdate.location
-          ? eventToUpdate.location
+        fallbackFromDefaultHomeVenue && eventToUpdateSafe.location
+          ? eventToUpdateSafe.location
           : resolvedVenue;
       const locationVenueForUpdate =
-        fallbackFromDefaultHomeVenue && eventToUpdate.location_venue
-          ? eventToUpdate.location_venue
+        fallbackFromDefaultHomeVenue && eventToUpdateSafe.location_venue
+          ? eventToUpdateSafe.location_venue
           : resolvedVenue;
       const locationStreetForUpdate =
-        fallbackFromDefaultHomeVenue && eventToUpdate.location_street
-          ? eventToUpdate.location_street
+        fallbackFromDefaultHomeVenue && eventToUpdateSafe.location_street
+          ? eventToUpdateSafe.location_street
           : resolvedStreet;
       const locationZipCityForUpdate =
-        fallbackFromDefaultHomeVenue && eventToUpdate.location_zip_city
-          ? eventToUpdate.location_zip_city
+        fallbackFromDefaultHomeVenue && eventToUpdateSafe.location_zip_city
+          ? eventToUpdateSafe.location_zip_city
           : resolvedZipCity;
 
       updateImportedEventStmt.run(
@@ -1338,20 +1347,20 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
         locationStreetForUpdate,
         locationZipCityForUpdate,
         defaultArrivalMinutes,
-        gameDate.toISOString(),
+        gameDateSafe.toISOString(),
         endDate.toISOString(),
         rsvpDeadline,
         120,
         isHomeMatch,
         opponentCrestUrl,
         externalGameId,
-        eventToUpdate.id,
+        eventToUpdateSafe.id,
       );
 
       updated.push({
-        id: Number(eventToUpdate.id),
+        id: Number(eventToUpdateSafe.id),
         title,
-        start_time: gameDate.toISOString(),
+        start_time: gameDateSafe.toISOString(),
       });
       continue;
     }
@@ -1368,7 +1377,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       null,
       null,
       defaultArrivalMinutes,
-      gameDate.toISOString(),
+      gameDateSafe.toISOString(),
       endDate.toISOString(),
       rsvpDeadline,
       120,
@@ -1387,7 +1396,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     created.push({
       id: Number(result.lastInsertRowid),
       title,
-      start_time: gameDate.toISOString(),
+      start_time: gameDateSafe.toISOString(),
     });
   }
 
