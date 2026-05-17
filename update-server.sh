@@ -48,7 +48,6 @@ echo -e "${BLUE}📥 Hole neue Version...${NC}"
 git pull
 
 echo -e "${BLUE}🧩 Prüfe .env-Werte...${NC}"
-ensure_env_key "FUSSBALL_API_BASE_URL" "https://api-fussball.de/api" ".env"
 
 echo -e "${BLUE}🐳 Baue und starte Container neu...${NC}"
 docker compose --env-file .env -f "$COMPOSE_FILE" up -d --build --remove-orphans

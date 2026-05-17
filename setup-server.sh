@@ -81,7 +81,6 @@ FRONTEND_PORT=${FRONTEND_PORT}
 JWT_SECRET=${JWT_SECRET}
 DATABASE_PATH=/app/data/database.sqlite
 FRONTEND_URL=http://${SERVER_IP}:${FRONTEND_PORT}
-FUSSBALL_API_BASE_URL=https://api-fussball.de/api
 BACKEND_DATA_DIR=./data/backend
 BACKEND_UPLOADS_DIR=./data/uploads
 EOF
@@ -92,7 +91,6 @@ else
     ensure_env_key "FRONTEND_PORT" "$FRONTEND_PORT" ".env"
     ensure_env_key "DATABASE_PATH" "/app/data/database.sqlite" ".env"
     ensure_env_key "FRONTEND_URL" "http://${SERVER_IP}:${FRONTEND_PORT}" ".env"
-    ensure_env_key "FUSSBALL_API_BASE_URL" "https://api-fussball.de/api" ".env"
     ensure_env_key "BACKEND_DATA_DIR" "./data/backend" ".env"
     ensure_env_key "BACKEND_UPLOADS_DIR" "./data/uploads" ".env"
 fi

@@ -22,6 +22,113 @@ const calendarTokenSelectExpression = hasTeamsCalendarTokenColumn
   ? 'calendar_token'
   : 'NULL AS calendar_token';
 
+const normalizeTeamNameInternal = (value: unknown): string => {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+};
+
+const parseInternalParticipants = (title: unknown): { homeTeam: string; awayTeam: string } | null => {
+  const text = String(title || '').trim();
+  const separator = ' - ';
+  const separatorIndex = text.indexOf(separator);
+  if (separatorIndex <= 0) return null;
+
+  const homeTeam = text.slice(0, separatorIndex).trim();
+  const awayTeam = text.slice(separatorIndex + separator.length).trim();
+  if (!homeTeam || !awayTeam) return null;
+
+  return { homeTeam, awayTeam };
+};
+
+const parseInternalScore = (title: unknown, description: unknown): { home: number; away: number } | null => {
+  const scorePattern = /(\d{1,2})\s*[:\-]\s*(\d{1,2})/;
+  const titleMatch = String(title || '').match(scorePattern);
+  if (titleMatch) {
+    return { home: parseInt(titleMatch[1], 10), away: parseInt(titleMatch[2], 10) };
+  }
+
+  const descriptionMatch = String(description || '').match(scorePattern);
+  if (descriptionMatch) {
+    return { home: parseInt(descriptionMatch[1], 10), away: parseInt(descriptionMatch[2], 10) };
+  }
+
+  return null;
+};
+
+const buildInternalTableRows = (team: any, matches: any[]) => {
+  const rows = new Map<string, { team: string; games: number; won: number; draw: number; lost: number; gf: number; ga: number; points: number }>();
+
+  const ensureRow = (teamName: string) => {
+    const key = normalizeTeamNameInternal(teamName);
+    if (!rows.has(key)) {
+      rows.set(key, { team: teamName, games: 0, won: 0, draw: 0, lost: 0, gf: 0, ga: 0, points: 0 });
+    }
+    return rows.get(key)!;
+  };
+
+  for (const match of matches) {
+    const participants = parseInternalParticipants(match.title);
+    const score = parseInternalScore(match.title, match.description);
+    if (!participants || !score) continue;
+
+    const home = ensureRow(participants.homeTeam);
+    const away = ensureRow(participants.awayTeam);
+
+    home.games += 1;
+    away.games += 1;
+    home.gf += score.home;
+    home.ga += score.away;
+    away.gf += score.away;
+    away.ga += score.home;
+
+    if (score.home > score.away) {
+      home.won += 1;
+      home.points += 3;
+      away.lost += 1;
+    } else if (score.home < score.away) {
+      away.won += 1;
+      away.points += 3;
+      home.lost += 1;
+    } else {
+      home.draw += 1;
+      away.draw += 1;
+      home.points += 1;
+      away.points += 1;
+    }
+  }
+
+  const ownTeamName = String(team?.fussballde_team_name || team?.name || '').trim();
+  if (ownTeamName) ensureRow(ownTeamName);
+
+  return Array.from(rows.values())
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      const bDiff = b.gf - b.ga;
+      const aDiff = a.gf - a.ga;
+      if (bDiff !== aDiff) return bDiff - aDiff;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      return a.team.localeCompare(b.team, 'de');
+    })
+    .map((row, index) => ({
+      place: index + 1,
+      team: row.team,
+      games: row.games,
+      won: row.won,
+      draw: row.draw,
+      lost: row.lost,
+      goal: `${row.gf}:${row.ga}`,
+      points: row.points,
+      img: null,
+    }));
+};
+
 type HomeVenue = {
   name: string;
   street?: string;
@@ -628,6 +735,24 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 
 // Update fussball.de team id (trainers only)
 export const runTeamGameImport = async (teamId: number, createdByUserId: number) => {
+  void createdByUserId;
+  const teamExists = db.prepare('SELECT id FROM teams WHERE id = ?').get(teamId) as any;
+  if (!teamExists) {
+    throw new Error('TEAM_NOT_FOUND');
+  }
+
+  return {
+    success: true,
+    imported: 0,
+    updated: 0,
+    skipped: 0,
+    created: [],
+    updatedItems: [],
+    skippedDetails: [],
+    mode: 'internal',
+    message: 'Externer Import ist deaktiviert. Spiele werden intern verwaltet.',
+  };
+
   const importDebugEnabled = process.env.FUSSBALL_IMPORT_DEBUG === '1';
   const importDebugLog = (message: string, payload?: unknown) => {
     if (!importDebugEnabled) return;
@@ -1295,9 +1420,6 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    if (!team.fussballde_id) {
-      return res.status(400).json({ error: 'Für dieses Team ist keine fussball.de ID hinterlegt' });
-    }
     const result = await runTeamGameImport(teamId, req.user!.id);
     return res.json(result);
   } catch (error) {
@@ -1363,6 +1485,23 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
+
+    const internalMatches = db.prepare(
+      `SELECT title, description, end_time
+       FROM events
+       WHERE team_id = ?
+         AND type = 'match'
+         AND end_time IS NOT NULL
+         AND datetime(end_time) <= datetime('now')`
+    ).all(teamId) as any[];
+
+    const table = buildInternalTableRows(team, internalMatches);
+
+    return res.json({
+      table,
+      leagueName: null,
+      source: 'internal',
+    });
 
     if (!team.fussballde_id) {
       return res.status(400).json({ error: 'Für dieses Team ist keine fussball.de ID hinterlegt' });
