@@ -53,33 +53,15 @@ Eine benutzerfreundliche Team-Management-App für Sportvereine mit Fokus auf Ter
 
 ## Installation
 
-### 🔥 TrueNAS Deployment (empfohlen für Produktion)
+### Server / Linux VM
 
-Complete setup mit automatischem JWT_SECRET, Backup und Updates:
+Für einen blanken Linux-Server findest du eine konkrete Schritt-für-Schritt-Anleitung in [SERVER-SETUP.md](SERVER-SETUP.md).
 
-```bash
-# SSH zu deiner TrueNAS
-ssh root@<TRUENAS-IP>
-
-# Repository klonen
-cd /mnt/DATA/docker
-git clone https://github.com/mrsorbate/sqadx.app.git
-cd sqadx.app
-
-# Initial Setup (5-10 Min)
-chmod +x setup-truenas-build.sh
-./setup-truenas-build.sh
-
-# Zugriff: http://<TRUENAS-IP>:18080
-```
-
-**Updates einspielen:**
-```bash
-chmod +x update-truenas.sh
-./update-truenas.sh
-```
-
-📖 **Vollständiger Guide:** [TRUENAS-SETUP.md](TRUENAS-SETUP.md)
+Kurzfassung:
+- Repository klonen
+- Docker + Docker Compose installieren
+- `bash ./setup-server.sh` ausführen
+- Für spätere Änderungen `bash ./update-server.sh` ausführen
 
 ---
 
