@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
-import { teamsAPI } from '../lib/api';
+import { teamsAPI, badgeProxyUrl } from '../lib/api';
 
 export default function MyTablePage() {
   const { data: teams, isLoading: teamsLoading, error: teamsError } = useQuery({
@@ -48,12 +48,6 @@ export default function MyTablePage() {
 
   const hasTeams = Array.isArray(teams) && teams.length > 0;
   const sections = useMemo(() => (Array.isArray(tableData) ? tableData : []), [tableData]);
-
-  const getBadgeUrl = (imgUrl: unknown): string | null => {
-    if (typeof imgUrl !== 'string' || !imgUrl) return null;
-    const fullUrl = imgUrl.startsWith('//') ? `https:${imgUrl}` : imgUrl;
-    return `/api/badge-proxy?url=${encodeURIComponent(fullUrl)}`;
-  };
 
   if (teamsLoading || (hasTeams && tableLoading)) {
     return <div className="text-sm text-gray-500 dark:text-gray-400 py-4">Lädt Tabellen...</div>;
@@ -110,9 +104,9 @@ export default function MyTablePage() {
                           <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">{row.place ?? index + 1}</td>
                           <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
                             <div className="flex items-center gap-2">
-                              {getBadgeUrl(row.img) ? (
+                              {badgeProxyUrl(typeof row.img === 'string' ? row.img : null) ? (
                                 <img
-                                  src={getBadgeUrl(row.img)!}
+                                  src={badgeProxyUrl(typeof row.img === 'string' ? row.img : null)!}
                                   alt={`${String(row.team || 'Team')} Wappen`}
                                   className="w-6 h-6 object-contain bg-white rounded"
                                   loading="lazy"

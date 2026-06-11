@@ -159,12 +159,22 @@ app.use('/api', invitesRoutes);
 // Image proxy for fussball.de team badges (CORS workaround)
 app.get('/api/badge-proxy', async (req, res) => {
   const url = String(req.query.url || '');
-  if (!url || !/^https?:\/\/(?:www\.)?fussball\.de\//i.test(url)) {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
     return res.status(400).end();
   }
+
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const isFussballDomain = hostname === 'fussball.de' || hostname.endsWith('.fussball.de');
+  if ((parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') || !isFussballDomain) {
+    return res.status(400).end();
+  }
+
   try {
     const axios = require('axios');
-    const response = await axios.get(url, {
+    const response = await axios.get(parsedUrl.toString(), {
       responseType: 'arraybuffer',
       timeout: 8000,
       headers: {
