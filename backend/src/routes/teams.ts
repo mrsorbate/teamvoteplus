@@ -1474,14 +1474,15 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
     const client = new FussballDeClient({ timeoutMs: 15000 });
     const eventResultLookupStmt = hasEventScoreColumns
       ? db.prepare(
-          `SELECT home_goals, away_goals
+          `SELECT title, home_goals, away_goals
            FROM events
            WHERE team_id = ?
              AND type = 'match'
              AND home_goals IS NOT NULL
              AND away_goals IS NOT NULL
              AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 172800
-             AND (title LIKE ? OR title LIKE ?)
+             AND title LIKE ?
+             AND title LIKE ?
            ORDER BY abs(strftime('%s', start_time) - strftime('%s', ?)) ASC
            LIMIT 1`
         )
@@ -1502,28 +1503,30 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
         return null;
       }
 
-      const byHome = eventResultLookupStmt.get(
+      const matchedEvent = eventResultLookupStmt.get(
         teamId,
         parsedDate.toISOString(),
         `%${homeTeam}%`,
         `%${awayTeam}%`,
         parsedDate.toISOString(),
-      ) as { home_goals?: number; away_goals?: number } | undefined;
+      ) as { title?: string; home_goals?: number; away_goals?: number } | undefined;
 
-      if (byHome && Number.isFinite(byHome.home_goals) && Number.isFinite(byHome.away_goals)) {
-        return { home: Number(byHome.home_goals), away: Number(byHome.away_goals) };
-      }
+      if (matchedEvent && Number.isFinite(matchedEvent.home_goals) && Number.isFinite(matchedEvent.away_goals)) {
+        const participants = parseInternalParticipants(matchedEvent.title);
+        if (participants) {
+          const eventHome = normalizeTeamNameInternal(participants.homeTeam);
+          const eventAway = normalizeTeamNameInternal(participants.awayTeam);
+          const matchHome = normalizeTeamNameInternal(homeTeam);
+          const matchAway = normalizeTeamNameInternal(awayTeam);
 
-      const byAway = eventResultLookupStmt.get(
-        teamId,
-        parsedDate.toISOString(),
-        `%${awayTeam}%`,
-        `%${homeTeam}%`,
-        parsedDate.toISOString(),
-      ) as { home_goals?: number; away_goals?: number } | undefined;
+          if (eventHome === matchHome && eventAway === matchAway) {
+            return { home: Number(matchedEvent.home_goals), away: Number(matchedEvent.away_goals) };
+          }
 
-      if (byAway && Number.isFinite(byAway.home_goals) && Number.isFinite(byAway.away_goals)) {
-        return { home: Number(byAway.away_goals), away: Number(byAway.home_goals) };
+          if (eventHome === matchAway && eventAway === matchHome) {
+            return { home: Number(matchedEvent.away_goals), away: Number(matchedEvent.home_goals) };
+          }
+        }
       }
 
       return null;
@@ -1609,9 +1612,12 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
 
         const matchedTeamName = rowMatches[0]?.rowName || null;
 
-        const toPayloadMatches = (matches: any[]) => matches.map((match) => {
+        const toPayloadMatches = (matches: any[], mode: 'next' | 'last') => matches.map((match) => {
           const parsedDate = parseScheduleDate(match?.date);
-          const fallbackResult = resolveResultFromInternalEvents(match, parsedDate);
+          const isPastMatch = Boolean(parsedDate && parsedDate.getTime() <= Date.now());
+          const fallbackResult = mode === 'last' && isPastMatch
+            ? resolveResultFromInternalEvents(match, parsedDate)
+            : null;
 
           return {
             date: String(match?.date || ''),
@@ -1635,8 +1641,8 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
           source: 'fussball.de',
           league_name: leagueName,
           matched_team_name: matchedTeamName,
-          next_games: toPayloadMatches(nextGames),
-          last_games: toPayloadMatches(lastGames),
+          next_games: toPayloadMatches(nextGames, 'next'),
+          last_games: toPayloadMatches(lastGames, 'last'),
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
