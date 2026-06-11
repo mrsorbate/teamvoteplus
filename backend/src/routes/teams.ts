@@ -1636,7 +1636,7 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
             venue: String(match?.venue || ''),
             statusText: String(match?.statusText || ''),
             result: mode === 'last'
-              ? (fallbackResult || null)
+              ? (fallbackResult || match?.result || null)
               : (match?.result || null),
           };
         });
