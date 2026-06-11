@@ -27,6 +27,13 @@ ensure_env_key() {
     fi
 }
 
+get_env_value() {
+    local key="$1"
+    local file="$2"
+
+    grep -E "^${key}=" "$file" | tail -n 1 | sed -E "s/^${key}=//"
+}
+
 echo -e "${BLUE}🔄 teamvote+ - Server Update${NC}\n"
 
 if [ ! -f "docker-compose.yml" ]; then
@@ -39,6 +46,14 @@ fi
 
 if [ ! -f ".env" ]; then
     error_exit ".env fehlt. Zuerst ./setup-server.sh ausführen."
+fi
+
+if [ "${COMPOSE_FILE}" = "docker-compose.yml" ] && [ -f "docker-compose.prod.yml" ]; then
+    DOMAIN_VALUE="$(get_env_value "DOMAIN" ".env" || true)"
+    if [ -n "$(echo "${DOMAIN_VALUE}" | tr -d '[:space:]')" ]; then
+        COMPOSE_FILE="docker-compose.prod.yml"
+        echo -e "${YELLOW}ℹ️  DOMAIN in .env erkannt - nutze automatisch ${COMPOSE_FILE}${NC}"
+    fi
 fi
 
 echo -e "${BLUE}💾 Erstelle .env-Backup...${NC}"

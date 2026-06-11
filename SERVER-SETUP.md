@@ -101,6 +101,8 @@ Das Update-Skript macht automatisch:
 - Container neu bauen
 - Container neu starten
 
+Wenn in `.env` eine `DOMAIN` gesetzt ist, nutzt `update-server.sh` automatisch `docker-compose.prod.yml`.
+
 Die Datenbank und Uploads bleiben erhalten, weil sie in Volumes liegen.
 
 ## Wichtige Ports

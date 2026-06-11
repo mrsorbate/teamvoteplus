@@ -64,6 +64,8 @@ Kurzfassung:
 - Für spätere Änderungen `bash ./update-server.sh` ausführen
 - Für mehrere Vereins-Instanzen nacheinander: `bash ./update-all-instances.sh`
 
+Hinweis: Wenn in `.env` eine `DOMAIN` gesetzt ist, verwendet `update-server.sh` automatisch `docker-compose.prod.yml`.
+
 ---
 
 ### Backend (lokal entwickeln)
