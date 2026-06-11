@@ -13,6 +13,11 @@ export default function TeamJoinPage() {
   const { showToast } = useToast();
   const [joinComplete, setJoinComplete] = useState(false);
   const [teamData, setTeamData] = useState<any>(null);
+  const [registerName, setRegisterName] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState('');
 
   // Fetch invite details
   const { data: inviteData, isLoading: isLoadingInvite, error: inviteError } = useQuery({
@@ -56,6 +61,65 @@ export default function TeamJoinPage() {
       }, 3000);
     },
   });
+
+  const registerMutation = useMutation({
+    mutationFn: () => {
+      if (!token) throw new Error('Kein Token vorhanden');
+      return invitesAPI.registerWithInvite(token, {
+        name: registerName.trim(),
+        username: registerUsername.trim(),
+        email: registerEmail.trim(),
+        password: registerPassword,
+      });
+    },
+    onSuccess: (response: any) => {
+      const authToken = response?.data?.token;
+      const authUser = response?.data?.user;
+      const targetTeamId = response?.data?.team_id || teamData?.team_id;
+
+      if (authToken && authUser) {
+        localStorage.setItem('auth-token', authToken);
+        localStorage.setItem('auth-user', JSON.stringify(authUser));
+      }
+
+      showToast('Konto erstellt und Team beigetreten', 'success');
+      window.setTimeout(() => {
+        window.location.href = `/teams/${targetTeamId}`;
+      }, 500);
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Registrierung fehlgeschlagen', 'error');
+    },
+  });
+
+  const handleRegister = () => {
+    if (!registerName.trim()) {
+      showToast('Bitte Namen eingeben', 'warning');
+      return;
+    }
+
+    if (!registerUsername.trim()) {
+      showToast('Bitte Benutzernamen eingeben', 'warning');
+      return;
+    }
+
+    if (!registerEmail.trim()) {
+      showToast('Bitte E-Mail eingeben', 'warning');
+      return;
+    }
+
+    if (registerPassword.length < 6) {
+      showToast('Passwort muss mindestens 6 Zeichen haben', 'warning');
+      return;
+    }
+
+    if (registerPassword !== registerPasswordConfirm) {
+      showToast('Passwörter stimmen nicht überein', 'warning');
+      return;
+    }
+
+    registerMutation.mutate();
+  };
 
   if (isLoadingInvite) {
     return (
@@ -187,14 +251,60 @@ export default function TeamJoinPage() {
                   onClick={() => navigate(`/login?redirect=${encodeURIComponent(`/join/${token}`)}`)}
                   className="btn btn-primary w-full"
                 >
-                  Anmelden
+                  Ich habe schon ein Konto (Anmelden)
                 </button>
-                <button
-                  onClick={() => navigate(`/register?redirect=${encodeURIComponent(`/join/${token}`)}`)}
-                  className="btn btn-secondary w-full"
-                >
-                  Registrieren
-                </button>
+
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Neu hier? Direkt registrieren</p>
+
+                  <input
+                    type="text"
+                    className="input w-full"
+                    placeholder="Dein Name"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                  />
+
+                  <input
+                    type="text"
+                    className="input w-full"
+                    placeholder="Benutzername"
+                    value={registerUsername}
+                    onChange={(e) => setRegisterUsername(e.target.value)}
+                  />
+
+                  <input
+                    type="email"
+                    className="input w-full"
+                    placeholder="E-Mail"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                  />
+
+                  <input
+                    type="password"
+                    className="input w-full"
+                    placeholder="Passwort (mind. 6 Zeichen)"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                  />
+
+                  <input
+                    type="password"
+                    className="input w-full"
+                    placeholder="Passwort wiederholen"
+                    value={registerPasswordConfirm}
+                    onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
+                  />
+
+                  <button
+                    onClick={handleRegister}
+                    disabled={registerMutation.isPending}
+                    className="btn btn-secondary w-full"
+                  >
+                    {registerMutation.isPending ? 'Registriert...' : 'Konto erstellen und Team beitreten'}
+                  </button>
+                </div>
               </>
             )}
           </div>

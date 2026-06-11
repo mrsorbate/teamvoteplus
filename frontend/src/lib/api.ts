@@ -213,7 +213,7 @@ export const invitesAPI = {
   
   acceptInvite: (token: string) => api.post(`/invites/${token}/accept`),
   
-  registerWithInvite: (token: string, data: { username: string; email: string; password: string }) =>
+  registerWithInvite: (token: string, data: { name?: string; username: string; email: string; password: string }) =>
     api.post(`/invites/${token}/register`, data),
   
   deleteInvite: (inviteId: number) => api.delete(`/invites/${inviteId}`),

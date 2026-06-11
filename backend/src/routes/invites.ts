@@ -490,7 +490,7 @@ router.post('/invites/:token/register', async (req, res) => {
     ensureTrainerInviteSchema();
 
     const { token } = req.params;
-    const { username, email, password } = req.body;
+    const { name, username, email, password } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email and password are required' });
@@ -663,9 +663,15 @@ router.post('/invites/:token/register', async (req, res) => {
       return res.status(410).json({ error: 'Invite has reached maximum uses' });
     }
 
-    // Check if player_name exists (indicates this is a player invite, not generic invite)
-    if (!invite.player_name) {
-      return res.status(400).json({ error: 'This invite is not for player registration. Please login and accept the invite.' });
+    const isTeamJoinLink = !invite.player_name && (invite.max_uses ?? 1) >= 1000;
+    const providedName = String(name || '').trim();
+
+    if (!invite.player_name && !isTeamJoinLink) {
+      return res.status(400).json({ error: 'This invite is not eligible for registration.' });
+    }
+
+    if (isTeamJoinLink && !providedName) {
+      return res.status(400).json({ error: 'Name is required for team join registration' });
     }
 
     // Check if user with this username or email already exists
@@ -674,7 +680,8 @@ router.post('/invites/:token/register', async (req, res) => {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(normalizedEmail);
     if (existingUser) {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
@@ -682,11 +689,13 @@ router.post('/invites/:token/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const targetName = invite.player_name || providedName;
+
     // Create user with data from invite
     const userStmt = db.prepare(
       'INSERT INTO users (username, email, password, name, role, birth_date) VALUES (?, ?, ?, ?, ?, ?)'
     );
-    const userResult = userStmt.run(normalizedUsername, email, hashedPassword, invite.player_name, invite.role, invite.player_birth_date);
+    const userResult = userStmt.run(normalizedUsername, normalizedEmail, hashedPassword, targetName, invite.role, invite.player_birth_date || null);
 
     // Add user to team
     const memberStmt = db.prepare(
@@ -712,7 +721,7 @@ router.post('/invites/:token/register', async (req, res) => {
 
     // Generate token
     const authToken = jwt.sign(
-      { id: userResult.lastInsertRowid, username: normalizedUsername, email, role: invite.role },
+      { id: userResult.lastInsertRowid, username: normalizedUsername, email: normalizedEmail, role: invite.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -722,8 +731,8 @@ router.post('/invites/:token/register', async (req, res) => {
       user: {
         id: userResult.lastInsertRowid,
         username: normalizedUsername,
-        email,
-        name: invite.player_name,
+        email: normalizedEmail,
+        name: targetName,
         role: invite.role,
         birth_date: invite.player_birth_date
       }
