@@ -37,6 +37,92 @@ get_env_value() {
     grep -E "^${key}=" "$file" | tail -n 1 | sed -E "s/^${key}=//"
 }
 
+is_env_value_empty() {
+    local value="$1"
+    [ -z "$(echo "$value" | tr -d '[:space:]')" ]
+}
+
+generate_jwt_secret() {
+    openssl rand -base64 32
+}
+
+generate_vapid_keys_with_node() {
+    node <<'NODE'
+const crypto = require('crypto');
+const ecdh = crypto.createECDH('prime256v1');
+ecdh.generateKeys();
+const toBase64Url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+console.log(toBase64Url(ecdh.getPublicKey()));
+console.log(toBase64Url(ecdh.getPrivateKey()));
+NODE
+}
+
+generate_vapid_keys_with_docker() {
+    docker run --rm node:20-alpine node <<'NODE'
+const crypto = require('crypto');
+const ecdh = crypto.createECDH('prime256v1');
+ecdh.generateKeys();
+const toBase64Url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+console.log(toBase64Url(ecdh.getPublicKey()));
+console.log(toBase64Url(ecdh.getPrivateKey()));
+NODE
+}
+
+ensure_prod_env_values() {
+    local env_file="$1"
+
+    ensure_env_key "DOMAIN" "trainello.de" "$env_file"
+    ensure_env_key "FRONTEND_URL" "https://trainello.de" "$env_file"
+
+    local jwt_secret
+    jwt_secret="$(get_env_value "JWT_SECRET" "$env_file" || true)"
+    if is_env_value_empty "$jwt_secret" || [ "$jwt_secret" = "change-me-in-production" ]; then
+        ensure_env_key "JWT_SECRET" "$(generate_jwt_secret)" "$env_file"
+        echo -e "${GREEN}✓ JWT_SECRET automatisch gesetzt${NC}"
+    fi
+
+    local acme_email
+    acme_email="$(get_env_value "ACME_EMAIL" "$env_file" || true)"
+    if is_env_value_empty "$acme_email" || [ "$acme_email" = "admin@deine-domain.tld" ]; then
+        error_exit "Für docker-compose.prod.yml muss ACME_EMAIL in .env gesetzt sein (z. B. admin@trainello.de)."
+    fi
+
+    local vapid_public
+    local vapid_private
+    vapid_public="$(get_env_value "VAPID_PUBLIC_KEY" "$env_file" || true)"
+    vapid_private="$(get_env_value "VAPID_PRIVATE_KEY" "$env_file" || true)"
+
+    if is_env_value_empty "$vapid_public" || is_env_value_empty "$vapid_private"; then
+        echo -e "${BLUE}🔔 Erzeuge VAPID-Schlüssel für Push-Benachrichtigungen...${NC}"
+        local generated_keys
+        if command_exists node; then
+            generated_keys="$(generate_vapid_keys_with_node)"
+        else
+            generated_keys="$(generate_vapid_keys_with_docker)"
+        fi
+
+        local generated_public
+        local generated_private
+        generated_public="$(echo "$generated_keys" | sed -n '1p')"
+        generated_private="$(echo "$generated_keys" | sed -n '2p')"
+
+        if is_env_value_empty "$generated_public" || is_env_value_empty "$generated_private"; then
+            error_exit "VAPID-Schlüssel konnten nicht erzeugt werden. Bitte VAPID_PUBLIC_KEY und VAPID_PRIVATE_KEY manuell in .env setzen."
+        fi
+
+        ensure_env_key "VAPID_PUBLIC_KEY" "$generated_public" "$env_file"
+        ensure_env_key "VAPID_PRIVATE_KEY" "$generated_private" "$env_file"
+        echo -e "${GREEN}✓ VAPID-Schlüssel automatisch gesetzt${NC}"
+    fi
+
+    local vapid_subject
+    vapid_subject="$(get_env_value "VAPID_SUBJECT" "$env_file" || true)"
+    if is_env_value_empty "$vapid_subject"; then
+        ensure_env_key "VAPID_SUBJECT" "mailto:${acme_email}" "$env_file"
+        echo -e "${GREEN}✓ VAPID_SUBJECT automatisch gesetzt${NC}"
+    fi
+}
+
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
@@ -73,7 +159,7 @@ fi
 
 if [ ! -f ".env" ]; then
     echo -e "${BLUE}🔐 Erstelle .env...${NC}"
-    JWT_SECRET="$(openssl rand -base64 32)"
+    JWT_SECRET="$(generate_jwt_secret)"
     cat > .env <<EOF
 # ${APP_NAME} - Server Setup
 BACKEND_PORT=${BACKEND_PORT}
@@ -96,13 +182,7 @@ else
 fi
 
 if [ "$COMPOSE_FILE" = "docker-compose.prod.yml" ]; then
-    ACME_EMAIL_VALUE="$(get_env_value "ACME_EMAIL" ".env" || true)"
-    ensure_env_key "DOMAIN" "trainello.de" ".env"
-    ensure_env_key "FRONTEND_URL" "https://trainello.de" ".env"
-
-    if [ -z "$ACME_EMAIL_VALUE" ] || [ "$ACME_EMAIL_VALUE" = "admin@deine-domain.tld" ]; then
-        error_exit "Für docker-compose.prod.yml muss ACME_EMAIL in .env gesetzt sein. DOMAIN ist fest auf trainello.de konfiguriert."
-    fi
+    ensure_prod_env_values ".env"
 fi
 
 mkdir -p data/backend data/uploads

@@ -113,6 +113,12 @@ Danach ggf. `JWT_SECRET`, `FRONTEND_PORT` und `BACKEND_PORT` in `.env` anpassen.
 Für öffentliche Deployments (Domain/Reverse Proxy) zusätzlich `FRONTEND_URL` setzen,
 z. B. `https://app.meinverein.de`, damit Einladungslinks immer die richtige URL enthalten.
 
+Hinweis: Eine Root-Vorlage liegt in [.env.example](.env.example). Für Produktion mit `docker-compose.prod.yml` ergänzt das Setup fehlende Pflichtwerte automatisch:
+- `JWT_SECRET` wird erzeugt, wenn leer oder unsicher.
+- `VAPID_PUBLIC_KEY` und `VAPID_PRIVATE_KEY` werden erzeugt, wenn leer.
+- `VAPID_SUBJECT` wird auf `mailto:<ACME_EMAIL>` gesetzt, wenn leer.
+- `ACME_EMAIL` bleibt Pflicht und muss manuell gesetzt sein.
+
 ### Starten
 ```bash
 docker compose up --build
@@ -148,6 +154,9 @@ In `.env` setzen:
 - `DOMAIN=trainello.de`
 - `ACME_EMAIL=admin@trainello.de`
 - `JWT_SECRET=<starkes-secret>`
+- `VAPID_PUBLIC_KEY=<public-key>` (optional, wird bei leerem Wert automatisch erstellt)
+- `VAPID_PRIVATE_KEY=<private-key>` (optional, wird bei leerem Wert automatisch erstellt)
+- `VAPID_SUBJECT=mailto:admin@trainello.de` (optional, wird bei leerem Wert automatisch gesetzt)
 
 Start:
 ```bash

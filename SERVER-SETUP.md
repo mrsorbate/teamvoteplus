@@ -48,6 +48,21 @@ ACME_EMAIL=admin@trainello.de
 JWT_SECRET=ein-langes-zufaelliges-secret
 ```
 
+Zusätzlich für Push (optional manuell, wird sonst beim Setup automatisch erzeugt):
+
+```bash
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@trainello.de
+```
+
+Beim Start mit `docker-compose.prod.yml` ergänzt `setup-server.sh` fehlende Werte automatisch:
+- `JWT_SECRET` (falls leer/unsicher)
+- `VAPID_PUBLIC_KEY` und `VAPID_PRIVATE_KEY` (falls leer)
+- `VAPID_SUBJECT` (falls leer)
+
+`ACME_EMAIL` bleibt Pflicht und muss gesetzt sein.
+
 ### 2. Produktions-Compose starten
 
 ```bash
