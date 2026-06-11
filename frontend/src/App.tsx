@@ -14,6 +14,7 @@ import EventDetailPage from './pages/EventDetailPage';
 import EventSquadPage from './pages/EventSquadPage';
 import StatsPage from './pages/StatsPage';
 import InvitePage from './pages/InvitePage';
+import TeamJoinPage from './pages/TeamJoinPage';
 import AdminPage from './pages/AdminPage';
 import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
@@ -89,6 +90,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<Navigate to="/login" />} />
           <Route path="/invite/:token" element={<InvitePage />} />
+          <Route path="/join/:token" element={<TeamJoinPage />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </>
       )}
@@ -110,6 +112,8 @@ function App() {
 
           <Route element={<Layout organization={organization} />}>
             <Route path="/" element={!setupCompleted ? <Navigate to="/setup" /> : <DashboardPage />} />
+            <Route path="/join/:token" element={<TeamJoinPage />} />
+            <Route path="/invite/:token" element={<InvitePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/teams" element={<TeamsPage />} />
