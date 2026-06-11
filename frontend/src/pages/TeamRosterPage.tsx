@@ -1,19 +1,23 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { teamsAPI } from '../lib/api';
-import { ArrowLeft, Users, X } from 'lucide-react';
+import { invitesAPI, teamsAPI } from '../lib/api';
+import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import PlayerInviteManager from '../components/PlayerInviteManager';
 import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
+import { useToast } from '../lib/useToast';
 
 export default function TeamRosterPage() {
   const { id } = useParams<{ id: string }>();
   const teamId = parseInt(id!);
+  const queryClient = useQueryClient();
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [joinLinkCopied, setJoinLinkCopied] = useState(false);
   const { user } = useAuthStore();
   const goBack = useSmartBack();
+  const { showToast } = useToast();
 
   const { data: team, isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
@@ -30,6 +34,51 @@ export default function TeamRosterPage() {
       return response.data;
     },
   });
+
+  const { data: joinLink } = useQuery({
+    queryKey: ['team-join-link', teamId],
+    queryFn: async () => {
+      try {
+        const response = await invitesAPI.getTeamJoinLink(teamId);
+        return response.data;
+      } catch (error: any) {
+        if (error?.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    enabled: Number.isFinite(teamId) && user?.role === 'trainer',
+    retry: false,
+  });
+
+  const createTeamJoinLinkMutation = useMutation({
+    mutationFn: () => invitesAPI.createTeamJoinLink(teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-join-link', teamId] });
+      showToast('Team-Beitrittslink generiert', 'success');
+      setJoinLinkCopied(false);
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Generieren des Links', 'error');
+    },
+  });
+
+  const copyJoinLink = async () => {
+    if (!joinLink?.join_url) {
+      showToast('Kein Beitrittslink verfügbar', 'warning');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(joinLink.join_url);
+      showToast('Beitrittslink kopiert', 'success');
+      setJoinLinkCopied(true);
+      setTimeout(() => setJoinLinkCopied(false), 2000);
+    } catch {
+      showToast('Beitrittslink konnte nicht kopiert werden', 'error');
+    }
+  };
 
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
   const players = members?.filter((m: any) => m.role !== 'trainer') || [];
@@ -148,6 +197,65 @@ export default function TeamRosterPage() {
             )}
           </div>
         </div>
+
+        {user?.role === 'trainer' && (
+          <div className="card space-y-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <LinkIcon className="w-5 h-5 text-primary-600" />
+              Team-Beitrittslink
+            </h2>
+
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Spieler können mit diesem allgemeinen Link selbst dem Team beitreten.
+            </p>
+
+            {joinLink?.join_url ? (
+              <>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={joinLink.join_url}
+                    className="input w-full"
+                    aria-label="Team-Beitrittslink"
+                  />
+                  <button
+                    type="button"
+                    onClick={copyJoinLink}
+                    className="btn btn-secondary w-full sm:w-auto whitespace-nowrap"
+                  >
+                    <Copy className="w-4 h-4 mr-1" />
+                    {joinLinkCopied ? 'Kopiert!' : 'Kopieren'}
+                  </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Verwendungen: {Number(joinLink.used_count || 0)} von {Number(joinLink.max_uses || 0)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => createTeamJoinLinkMutation.mutate()}
+                    disabled={createTeamJoinLinkMutation.isPending}
+                    className="btn btn-secondary w-full sm:w-auto disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    {createTeamJoinLinkMutation.isPending ? 'Generiert...' : 'Link neu generieren'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => createTeamJoinLinkMutation.mutate()}
+                disabled={createTeamJoinLinkMutation.isPending}
+                className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
+              >
+                {createTeamJoinLinkMutation.isPending ? 'Generiert...' : 'Beitrittslink generieren'}
+              </button>
+            )}
+          </div>
+        )}
 
         {user?.role === 'trainer' && <PlayerInviteManager teamId={teamId} />}
       </div>
