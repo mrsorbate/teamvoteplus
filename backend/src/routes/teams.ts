@@ -1528,6 +1528,12 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
           date: String(match?.date || ''),
           homeTeam: String(match?.homeTeam || ''),
           awayTeam: String(match?.awayTeam || ''),
+          homeBadge: match?.homeBadge
+            ? (String(match.homeBadge).startsWith('//') ? `https:${String(match.homeBadge)}` : String(match.homeBadge))
+            : null,
+          awayBadge: match?.awayBadge
+            ? (String(match.awayBadge).startsWith('//') ? `https:${String(match.awayBadge)}` : String(match.awayBadge))
+            : null,
           competition: String(match?.competition || ''),
           venue: String(match?.venue || ''),
           statusText: String(match?.statusText || ''),

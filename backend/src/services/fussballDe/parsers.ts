@@ -44,11 +44,20 @@ export const parseMatches = (html: string, source: string): TeamMatch[] => {
     }
 
     if (rowNode.find('td.column-club').length >= 2) {
-      const clubs = rowNode
-        .find('td.column-club .club-name')
+      const clubCells = rowNode.find('td.column-club');
+      const clubs = clubCells
+        .find('.club-name')
         .map((_i, club) => clean($(club).text()))
         .get()
         .filter(Boolean);
+
+      const badges = clubCells
+        .map((_i, club) => {
+          const imgSpan = $(club).find('[data-responsive-image]');
+          return imgSpan.attr('data-responsive-image') || undefined;
+        })
+        .get()
+        .filter((badge): badge is string => Boolean(badge));
 
       if (clubs.length >= 2) {
         const scoreText = clean(rowNode.find('td.column-score').text());
@@ -61,6 +70,8 @@ export const parseMatches = (html: string, source: string): TeamMatch[] => {
           date: currentDate,
           homeTeam: clubs[0],
           awayTeam: clubs[1],
+          homeBadge: badges[0],
+          awayBadge: badges[1],
           competition: currentCompetition,
           statusText: normalizedStatusText,
           result: scoreText.includes(':')

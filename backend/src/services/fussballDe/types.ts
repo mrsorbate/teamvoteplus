@@ -7,6 +7,8 @@ export type TeamMatch = {
   date?: string;
   homeTeam: string;
   awayTeam: string;
+  homeBadge?: string;
+  awayBadge?: string;
   competition?: string;
   venue?: string;
   statusText?: string;

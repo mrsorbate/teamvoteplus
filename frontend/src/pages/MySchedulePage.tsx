@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Clock } from 'lucide-react';
-import { teamsAPI } from '../lib/api';
+import { teamsAPI, badgeProxyUrl } from '../lib/api';
 
 const normalizeTeamName = (value: unknown): string => {
   return String(value ?? '')
@@ -36,20 +36,29 @@ const parseMatchDate = (input: unknown): Date | null => {
 
 const formatMatchDate = (input: unknown): string => {
   const parsed = parseMatchDate(input);
-  return !parsed
-    ? '-'
-    : parsed.toLocaleDateString('de-DE', {
-        weekday: 'short',
-        day: '2-digit',
-        month: '2-digit',
-      });
+  if (!parsed) {
+    const raw = String(input || '').split('|')[0]?.trim();
+    return raw || '-';
+  }
+
+  return parsed.toLocaleDateString('de-DE', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+  });
 };
 
 const formatMatchTime = (input: unknown): string => {
   const parsed = parseMatchDate(input);
-  return !parsed
-    ? '-'
-    : parsed.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  if (!parsed) {
+    const raw = String(input || '');
+    const fromPipe = raw.includes('|') ? raw.split('|')[1]?.trim() : '';
+    if (fromPipe) return fromPipe.replace(/\s*uhr$/i, '');
+    const explicitTime = raw.match(/(\d{1,2}:\d{2})/);
+    return explicitTime?.[1] || '-';
+  }
+
+  return parsed.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 };
 
 const renderMatchCard = (match: any) => {
@@ -61,10 +70,26 @@ const renderMatchCard = (match: any) => {
   const result = match?.result && (match.result.home !== undefined || match.result.away !== undefined)
     ? `${match.result.home ?? '-'}:${match.result.away ?? '-'}`
     : '';
+  const homeBadge = badgeProxyUrl(typeof match?.homeBadge === 'string' ? match.homeBadge : null);
+  const awayBadge = badgeProxyUrl(typeof match?.awayBadge === 'string' ? match.awayBadge : null);
 
   return (
     <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900">
-      <p className="text-sm font-semibold text-gray-900 dark:text-white">{homeTeam} - {awayTeam}</p>
+      <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1.5">
+          {homeBadge ? (
+            <img src={homeBadge} alt={`${homeTeam} Wappen`} className="w-5 h-5 object-contain bg-white rounded" loading="lazy" />
+          ) : null}
+          <span>{homeTeam}</span>
+        </span>
+        <span>-</span>
+        <span className="inline-flex items-center gap-1.5">
+          {awayBadge ? (
+            <img src={awayBadge} alt={`${awayTeam} Wappen`} className="w-5 h-5 object-contain bg-white rounded" loading="lazy" />
+          ) : null}
+          <span>{awayTeam}</span>
+        </span>
+      </p>
       {competition ? (
         <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{competition}</p>
       ) : null}
@@ -72,7 +97,7 @@ const renderMatchCard = (match: any) => {
         <span>{dateLabel}</span>
         <span className="inline-flex items-center gap-1">
           <Clock className="w-3.5 h-3.5" />
-          {timeLabel} Uhr
+          {timeLabel === '-' ? '-' : `${timeLabel} Uhr`}
         </span>
         {result ? <span>{result}</span> : null}
       </div>
