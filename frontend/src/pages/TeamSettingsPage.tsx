@@ -77,7 +77,10 @@ export default function TeamSettingsPage() {
 
   useEffect(() => {
     if (!settings) return;
-    setFussballDeId(settings.fussballde_id || '');
+    const idsFromSettings = Array.isArray((settings as any).fussballde_ids)
+      ? (settings as any).fussballde_ids
+      : [];
+    setFussballDeId(idsFromSettings.length > 0 ? idsFromSettings.join('\n') : (settings.fussballde_id || ''));
     setFussballDeTeamName(settings.fussballde_team_name || '');
     setDefaultResponse((settings.default_response || 'pending') as 'pending' | 'accepted' | 'tentative' | 'declined');
     const legacyDefault =
@@ -261,38 +264,22 @@ export default function TeamSettingsPage() {
     },
   });
 
-  const normalizeFussballDeId = (input: string): string => input.trim().toUpperCase();
+  const normalizeFussballDeInput = (input: string): string => input.toUpperCase();
 
-  const extractFussballDeId = (input: string): string => {
-    const value = input.trim();
-    if (!value) return '';
-
-    if (!/^https?:\/\//i.test(value)) {
-      return normalizeFussballDeId(value);
-    }
-
-    try {
-      const url = new URL(value);
-      const pathParts = url.pathname.split('/').filter(Boolean);
-      const candidate = [...pathParts]
-        .reverse()
-        .find((segment) => /^[A-Z0-9]{16,}$/i.test(segment));
-
-      return candidate ? normalizeFussballDeId(candidate) : '';
-    } catch {
-      return '';
-    }
+  const extractFussballDeIds = (input: string): string[] => {
+    const matches = String(input || '').toUpperCase().match(/[A-Z0-9]{16,40}/g) || [];
+    return [...new Set(matches)];
   };
 
   const saveApiSettings = () => {
-    const normalizedFussballId = normalizeFussballDeId(fussballDeId);
-    if (normalizedFussballId && !/^[A-Z0-9]{16,40}$/.test(normalizedFussballId)) {
+    const extractedIds = extractFussballDeIds(fussballDeId);
+    if (fussballDeId.trim() && extractedIds.length === 0) {
       showToast('Ungültiges fussball.de ID-Format', 'warning');
       return;
     }
 
     updateApiSettingsMutation.mutate({
-      fussballde_id: normalizedFussballId || undefined,
+      fussballde_id: extractedIds.length > 0 ? extractedIds.join(',') : undefined,
       fussballde_team_name: fussballDeTeamName.trim() || undefined,
     });
   };
@@ -645,34 +632,34 @@ export default function TeamSettingsPage() {
             </h2>
             <div>
               <label htmlFor="fussballde-id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                fussball.de ID
+                fussball.de IDs
               </label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <input
+                <textarea
                   id="fussballde-id"
-                  type="text"
                   value={fussballDeId}
-                  onChange={(e) => setFussballDeId(normalizeFussballDeId(e.target.value))}
+                  onChange={(e) => setFussballDeId(normalizeFussballDeInput(e.target.value))}
                   className="input w-full"
-                  placeholder="ID oder vollständige fussball.de URL"
+                  placeholder="Eine ID pro Zeile oder mehrere fussball.de URLs"
+                  rows={3}
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const extracted = extractFussballDeId(fussballDeId);
-                    if (!extracted) {
+                    const extracted = extractFussballDeIds(fussballDeId);
+                    if (extracted.length === 0) {
                       showToast('Keine gültige fussball.de ID in der Eingabe gefunden', 'warning');
                       return;
                     }
-                    setFussballDeId(extracted);
-                    showToast('fussball.de ID aus URL übernommen', 'info');
+                    setFussballDeId(extracted.join('\n'));
+                    showToast(`${extracted.length} fussball.de ID(s) übernommen`, 'info');
                   }}
                   className="btn btn-secondary w-full sm:w-auto whitespace-nowrap"
                 >
                   Aus URL übernehmen
                 </button>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Beispiel: 011MI8V6UC000000VTVG0001VTR8C1K7</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Eine ID pro Zeile. Beispiel: 011MI8V6UC000000VTVG0001VTR8C1K7</p>
             </div>
 
             <div>
@@ -703,7 +690,7 @@ export default function TeamSettingsPage() {
               <button
                 type="button"
                 onClick={() => importNextGamesMutation.mutate()}
-                disabled={importNextGamesMutation.isPending || !fussballDeId.trim()}
+                disabled={importNextGamesMutation.isPending || extractFussballDeIds(fussballDeId).length === 0}
                 className="btn btn-secondary w-full disabled:opacity-50"
               >
                 {importNextGamesMutation.isPending ? 'Import läuft...' : 'Spiele importieren'}

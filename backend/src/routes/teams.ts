@@ -25,6 +25,13 @@ const calendarTokenSelectExpression = hasTeamsCalendarTokenColumn
 
 const LEGACY_CALENDAR_TOKEN_HEX_REGEX = /^[0-9a-f]{48}$/i;
 const COMPACT_CALENDAR_TOKEN_BASE64URL_REGEX = /^[A-Za-z0-9_-]{32}$/;
+const FUSSBALL_DE_ID_REGEX = /^[A-Z0-9]{16,40}$/;
+
+const parseFussballDeIds = (value: unknown): string[] => {
+  const raw = String(value || '').toUpperCase();
+  const matches = raw.match(/[A-Z0-9]{16,40}/g) || [];
+  return [...new Set(matches.filter((entry) => FUSSBALL_DE_ID_REGEX.test(entry)))];
+};
 
 const hexTokenToBase64Url = (token: string): string | null => {
   if (!LEGACY_CALENDAR_TOKEN_HEX_REGEX.test(token)) {
@@ -589,6 +596,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
 
     return res.json({
       ...settings,
+      fussballde_ids: parseFussballDeIds(settings.fussballde_id),
       home_venues: parseHomeVenuesFromDb(settings.home_venues),
       default_home_venue_name: settings.default_home_venue_name || null,
       calendar_token: undefined,
@@ -605,6 +613,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
   try {
     const teamId = parseInt(req.params.id);
     const hasFussballId = Object.prototype.hasOwnProperty.call(req.body, 'fussballde_id');
+    const hasFussballIds = Object.prototype.hasOwnProperty.call(req.body, 'fussballde_ids');
     const hasFussballTeamName = Object.prototype.hasOwnProperty.call(req.body, 'fussballde_team_name');
     const hasDefaultResponse = Object.prototype.hasOwnProperty.call(req.body, 'default_response');
     const hasDefaultRsvpDeadlineHours = Object.prototype.hasOwnProperty.call(req.body, 'default_rsvp_deadline_hours');
@@ -620,6 +629,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 
     const {
       fussballde_id,
+      fussballde_ids,
       fussballde_team_name,
       default_response,
       default_rsvp_deadline_hours,
@@ -634,6 +644,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_home_venue_name,
     } = req.body as {
       fussballde_id?: string;
+      fussballde_ids?: string[];
       fussballde_team_name?: string;
       default_response?: string;
       default_rsvp_deadline_hours?: number | string | null;
@@ -668,12 +679,17 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     }
 
     let nextFussballId = team.fussballde_id as string | null;
-    if (hasFussballId) {
-      const normalizedFussballId = String(fussballde_id || '').trim().toUpperCase();
-      if (normalizedFussballId && !/^[A-Z0-9]{16,40}$/.test(normalizedFussballId)) {
+    if (hasFussballId || hasFussballIds) {
+      const rawFussballIdInput = hasFussballIds
+        ? (Array.isArray(fussballde_ids) ? fussballde_ids.join(',') : String(fussballde_ids || ''))
+        : String(fussballde_id || '').trim();
+      const normalizedFussballIds = parseFussballDeIds(rawFussballIdInput);
+
+      if (rawFussballIdInput && normalizedFussballIds.length === 0) {
         return res.status(400).json({ error: 'Ungültiges fussball.de ID-Format' });
       }
-      nextFussballId = normalizedFussballId || null;
+
+      nextFussballId = normalizedFussballIds.length > 0 ? normalizedFussballIds.join(',') : null;
     }
 
     let nextFussballTeamName = team.fussballde_team_name as string | null;
@@ -857,6 +873,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 
     return res.json({
       ...updatedSettings,
+      fussballde_ids: parseFussballDeIds(updatedSettings.fussballde_id),
       home_venues: parseHomeVenuesFromDb(updatedSettings.home_venues),
       default_home_venue_name: updatedSettings.default_home_venue_name || null,
       calendar_token: undefined,
@@ -880,7 +897,9 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
 
   if (!team) throw new Error('TEAM_NOT_FOUND');
 
-  if (!team.fussballde_id) {
+  const fussballdeIds = parseFussballDeIds(team.fussballde_id);
+
+  if (fussballdeIds.length === 0) {
     return {
       success: true, imported: 0, updated: 0, skipped: 0,
       created: [], updatedItems: [], skippedDetails: [],
@@ -890,8 +909,33 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
   }
 
   const client = new FussballDeClient({ timeoutMs: 15000 });
-  const teamPageUrl = buildTeamPageUrl(team.fussballde_id);
-  const matches = await client.getSpielplan({ teamPageUrl });
+  const matchesBySource = await Promise.all(
+    fussballdeIds.map(async (fussballdeId) => {
+      const teamPageUrl = buildTeamPageUrl(fussballdeId);
+      try {
+        const sourceMatches = await client.getSpielplan({ teamPageUrl });
+        return sourceMatches.map((match) => ({ ...match, __sourceId: fussballdeId }));
+      } catch (error) {
+        console.warn(`fussball.de Import fehlgeschlagen für ID ${fussballdeId}:`, error);
+        return [];
+      }
+    })
+  );
+
+  const seenMatchKeys = new Set<string>();
+  const matches = matchesBySource
+    .flat()
+    .filter((match: any) => {
+      const key = [
+        String(match?.date || ''),
+        String(match?.homeTeam || ''),
+        String(match?.awayTeam || ''),
+        String(match?.competition || ''),
+      ].join('|');
+      if (seenMatchKeys.has(key)) return false;
+      seenMatchKeys.add(key);
+      return true;
+    });
 
   const parseFussballDeDate = (dateStr: string | undefined): Date | null => {
     if (!dateStr) return null;
@@ -929,6 +973,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
 
   const ownTeamName = String(team.fussballde_team_name || team.name || '').trim();
   const ownTeamNorm = normalizeTeamName(ownTeamName);
+  const enforceOwnTeamDetection = fussballdeIds.length === 1 && ownTeamNorm.length > 0;
 
   const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
   const defaultArrivalMinutes = parseArrivalMinutes(team.default_arrival_minutes_match) ?? parseArrivalMinutes(team.default_arrival_minutes);
@@ -987,7 +1032,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       ? awayNorm.includes(ownTeamNorm) || ownTeamNorm.includes(awayNorm)
       : awayNorm === ownTeamNorm;
 
-    if (!isHome && !isAway && ownTeamNorm) {
+    if (!isHome && !isAway && enforceOwnTeamDetection) {
       skipped.push(`${match.homeTeam} - ${match.awayTeam}: Team nicht identifiziert`);
       continue;
     }
@@ -1170,6 +1215,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     updatedItems: updated,
     skippedDetails: skipped,
     mode: 'fussball.de',
+    source_ids: fussballdeIds,
   };
 };
 router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
@@ -1257,10 +1303,13 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
     }
 
     // Try to fetch live standings from fussball.de if a team ID is configured
-    if (team.fussballde_id) {
+    const externalTableIds = parseFussballDeIds(team.fussballde_id);
+    const primaryTableId = externalTableIds[0];
+
+    if (primaryTableId) {
       try {
         const client = new FussballDeClient({ timeoutMs: 15000 });
-        const teamPageUrl = buildTeamPageUrl(team.fussballde_id);
+        const teamPageUrl = buildTeamPageUrl(primaryTableId);
         const standings = await client.getTabelle({ teamPageUrl });
 
         if (standings.length > 0) {
