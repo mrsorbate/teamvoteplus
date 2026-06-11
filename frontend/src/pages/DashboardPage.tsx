@@ -54,7 +54,7 @@ export default function DashboardPage() {
     && teams.length > 0
     && (
       (teams.length === 1 && teamsWithPhotos.length === 1)
-      || (teams.length > 1 && teamsWithPhotos.length >= 2)
+      || (teams.length > 1 && teamsWithPhotos.length >= 1)
     )
   );
 
@@ -112,28 +112,44 @@ export default function DashboardPage() {
               </div>
             )
           ) : (
-            // Multiple teams - overlapping layout
-            <div className="flex flex-col items-center">
-              <div className="flex items-center justify-center">
-                {teamsWithPhotos.slice(0, 2).map((team: any, index: number) => (
-                  <div key={team.id} className={`${index > 0 ? '-ml-10' : ''} relative`}>
-                    <img
-                      src={getTeamPhotoUrl(team)!}
-                      alt={team.name}
-                      className="w-[46vw] sm:w-[42vw] max-w-[24rem] h-72 sm:h-96 object-cover rounded-xl shadow-md border-2 border-white dark:border-gray-800"
-                    />
-                  </div>
-                ))}
+            teamsWithPhotos.length === 1 ? (
+              // Multiple teams but only one photo - show a simple single-photo fallback
+              <div className="flex flex-col items-center">
+                <div className="relative">
+                  <img
+                    src={getTeamPhotoUrl(teamsWithPhotos[0])!}
+                    alt={teamsWithPhotos[0].name}
+                    className="w-[60vw] sm:w-[44vw] max-w-[24rem] h-72 sm:h-96 object-cover rounded-xl shadow-md border-2 border-white dark:border-gray-800"
+                  />
+                </div>
+                <div className="mt-3 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {teamsWithPhotos[0].name}
+                </div>
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200">
-                {teamsWithPhotos.slice(0, 2).map((team: any, index: number) => (
-                  <span key={`team-name-${team.id}`} className="flex items-center gap-2">
-                    {team.name}
-                    {index === 0 && <span className="text-gray-400 dark:text-gray-500">•</span>}
-                  </span>
-                ))}
+            ) : (
+              // Multiple teams - overlapping layout
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-center">
+                  {teamsWithPhotos.slice(0, 2).map((team: any, index: number) => (
+                    <div key={team.id} className={`${index > 0 ? '-ml-10' : ''} relative`}>
+                      <img
+                        src={getTeamPhotoUrl(team)!}
+                        alt={team.name}
+                        className="w-[46vw] sm:w-[42vw] max-w-[24rem] h-72 sm:h-96 object-cover rounded-xl shadow-md border-2 border-white dark:border-gray-800"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {teamsWithPhotos.slice(0, 2).map((team: any, index: number) => (
+                    <span key={`team-name-${team.id}`} className="flex items-center gap-2">
+                      {team.name}
+                      {index === 0 && <span className="text-gray-400 dark:text-gray-500">•</span>}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )
           )}
         </div>
       )}
