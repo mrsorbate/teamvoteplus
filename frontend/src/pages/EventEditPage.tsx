@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2 } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 import { useToast } from '../lib/useToast';
-import { useSmartBack } from '../hooks/useSmartBack';
 
 export default function EventEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,7 +14,6 @@ export default function EventEditPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const goBack = useSmartBack();
   const queryClient = useQueryClient();
 
   const isTrainer = user?.role === 'trainer';
