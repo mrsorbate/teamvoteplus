@@ -83,13 +83,7 @@ export default function DashboardPage() {
 
       {/* Team Section - show for all non-admin users if team photos exist */}
       {user?.role !== 'admin' && shouldShowTeamPhotoSection && (
-        <div className={`card ${teams.length === 1 ? 'p-0 overflow-hidden' : ''}`}>
-          {teams.length > 1 && (
-            <h2 className="text-xl font-semibold mb-4 flex items-center justify-center">
-              <Users className="w-6 h-6 mr-2 text-primary-600" />
-              Meine Teams
-            </h2>
-          )}
+        <div className="card p-0 overflow-hidden">
 
           {teams.length === 1 ? (
             // Single team - full image with overlay labels
