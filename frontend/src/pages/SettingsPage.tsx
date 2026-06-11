@@ -37,12 +37,17 @@ export default function SettingsPage() {
     },
   });
 
-  const { data: trainerTeams } = useQuery({
+  const {
+    data: trainerTeams,
+    isLoading: isTrainerTeamsLoading,
+    isError: isTrainerTeamsError,
+  } = useQuery({
     queryKey: ['trainer-team-names'],
     queryFn: async () => {
       const response = await settingsAPI.getTrainerTeamNames();
       return response.data;
     },
+    enabled: authUser?.role === 'trainer',
   });
 
   useEffect(() => {
@@ -595,7 +600,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Trainer Team Names Section */}
-      {authUser?.role === 'trainer' && trainerTeams && trainerTeams.length > 0 && (
+      {authUser?.role === 'trainer' && (
         <div className="card">
           <h2 className="text-xl font-semibold mb-4 flex items-center">
             <Edit2 className="w-6 h-6 mr-2 text-primary-600" />
@@ -606,66 +611,84 @@ export default function SettingsPage() {
             Gib jedem Team einen persönlichen Namen, um es leichter zu unterscheiden.
           </p>
 
-          <div className="space-y-3">
-            {trainerTeams.map((team: any) => (
-              <div key={team.id} className="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{team.name}</p>
-                  {editingTeamId === team.id ? (
-                    <input
-                      type="text"
-                      value={customTeamNames[team.id] || ''}
-                      onChange={(e) =>
-                        setCustomTeamNames({
-                          ...customTeamNames,
-                          [team.id]: e.target.value,
-                        })
-                      }
-                      placeholder="z.B. Mein U19 Team"
-                      className="input mt-2"
-                      autoFocus
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {customTeamNames[team.id]
-                        ? `Mein Name: ${customTeamNames[team.id]}`
-                        : 'Kein persönlicher Name gesetzt'}
-                    </p>
-                  )}
-                </div>
+          {isTrainerTeamsLoading && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">Teams werden geladen...</p>
+          )}
 
-                {editingTeamId === team.id ? (
-                  <div className="flex gap-2">
+          {isTrainerTeamsError && (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              Teamnamen konnten nicht geladen werden. Bitte Seite neu laden.
+            </p>
+          )}
+
+          {!isTrainerTeamsLoading && !isTrainerTeamsError && (!trainerTeams || trainerTeams.length === 0) && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Du bist aktuell keinem Team als Trainer zugeordnet.
+            </p>
+          )}
+
+          {!isTrainerTeamsLoading && !isTrainerTeamsError && trainerTeams && trainerTeams.length > 0 && (
+            <div className="space-y-3">
+              {trainerTeams.map((team: any) => (
+                <div key={team.id} className="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{team.name}</p>
+                    {editingTeamId === team.id ? (
+                      <input
+                        type="text"
+                        value={customTeamNames[team.id] || ''}
+                        onChange={(e) =>
+                          setCustomTeamNames({
+                            ...customTeamNames,
+                            [team.id]: e.target.value,
+                          })
+                        }
+                        placeholder="z.B. Mein U19 Team"
+                        className="input mt-2"
+                        autoFocus
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {customTeamNames[team.id]
+                          ? `Mein Name: ${customTeamNames[team.id]}`
+                          : 'Kein persönlicher Name gesetzt'}
+                      </p>
+                    )}
+                  </div>
+
+                  {editingTeamId === team.id ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          updateTrainerTeamNameMutation.mutate({
+                            teamId: team.id,
+                            customName: customTeamNames[team.id] || null,
+                          });
+                        }}
+                        disabled={updateTrainerTeamNameMutation.isPending}
+                        className="btn btn-sm btn-primary"
+                      >
+                        {updateTrainerTeamNameMutation.isPending ? 'Speichert...' : 'Speichern'}
+                      </button>
+                      <button
+                        onClick={() => setEditingTeamId(null)}
+                        className="btn btn-sm btn-secondary"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => {
-                        updateTrainerTeamNameMutation.mutate({
-                          teamId: team.id,
-                          customName: customTeamNames[team.id] || null,
-                        });
-                      }}
-                      disabled={updateTrainerTeamNameMutation.isPending}
-                      className="btn btn-sm btn-primary"
-                    >
-                      {updateTrainerTeamNameMutation.isPending ? 'Speichert...' : 'Speichern'}
-                    </button>
-                    <button
-                      onClick={() => setEditingTeamId(null)}
+                      onClick={() => setEditingTeamId(team.id)}
                       className="btn btn-sm btn-secondary"
                     >
-                      Abbrechen
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setEditingTeamId(team.id)}
-                    className="btn btn-sm btn-secondary"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
