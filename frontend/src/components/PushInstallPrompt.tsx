@@ -9,6 +9,8 @@ type PushInstallPromptProps = {
   userId?: number;
 };
 
+const PUSH_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+
 const isStandalonePwa = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
@@ -39,7 +41,16 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
       return;
     }
 
-    setDismissed(localStorage.getItem(dismissKey) === '1');
+    const dismissedAtRaw = Number(localStorage.getItem(dismissKey) || '0');
+    const isStillDismissed = Number.isFinite(dismissedAtRaw)
+      && dismissedAtRaw > 0
+      && (Date.now() - dismissedAtRaw) < PUSH_PROMPT_SNOOZE_MS;
+
+    setDismissed(isStillDismissed);
+
+    if (!isStillDismissed && dismissedAtRaw > 0) {
+      localStorage.removeItem(dismissKey);
+    }
   }, [dismissKey]);
 
   useEffect(() => {
@@ -109,7 +120,7 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
 
   const handleDismiss = () => {
     if (dismissKey) {
-      localStorage.setItem(dismissKey, '1');
+      localStorage.setItem(dismissKey, String(Date.now()));
     }
     setDismissed(true);
   };
