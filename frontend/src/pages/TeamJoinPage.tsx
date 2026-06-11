@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { invitesAPI, settingsAPI } from '../lib/api';
+import { authAPI, invitesAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { CheckCircle, AlertCircle } from 'lucide-react';
@@ -10,7 +10,7 @@ import { resolveAssetUrl } from '../lib/utils';
 export default function TeamJoinPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, setAuth } = useAuthStore();
   const { showToast } = useToast();
   const [joinComplete, setJoinComplete] = useState(false);
   const [teamData, setTeamData] = useState<any>(null);
@@ -19,6 +19,8 @@ export default function TeamJoinPage() {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState('');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Fetch invite details
   const { data: inviteData, isLoading: isLoadingInvite, error: inviteError } = useQuery({
@@ -129,6 +131,48 @@ export default function TeamJoinPage() {
     }
 
     registerMutation.mutate();
+  };
+
+  const loginAndJoinMutation = useMutation({
+    mutationFn: async () => {
+      if (!token) throw new Error('Kein Token vorhanden');
+
+      const loginResponse = await authAPI.login(loginUsername.trim(), loginPassword);
+      const authToken = loginResponse?.data?.token;
+      const authUser = loginResponse?.data?.user;
+
+      if (!authToken || !authUser) {
+        throw new Error('Login fehlgeschlagen');
+      }
+
+      setAuth(authToken, authUser);
+      const joinResponse = await invitesAPI.acceptInvite(token);
+      return { authUser, joinResponse };
+    },
+    onSuccess: ({ authUser, joinResponse }: any) => {
+      showToast(`Willkommen zurück ${authUser?.name || ''}! Du bist dem Team beigetreten.`, 'success');
+      const targetTeamId = joinResponse?.data?.team_id || teamData?.team_id;
+      window.setTimeout(() => {
+        navigate(`/teams/${targetTeamId}`, { replace: true });
+      }, 500);
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || error?.message || 'Anmelden fehlgeschlagen', 'error');
+    },
+  });
+
+  const handleExistingAccountLogin = () => {
+    if (!loginUsername.trim()) {
+      showToast('Bitte Benutzername eingeben', 'warning');
+      return;
+    }
+
+    if (!loginPassword) {
+      showToast('Bitte Passwort eingeben', 'warning');
+      return;
+    }
+
+    loginAndJoinMutation.mutate();
   };
 
   if (isLoadingInvite) {
@@ -316,12 +360,33 @@ export default function TeamJoinPage() {
                   </button>
                 </div>
 
-                <button
-                  onClick={() => navigate(`/login?redirect=${encodeURIComponent(`/join/${token}`)}`)}
-                  className="btn btn-primary w-full"
-                >
-                  Ich habe schon ein Konto (Anmelden)
-                </button>
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Ich habe bereits ein Konto</p>
+
+                  <input
+                    type="text"
+                    className="input w-full"
+                    placeholder="Benutzername"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                  />
+
+                  <input
+                    type="password"
+                    className="input w-full"
+                    placeholder="Passwort"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+
+                  <button
+                    onClick={handleExistingAccountLogin}
+                    disabled={loginAndJoinMutation.isPending}
+                    className="btn btn-primary w-full"
+                  >
+                    {loginAndJoinMutation.isPending ? 'Meldet an...' : 'Anmelden und Team beitreten'}
+                  </button>
+                </div>
               </>
             )}
           </div>
