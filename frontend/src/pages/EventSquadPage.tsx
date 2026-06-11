@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ClipboardList } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
-import { useSmartBack } from '../hooks/useSmartBack';
 
 const MATCH_LINEUP_SLOT_ORDER = ['TW', 'LV', 'IV1', 'IV2', 'RV', 'DM', 'ZM', 'OM', 'LF', 'ST', 'RF'];
 const MAX_BOARD_PLAYERS = 11;
@@ -46,8 +45,9 @@ export default function EventSquadPage() {
   const eventId = parseInt(id || '', 10);
   const { user } = useAuthStore();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
-  const goBack = useSmartBack();
 
   const isTrainer = user?.role === 'trainer';
 
@@ -444,7 +444,10 @@ export default function EventSquadPage() {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => goBack(`/events/${eventId}`)}
+            onClick={() => {
+              const target = (location.state as any)?.from || `/events/${eventId}`;
+              navigate(target, { replace: true });
+            }}
             aria-label="Zurück zum Termin"
             title="Zurück zum Termin"
             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
@@ -463,7 +466,10 @@ export default function EventSquadPage() {
       <div className="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
-          onClick={() => goBack(`/events/${eventId}`)}
+          onClick={() => {
+            const target = (location.state as any)?.from || `/events/${eventId}`;
+            navigate(target, { replace: true });
+          }}
           className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           aria-label="Zurück"
           title="Zurück"

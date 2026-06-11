@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -14,6 +14,7 @@ export default function EventsPage() {
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const goBack = useSmartBack();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
@@ -210,10 +211,14 @@ export default function EventsPage() {
       ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
       : '';
 
+    const handleEventClick = () => {
+      navigate(`/events/${event.id}`, { state: { from: location.pathname } });
+    };
+
     return (
       <div
         key={event.id}
-        onClick={() => navigate(`/events/${event.id}`)}
+        onClick={handleEventClick}
         className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600`}
       >
         <div className="flex items-center gap-3 sm:gap-4">

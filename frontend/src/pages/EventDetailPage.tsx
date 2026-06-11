@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { eventsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
@@ -14,6 +14,7 @@ export default function EventDetailPage() {
   const { user } = useAuthStore();
   const isTrainer = user?.role === 'trainer';
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
 
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
@@ -348,15 +349,10 @@ export default function EventDetailPage() {
   const isMatchWithoutAddress = event?.type === 'match' && locationParts.length === 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
     || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
-  const backTarget = event?.team_id ? `/teams/${event.team_id}/events` : '/events';
 
-  const handleBackNavigation = (fallbackTarget: string) => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate(fallbackTarget, { replace: true });
+  const handleBackNavigation = () => {
+    const target = (location.state as any)?.from || (event?.team_id ? `/teams/${event.team_id}/events` : '/events');
+    navigate(target, { replace: true });
   };
 
   const renderResponseModule = (
@@ -423,7 +419,7 @@ export default function EventDetailPage() {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
           <button
-            onClick={() => handleBackNavigation('/events')}
+            onClick={() => handleBackNavigation()}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             aria-label="Zurück"
             title="Zurück"
@@ -447,7 +443,7 @@ export default function EventDetailPage() {
       <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
         <button
           type="button"
-          onClick={() => handleBackNavigation(backTarget)}
+          onClick={() => handleBackNavigation()}
           className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           aria-label="Zurück"
           title="Zurück"
@@ -608,7 +604,11 @@ export default function EventDetailPage() {
                 {isTrainer ? 'Kader festlegen, Aufstellung bauen und Team freigeben.' : 'Freigegebenen Kader und Aufstellung ansehen.'}
               </p>
               {isTrainer ? (
-                <Link to={`/events/${eventId}/squad`} className="w-full btn btn-primary inline-flex items-center justify-center">
+                <Link
+                  to={`/events/${eventId}/squad`}
+                  state={{ from: location.pathname }}
+                  className="w-full btn btn-primary inline-flex items-center justify-center"
+                >
                   Zur Kaderseite
                 </Link>
               ) : (
@@ -749,6 +749,7 @@ export default function EventDetailPage() {
         <div className="card border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 space-y-3">
           <Link
             to={`/events/${eventId}/edit`}
+            state={{ from: location.pathname }}
             className="w-full btn btn-secondary flex items-center justify-center space-x-2"
           >
             <Pencil className="w-5 h-5" />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2 } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
@@ -14,6 +14,7 @@ export default function EventEditPage() {
   const { user } = useAuthStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const goBack = useSmartBack();
   const queryClient = useQueryClient();
 
@@ -435,7 +436,8 @@ export default function EventEditPage() {
         navigate(`/teams/${event.team_id}/events`, { replace: true });
         return;
       }
-      navigate(`/events/${eventId}`, { replace: true });
+      const backTarget = (location.state as any)?.from || `/events/${eventId}`;
+      navigate(backTarget, { replace: true, state: { from: (location.state as any)?.from } });
     },
     onError: (error: any) => {
       showToast(error?.response?.data?.error || 'Termin konnte nicht gespeichert werden', 'error');
@@ -528,7 +530,10 @@ export default function EventEditPage() {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => goBack(`/events/${eventId}`)}
+          onClick={() => {
+            const target = (location.state as any)?.from || `/events/${eventId}`;
+            navigate(target, { replace: true });
+          }}
           className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           aria-label="Zurück"
           title="Zurück"
@@ -1007,9 +1012,16 @@ export default function EventEditPage() {
             <button type="submit" className="btn btn-primary w-full" disabled={updateEventMutation.isPending}>
               {updateEventMutation.isPending ? 'Speichern...' : 'Speichern'}
             </button>
-            <Link to={`/events/${eventId}`} className="btn btn-secondary w-full inline-flex items-center justify-center text-center">
+            <button
+              type="button"
+              onClick={() => {
+                const target = (location.state as any)?.from || `/events/${eventId}`;
+                navigate(target, { replace: true });
+              }}
+              className="btn btn-secondary w-full inline-flex items-center justify-center text-center"
+            >
               Abbrechen
-            </Link>
+            </button>
           </div>
       </form>
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Swords } from 'lucide-react';
@@ -8,6 +8,8 @@ import { resolveAssetUrl } from '../lib/utils';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
 
@@ -171,7 +173,7 @@ export default function DashboardPage() {
               };
 
               const handleCardClick = () => {
-                window.location.href = `/events/${event.id}`;
+                navigate(`/events/${event.id}`, { state: { from: location.pathname } });
               };
 
               const getActionButtonClass = (status: string) => {
