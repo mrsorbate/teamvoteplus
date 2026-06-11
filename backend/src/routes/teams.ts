@@ -1330,15 +1330,19 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
 
     // Try to fetch live standings from fussball.de if a team ID is configured
     const externalTableIds = parseFussballDeIds(team.fussballde_id);
-    const primaryTableId = externalTableIds[0];
 
-    if (primaryTableId) {
-      try {
-        const client = new FussballDeClient({ timeoutMs: 15000 });
-        const teamPageUrl = buildTeamPageUrl(primaryTableId);
-        const standings = await client.getTabelle({ teamPageUrl });
+    if (externalTableIds.length > 0) {
+      const client = new FussballDeClient({ timeoutMs: 15000 });
 
-        if (standings.length > 0) {
+      for (const tableId of externalTableIds) {
+        try {
+          const teamPageUrl = buildTeamPageUrl(tableId);
+          const standings = await client.getTabelle({ teamPageUrl });
+
+          if (standings.length === 0) {
+            continue;
+          }
+
           const table = standings.map((row, index) => ({
             place: row.rank ?? (index + 1),
             team: row.team,
@@ -1359,10 +1363,10 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
           ).all(teamId) as any[];
           const leagueName = parseInternalLeagueName(recentMatches) || 'fussball.de Tabelle';
 
-          return res.json({ table, leagueName, source: 'fussball.de' });
+          return res.json({ table, leagueName, source: 'fussball.de', source_id: tableId });
+        } catch (externalError) {
+          console.warn(`fussball.de table fetch failed for ID ${tableId}:`, externalError);
         }
-      } catch (externalError) {
-        console.warn('fussball.de table fetch failed, falling back to internal:', externalError);
       }
     }
 
