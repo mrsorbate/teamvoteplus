@@ -182,6 +182,19 @@ db.exec(`
     FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  -- Push subscriptions for PWA notifications
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    expiration_time INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   -- Create indexes for better performance
   CREATE INDEX IF NOT EXISTS idx_team_members_team ON team_members(team_id);
   CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
@@ -194,6 +207,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
   CREATE INDEX IF NOT EXISTS idx_team_invites_team ON team_invites(team_id);
   CREATE INDEX IF NOT EXISTS idx_trainer_invites_token ON trainer_invites(token);
+  CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
 `);
 
 // Migration: Add profile_picture column if it doesn't exist

@@ -14,6 +14,7 @@ import invitesRoutes from './routes/invites';
 import adminRoutes from './routes/admin';
 import profileRoutes from './routes/profile';
 import settingsRoutes from './routes/settings';
+import notificationsRoutes from './routes/notifications';
 import { startAutoGameImportJob } from './services/autoGameImport';
 
 dotenv.config();
@@ -149,6 +150,7 @@ app.use('/api/teams', teamsRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api', invitesRoutes);

@@ -1,10 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { profileAPI, settingsAPI } from '../lib/api';
+import { notificationsAPI, profileAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { User, Lock, Camera, Trash2, Check, AlertCircle, Edit2 } from 'lucide-react';
+import { User, Lock, Camera, Trash2, Check, AlertCircle, Edit2, Bell } from 'lucide-react';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
+import {
+  getNotificationPermission,
+  getBrowserPushSubscription,
+  isPushSupported,
+  subscribeBrowserPush,
+  unsubscribeBrowserPush,
+} from '../lib/pushNotifications';
 
 export default function SettingsPage() {
   const { user: authUser } = useAuthStore();
@@ -28,6 +35,7 @@ export default function SettingsPage() {
   const [showDeletePictureConfirmModal, setShowDeletePictureConfirmModal] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
   const [customTeamNames, setCustomTeamNames] = useState<Record<number, string>>({});
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -49,6 +57,20 @@ export default function SettingsPage() {
     },
     enabled: authUser?.role === 'trainer',
   });
+
+  const {
+    data: pushStatus,
+    isLoading: isPushStatusLoading,
+  } = useQuery({
+    queryKey: ['push-status'],
+    queryFn: async () => {
+      const response = await notificationsAPI.getStatus();
+      return response.data as { configured: boolean; subscribed: boolean };
+    },
+    enabled: Boolean(authUser),
+  });
+
+  const pushSupported = isPushSupported();
 
   useEffect(() => {
     if (trainerTeams) {
@@ -152,6 +174,86 @@ export default function SettingsPage() {
       showToast(error.response?.data?.error || 'Teamname konnte nicht gespeichert werden', 'error');
     },
   });
+
+  const enablePushMutation = useMutation({
+    mutationFn: async () => {
+      const keyResponse = await notificationsAPI.getPublicKey();
+      const publicKey = String(keyResponse?.data?.publicKey || '').trim();
+      if (!publicKey) {
+        throw new Error('VAPID Public Key fehlt auf dem Server.');
+      }
+
+      const subscription = await subscribeBrowserPush(publicKey);
+      const subscriptionJson = subscription.toJSON();
+      const endpoint = String(subscriptionJson.endpoint || '').trim();
+      const p256dh = String(subscriptionJson.keys?.p256dh || '').trim();
+      const auth = String(subscriptionJson.keys?.auth || '').trim();
+
+      if (!endpoint || !p256dh || !auth) {
+        throw new Error('Ungültige Push-Subscription vom Browser.');
+      }
+
+      await notificationsAPI.subscribe({
+        endpoint,
+        expirationTime: subscription.expirationTime,
+        keys: { p256dh, auth },
+      });
+
+      return subscription;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['push-status'] });
+      setPushPermission(getNotificationPermission());
+      showToast('Push-Benachrichtigungen aktiviert', 'success');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || error?.message || 'Push konnte nicht aktiviert werden';
+      showToast(message, 'error');
+      setPushPermission(getNotificationPermission());
+    },
+  });
+
+  const disablePushMutation = useMutation({
+    mutationFn: async () => {
+      const existingSubscription = await getBrowserPushSubscription();
+      if (existingSubscription?.endpoint) {
+        await notificationsAPI.unsubscribe(existingSubscription.endpoint);
+      }
+      await unsubscribeBrowserPush();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['push-status'] });
+      setPushPermission(getNotificationPermission());
+      showToast('Push-Benachrichtigungen deaktiviert', 'success');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || error?.message || 'Push konnte nicht deaktiviert werden';
+      showToast(message, 'error');
+    },
+  });
+
+  const sendTestPushMutation = useMutation({
+    mutationFn: () => notificationsAPI.sendTest({
+      title: 'Trainello Test',
+      body: 'Push funktioniert auf diesem Gerät.',
+      url: '/events',
+    }),
+    onSuccess: () => {
+      showToast('Test-Benachrichtigung wurde gesendet', 'success');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || error?.message || 'Test-Benachrichtigung konnte nicht gesendet werden';
+      showToast(message, 'error');
+    },
+  });
+
+  useEffect(() => {
+    if (!pushSupported) {
+      return;
+    }
+
+    setPushPermission(getNotificationPermission());
+  }, [pushSupported]);
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,6 +403,21 @@ export default function SettingsPage() {
       position: position.trim() ? position.trim() : null,
     });
   };
+
+  const handleEnablePush = () => {
+    enablePushMutation.mutate();
+  };
+
+  const handleDisablePush = () => {
+    disablePushMutation.mutate();
+  };
+
+  const handleSendTestPush = () => {
+    sendTestPushMutation.mutate();
+  };
+
+  const isPushConfigured = Boolean(pushStatus?.configured);
+  const isPushSubscribed = Boolean(pushStatus?.subscribed);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -691,6 +808,65 @@ export default function SettingsPage() {
           )}
         </div>
       )}
+
+      <div className="card">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <Bell className="w-6 h-6 mr-2 text-primary-600" />
+          Benachrichtigungen (PWA)
+        </h2>
+
+        {!pushSupported ? (
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Dieser Browser unterstützt keine Web-Push-Benachrichtigungen.
+          </p>
+        ) : !isPushConfigured && !isPushStatusLoading ? (
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Push ist auf dem Server noch nicht konfiguriert. Bitte VAPID-Keys in der Backend-Umgebung setzen.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-sm text-gray-700 dark:text-gray-200 space-y-1">
+              <p>
+                Status: <span className={isPushSubscribed ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-700 dark:text-gray-300'}>{isPushSubscribed ? 'Aktiv' : 'Inaktiv'}</span>
+              </p>
+              <p>
+                Berechtigung: <span className="font-medium">{pushPermission === 'granted' ? 'Erlaubt' : pushPermission === 'denied' ? 'Blockiert' : 'Noch nicht gefragt'}</span>
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              {!isPushSubscribed ? (
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  disabled={enablePushMutation.isPending || !isPushConfigured}
+                  className="btn btn-primary w-full sm:w-auto"
+                >
+                  {enablePushMutation.isPending ? 'Aktiviert...' : 'Benachrichtigungen aktivieren'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDisablePush}
+                  disabled={disablePushMutation.isPending}
+                  className="btn btn-secondary w-full sm:w-auto"
+                >
+                  {disablePushMutation.isPending ? 'Deaktiviert...' : 'Benachrichtigungen deaktivieren'}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSendTestPush}
+                disabled={!isPushSubscribed || sendTestPushMutation.isPending}
+                className="btn btn-secondary w-full sm:w-auto"
+              >
+                {sendTestPushMutation.isPending ? 'Sendet...' : 'Test senden'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Change Password Section */}
       <div className="card">

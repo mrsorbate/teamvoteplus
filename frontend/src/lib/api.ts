@@ -314,4 +314,21 @@ export const settingsAPI = {
     api.put(`/settings/trainer-team-names/${teamId}`, { trainer_custom_team_name: customName }),
 };
 
+export const notificationsAPI = {
+  getPublicKey: () => api.get('/notifications/public-key'),
+
+  getStatus: () => api.get('/notifications/status'),
+
+  subscribe: (subscription: {
+    endpoint: string;
+    expirationTime: number | null;
+    keys: { p256dh: string; auth: string };
+  }) => api.post('/notifications/subscribe', subscription),
+
+  unsubscribe: (endpoint: string) => api.post('/notifications/unsubscribe', { endpoint }),
+
+  sendTest: (data?: { title?: string; body?: string; url?: string }) =>
+    api.post('/notifications/test', data || {}),
+};
+
 export default api;
