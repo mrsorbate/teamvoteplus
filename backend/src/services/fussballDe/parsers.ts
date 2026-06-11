@@ -45,6 +45,7 @@ export const parseMatches = (html: string, source: string): TeamMatch[] => {
 
     if (rowNode.find('td.column-club').length >= 2) {
       const clubCells = rowNode.find('td.column-club');
+      const scoreLink = rowNode.find('td.column-score a[href*="/spiel/"]').attr('href') || undefined;
       const clubs = clubCells
         .find('.club-name')
         .map((_i, club) => clean($(club).text()))
@@ -72,6 +73,9 @@ export const parseMatches = (html: string, source: string): TeamMatch[] => {
           awayTeam: clubs[1],
           homeBadge: badges[0],
           awayBadge: badges[1],
+          matchUrl: scoreLink
+            ? (scoreLink.startsWith('http') ? scoreLink : `https://www.fussball.de${scoreLink}`)
+            : undefined,
           competition: currentCompetition,
           statusText: normalizedStatusText,
           result: scoreText.includes(':')
@@ -134,6 +138,7 @@ export const parseMatches = (html: string, source: string): TeamMatch[] => {
   }
 
   $('table tr').each((_, row) => {
+    const rowNode = $(row);
     const cells = $(row)
       .find('td')
       .map((_i, cell) => clean($(cell).text()))
@@ -146,10 +151,14 @@ export const parseMatches = (html: string, source: string): TeamMatch[] => {
     if (!pairing) return;
 
     const [homeTeam, awayTeam] = pairing.split(/\s+-\s+/, 2).map(clean);
+    const rowMatchUrl = rowNode.find('a[href*="/spiel/"]').attr('href');
     matches.push({
       date: cells[0],
       homeTeam,
       awayTeam,
+      matchUrl: rowMatchUrl
+        ? (rowMatchUrl.startsWith('http') ? rowMatchUrl : `https://www.fussball.de${rowMatchUrl}`)
+        : undefined,
       competition: cells[1],
       statusText: cells[cells.length - 1].includes(':') ? undefined : cells[cells.length - 1],
       result: cells[cells.length - 1].includes(':')

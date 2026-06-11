@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { teamsAPI, badgeProxyUrl } from '../lib/api';
 
 const normalizeTeamName = (value: unknown): string => {
@@ -61,47 +61,44 @@ const formatMatchTime = (input: unknown): string => {
   return parsed.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 };
 
-const renderMatchCard = (match: any) => {
+const renderScore = (match: any): string => {
+  if (match?.result && (match.result.home !== undefined || match.result.away !== undefined)) {
+    return `${match.result.home ?? '-'}:${match.result.away ?? '-'}`;
+  }
+  return '-';
+};
+
+const renderMatchRow = (match: any, rowKey: string) => {
   const dateLabel = formatMatchDate(match?.date);
   const timeLabel = formatMatchTime(match?.date);
   const homeTeam = String(match?.homeTeam || '-');
   const awayTeam = String(match?.awayTeam || '-');
-  const competition = String(match?.competition || '').trim();
-  const result = match?.result && (match.result.home !== undefined || match.result.away !== undefined)
-    ? `${match.result.home ?? '-'}:${match.result.away ?? '-'}`
-    : '';
   const homeBadge = badgeProxyUrl(typeof match?.homeBadge === 'string' ? match.homeBadge : null);
   const awayBadge = badgeProxyUrl(typeof match?.awayBadge === 'string' ? match.awayBadge : null);
+  const scoreLabel = renderScore(match);
 
   return (
-    <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900">
-      <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+    <tr key={rowKey} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white whitespace-nowrap">{dateLabel}</td>
+      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{timeLabel}</td>
+      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white min-w-[180px]">
         <span className="inline-flex items-center gap-1.5">
           {homeBadge ? (
             <img src={homeBadge} alt={`${homeTeam} Wappen`} className="w-5 h-5 object-contain bg-white rounded" loading="lazy" />
           ) : null}
           <span>{homeTeam}</span>
         </span>
-        <span>-</span>
+      </td>
+      <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap text-center">{scoreLabel}</td>
+      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white min-w-[180px]">
         <span className="inline-flex items-center gap-1.5">
           {awayBadge ? (
             <img src={awayBadge} alt={`${awayTeam} Wappen`} className="w-5 h-5 object-contain bg-white rounded" loading="lazy" />
           ) : null}
           <span>{awayTeam}</span>
         </span>
-      </p>
-      {competition ? (
-        <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{competition}</p>
-      ) : null}
-      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-        <span>{dateLabel}</span>
-        <span className="inline-flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5" />
-          {timeLabel === '-' ? '-' : `${timeLabel} Uhr`}
-        </span>
-        {result ? <span>{result}</span> : null}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 };
 
@@ -125,12 +122,21 @@ const renderScheduleSections = (
         {section.matchedTeamName && normalizeTeamName(section.matchedTeamName) !== normalizeTeamName(section.teamName) ? (
           <p className="text-xs text-gray-500 dark:text-gray-400">{section.matchedTeamName}</p>
         ) : null}
-        <div className="space-y-2">
-          {matches.map((match: any, index: number) => (
-            <div key={`${section.key}-${mode}-${index}`}>
-              {renderMatchCard(match)}
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Datum</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Uhrzeit</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Heim</th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tore</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Gast</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matches.map((match: any, index: number) => renderMatchRow(match, `${section.key}-${mode}-${index}`))}
+            </tbody>
+          </table>
         </div>
       </div>
       );

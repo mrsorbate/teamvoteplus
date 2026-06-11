@@ -52,7 +52,7 @@ export class FussballDeClient {
       ? `https://www.fussball.de/ajax.team.matchplan/-/mode/PAGE/team-id/${teamId}`
       : validated.teamPageUrl;
     const html = await this.fetchHtml(url);
-    return parseMatches(html, validated.teamPageUrl);
+    return this.resolveMatchResults(parseMatches(html, validated.teamPageUrl));
   }
 
   public async getLastMatches(input: TeamSourceInput): Promise<TeamMatch[]> {
@@ -62,7 +62,7 @@ export class FussballDeClient {
       ? `https://www.fussball.de/ajax.team.prev.games/-/mode/PAGE/team-id/${teamId}`
       : validated.teamPageUrl;
     const html = await this.fetchHtml(url);
-    return parseMatches(html, validated.teamPageUrl);
+    return this.resolveMatchResults(parseMatches(html, validated.teamPageUrl));
   }
 
   public async getAllMatches(input: TeamSourceInput): Promise<TeamMatch[]> {
@@ -195,6 +195,43 @@ export class FussballDeClient {
     const client = createHttpClient(this.timeoutMs);
     const response = await client.get<string>(url);
     return response.data;
+  }
+
+  private async resolveMatchResults(matches: TeamMatch[]): Promise<TeamMatch[]> {
+    const resolved = await Promise.all(matches.map(async (match) => {
+      if (match.result || !match.matchUrl) {
+        return match;
+      }
+
+      try {
+        const detailHtml = await this.fetchHtml(match.matchUrl);
+        const scoreMatch = detailHtml.match(/\[(\d+)\s*:\s*(\d+)\]|(\d+)\s*:\s*(\d+)/);
+        if (!scoreMatch) {
+          return match;
+        }
+
+        const homeScore = scoreMatch[1] ?? scoreMatch[3];
+        const awayScore = scoreMatch[2] ?? scoreMatch[4];
+        const parsedHome = Number.parseInt(String(homeScore), 10);
+        const parsedAway = Number.parseInt(String(awayScore), 10);
+
+        if (Number.isNaN(parsedHome) || Number.isNaN(parsedAway)) {
+          return match;
+        }
+
+        return {
+          ...match,
+          result: {
+            home: parsedHome,
+            away: parsedAway,
+          },
+        };
+      } catch {
+        return match;
+      }
+    }));
+
+    return resolved;
   }
 
   private extractTeamId(teamPageUrl: string): string | undefined {
