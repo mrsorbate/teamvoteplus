@@ -48,6 +48,16 @@ export default function DashboardPage() {
     return resolveAssetUrl(team.team_picture);
   };
 
+  const teamsWithPhotos = (teams || []).filter((team: any) => Boolean(getTeamPhotoUrl(team)));
+  const shouldShowTeamPhotoSection = Boolean(
+    teams
+    && teams.length > 0
+    && (
+      (teams.length === 1 && teamsWithPhotos.length === 1)
+      || (teams.length > 1 && teamsWithPhotos.length >= 2)
+    )
+  );
+
   if (eventsLoading || (user?.role !== 'admin' && teamsLoading)) {
     return <div className="text-center py-12">Lädt...</div>;
   }
@@ -71,7 +81,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Team Section - show for all non-admin users if team photos exist */}
-      {user?.role !== 'admin' && teams && teams.length > 0 && teams.some((t: any) => t.team_picture) && (
+      {user?.role !== 'admin' && shouldShowTeamPhotoSection && (
         <div className={`card ${teams.length === 1 ? 'p-0 overflow-hidden' : ''}`}>
           {teams.length > 1 && (
             <h2 className="text-xl font-semibold mb-4 flex items-center justify-center">
@@ -105,7 +115,7 @@ export default function DashboardPage() {
             // Multiple teams - overlapping layout
             <div className="flex flex-col items-center">
               <div className="flex items-center justify-center">
-                {teams.filter((t: any) => getTeamPhotoUrl(t)).slice(0, 2).map((team: any, index: number) => (
+                {teamsWithPhotos.slice(0, 2).map((team: any, index: number) => (
                   <div key={team.id} className={`${index > 0 ? '-ml-10' : ''} relative`}>
                     <img
                       src={getTeamPhotoUrl(team)!}
@@ -116,7 +126,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200">
-                {teams.filter((t: any) => getTeamPhotoUrl(t)).slice(0, 2).map((team: any, index: number) => (
+                {teamsWithPhotos.slice(0, 2).map((team: any, index: number) => (
                   <span key={`team-name-${team.id}`} className="flex items-center gap-2">
                     {team.name}
                     {index === 0 && <span className="text-gray-400 dark:text-gray-500">•</span>}
