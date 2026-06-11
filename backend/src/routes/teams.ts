@@ -1360,11 +1360,37 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
-    const team = db.prepare('SELECT id, name, fussballde_id FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name, fussballde_id, fussballde_team_name FROM teams WHERE id = ?').get(teamId) as any;
 
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
+
+    const configuredTeamNames = [...new Set([
+      String(team.name || '').trim(),
+      ...parseFussballDeTeamNames(team.fussballde_team_name),
+    ].filter(Boolean))];
+    const normalizedConfiguredTeamNames = configuredTeamNames
+      .map((name) => normalizeTeamNameInternal(name))
+      .filter(Boolean);
+
+    const candidateTables: Array<{
+      sourceEntry: string;
+      table: Array<{
+        place: number;
+        team: string;
+        games: number;
+        won: null;
+        draw: null;
+        lost: null;
+        goal: string;
+        points: number;
+        img: null;
+      }>;
+      leagueName: string;
+      matchScore: number;
+      rowCount: number;
+    }> = [];
 
     // Try to fetch live standings from fussball.de if a team ID is configured
     const externalTableSources = parseFussballDeSources(team.fussballde_id);
@@ -1419,19 +1445,23 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
           ).all(teamId) as any[];
           const leagueName = parseInternalLeagueName(recentMatches) || 'fussball.de Tabelle';
 
-          return res.json({
+          const matchScore = normalizedConfiguredTeamNames.length > 0
+            ? table.reduce((score, row) => {
+                const normalizedRowName = normalizeTeamNameInternal(row.team);
+                return score + (normalizedConfiguredTeamNames.some((configuredName) => (
+                  normalizedRowName === configuredName
+                  || normalizedRowName.includes(configuredName)
+                  || configuredName.includes(normalizedRowName)
+                )) ? 1 : 0);
+              }, 0)
+            : 0;
+
+          candidateTables.push({
+            sourceEntry,
             table,
             leagueName,
-            source: 'fussball.de',
-            source_id: extractFussballDeTeamId(sourceEntry) || sourceEntry,
-            diagnostics: {
-              configured_ids: parseFussballDeIds(team.fussballde_id),
-              configured_sources: externalTableSources,
-              selected_source: 'fussball.de',
-              selected_source_id: extractFussballDeTeamId(sourceEntry) || sourceEntry,
-              attempts: externalAttempts,
-              fallback_reason: null,
-            },
+            matchScore,
+            rowCount: standings.length,
           });
         } catch (externalError) {
           const errorMessage = externalError instanceof Error ? externalError.message : String(externalError);
@@ -1444,6 +1474,37 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
           });
           console.warn(`fussball.de table fetch failed for source ${sourceEntry}:`, externalError);
         }
+      }
+
+      if (candidateTables.length > 0) {
+        const selectedCandidate = candidateTables
+          .sort((left, right) => {
+            if (normalizedConfiguredTeamNames.length > 0 && left.matchScore !== right.matchScore) {
+              return right.matchScore - left.matchScore;
+            }
+
+            if (right.rowCount !== left.rowCount) {
+              return right.rowCount - left.rowCount;
+            }
+
+            return externalTableSources.indexOf(left.sourceEntry) - externalTableSources.indexOf(right.sourceEntry);
+          })[0];
+
+        return res.json({
+          table: selectedCandidate.table,
+          leagueName: selectedCandidate.leagueName,
+          source: 'fussball.de',
+          source_id: extractFussballDeTeamId(selectedCandidate.sourceEntry) || selectedCandidate.sourceEntry,
+          diagnostics: {
+            configured_ids: parseFussballDeIds(team.fussballde_id),
+            configured_sources: externalTableSources,
+            configured_team_names: configuredTeamNames,
+            selected_source: 'fussball.de',
+            selected_source_id: extractFussballDeTeamId(selectedCandidate.sourceEntry) || selectedCandidate.sourceEntry,
+            attempts: externalAttempts,
+            fallback_reason: null,
+          },
+        });
       }
     }
 
