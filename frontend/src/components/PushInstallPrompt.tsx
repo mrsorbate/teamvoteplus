@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, X } from 'lucide-react';
 import { notificationsAPI } from '../lib/api';
-import { getNotificationPermission, isPushSupported, subscribeBrowserPush } from '../lib/pushNotifications';
+import { getBrowserPushSubscription, getNotificationPermission, isPushSupported, subscribeBrowserPush } from '../lib/pushNotifications';
 import { useToast } from '../lib/useToast';
 
 type PushInstallPromptProps = {
@@ -27,6 +27,7 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
   const [isStandalone, setIsStandalone] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [dismissed, setDismissed] = useState(false);
+  const [hasTriedAutoSync, setHasTriedAutoSync] = useState(false);
 
   const dismissKey = useMemo(() => {
     if (!userId) {
@@ -52,6 +53,10 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
       localStorage.removeItem(dismissKey);
     }
   }, [dismissKey]);
+
+  useEffect(() => {
+    setHasTriedAutoSync(false);
+  }, [userId]);
 
   useEffect(() => {
     const refreshInstallState = () => {
@@ -118,6 +123,62 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
     },
   });
 
+  const autoSyncPushMutation = useMutation({
+    mutationFn: async () => {
+      const existingSubscription = await getBrowserPushSubscription();
+      if (!existingSubscription) {
+        return false;
+      }
+
+      const subscriptionJson = existingSubscription.toJSON();
+      const endpoint = String(subscriptionJson.endpoint || '').trim();
+      const p256dh = String(subscriptionJson.keys?.p256dh || '').trim();
+      const auth = String(subscriptionJson.keys?.auth || '').trim();
+
+      if (!endpoint || !p256dh || !auth) {
+        return false;
+      }
+
+      await notificationsAPI.subscribe({
+        endpoint,
+        expirationTime: existingSubscription.expirationTime,
+        keys: { p256dh, auth },
+      });
+
+      return true;
+    },
+    onSuccess: (synced) => {
+      if (synced) {
+        queryClient.invalidateQueries({ queryKey: ['push-status'] });
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (!userId || !isStandalone || !isPushSupported()) {
+      return;
+    }
+
+    if (!pushStatus?.configured || pushStatus?.subscribed) {
+      return;
+    }
+
+    if (permission !== 'granted' || hasTriedAutoSync || autoSyncPushMutation.isPending) {
+      return;
+    }
+
+    setHasTriedAutoSync(true);
+    autoSyncPushMutation.mutate();
+  }, [
+    userId,
+    isStandalone,
+    permission,
+    pushStatus?.configured,
+    pushStatus?.subscribed,
+    hasTriedAutoSync,
+    autoSyncPushMutation,
+  ]);
+
   const handleDismiss = () => {
     if (dismissKey) {
       localStorage.setItem(dismissKey, String(Date.now()));
@@ -129,7 +190,7 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
     return null;
   }
 
-  if (!pushStatus?.configured || pushStatus?.subscribed || permission === 'denied' || dismissed) {
+  if (!pushStatus?.configured || pushStatus?.subscribed || permission === 'denied' || dismissed || autoSyncPushMutation.isPending) {
     return null;
   }
 
