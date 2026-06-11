@@ -151,6 +151,33 @@ export class FussballDeClient {
 
   private async buildStandingsFromPrintableMatches(matches: Array<{ date?: string; competition?: string; homeTeam: string; awayTeam: string; matchUrl?: string }>): Promise<TeamStanding[]> {
     const client = createHttpClient(this.timeoutMs);
+    const isLeagueCompetition = (value: string | undefined): boolean => {
+      const normalized = String(value || '').toLowerCase();
+      if (!normalized) return false;
+      if (/pokal|freundschaft|testspiel|privat|turnier|futsal/i.test(normalized)) return false;
+      return /liga|klasse|oberliga|landesliga|verbandsliga|regionalliga|bundesliga|kreis/i.test(normalized);
+    };
+
+    const competitionCounts = new Map<string, number>();
+    for (const match of matches) {
+      const competition = String(match.competition || '').trim();
+      if (!competition) continue;
+      competitionCounts.set(competition, (competitionCounts.get(competition) || 0) + 1);
+    }
+
+    const preferredCompetition = Array.from(competitionCounts.entries())
+      .filter(([competition]) => isLeagueCompetition(competition))
+      .sort((left, right) => right[1] - left[1])
+      .map(([competition]) => competition)[0];
+
+    const relevantMatches = matches.filter((match) => {
+      if (preferredCompetition) {
+        return String(match.competition || '').trim() === preferredCompetition;
+      }
+      return isLeagueCompetition(match.competition);
+    });
+
+    const targetMatches = relevantMatches.length > 0 ? relevantMatches : matches;
     const rowMap = new Map<string, TeamStanding & { gf: number; ga: number; games: number; won: number; draw: number; lost: number }>();
 
     const ensureRow = (teamName: string) => {
@@ -161,11 +188,11 @@ export class FussballDeClient {
       return rowMap.get(key)!;
     };
 
-    for (const match of matches) {
+    for (const match of targetMatches) {
       if (!match.matchUrl) continue;
       try {
         const detail = await client.get<string>(match.matchUrl);
-        const scoreMatch = detail.data.match(/([0-9]{1,2})\s*[:\-]\s*([0-9]{1,2})/);
+        const scoreMatch = detail.data.match(/\[(\d+)\s*:\s*(\d+)\]/);
         if (!scoreMatch) continue;
 
         const home = ensureRow(match.homeTeam);
