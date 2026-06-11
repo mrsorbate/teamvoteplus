@@ -42,9 +42,10 @@ export default function MyTablePage() {
     enabled: Array.isArray(teams) && teams.length > 0,
   });
 
+  const hasTeams = Array.isArray(teams) && teams.length > 0;
   const sections = useMemo(() => (Array.isArray(tableData) ? tableData : []), [tableData]);
 
-  if (teamsLoading || tableLoading) {
+  if (teamsLoading || (hasTeams && tableLoading)) {
     return <div className="text-sm text-gray-500 dark:text-gray-400 py-4">Lädt Tabellen...</div>;
   }
 
@@ -64,8 +65,10 @@ export default function MyTablePage() {
         </p>
       </div>
 
-      {sections.length === 0 ? (
+      {!hasTeams ? (
         <div className="card text-sm text-gray-500 dark:text-gray-400">Keine Teams gefunden.</div>
+      ) : sections.length === 0 ? (
+        <div className="card text-sm text-gray-500 dark:text-gray-400">Keine Tabellen-Daten gefunden.</div>
       ) : (
         <div className="space-y-4">
           {sections.map((section) => (
