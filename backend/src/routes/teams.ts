@@ -1385,7 +1385,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
         lost: null;
         goal: string;
         points: number;
-        img: null;
+        img: string | null;
       }>;
       leagueName: string;
       matchScore: number;
@@ -1436,7 +1436,9 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
               ? (row.goalDiff >= 0 ? `+${row.goalDiff}` : String(row.goalDiff))
               : '-',
             points: row.points ?? 0,
-            img: null,
+            img: row.badge
+              ? (row.badge.startsWith('//') ? `https:${row.badge}` : row.badge)
+              : null,
           }));
 
           // Use league name from recently imported matches if available

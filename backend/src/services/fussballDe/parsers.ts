@@ -159,8 +159,9 @@ export const parseStandings = (html: string, source: string): TeamStanding[] => 
   const standings: TeamStanding[] = [];
 
   $('table tr').each((_, row) => {
-    const cells = $(row)
-      .find('td')
+    const rowNode = $(row);
+    const tds = rowNode.find('td');
+    const cells = tds
       .map((_i, cell) => clean($(cell).text()))
       .get()
       .filter(Boolean);
@@ -176,9 +177,25 @@ export const parseStandings = (html: string, source: string): TeamStanding[] => 
     const teamCell = cells[1] || '';
     if (!teamCell || /^platz|rang$/i.test(teamCell)) return;
 
+    // Extract team badge URL from data-responsive-image or img[src*=getLogo]
+    let badge: string | undefined;
+    tds.each((_i, td) => {
+      if (badge) return;
+      const img = $(td).find('[data-responsive-image]');
+      if (img.length) {
+        badge = img.attr('data-responsive-image') || undefined;
+        return;
+      }
+      const imgSrc = $(td).find('img[src*="getLogo"]');
+      if (imgSrc.length) {
+        badge = imgSrc.attr('src') || undefined;
+      }
+    });
+
     standings.push({
       rank: rankCandidate,
       team: teamCell,
+      badge,
       played: toNumber(cells[2]),
       goalDiff: toNumber(cells[cells.length - 2]),
       points: pointsCandidate,

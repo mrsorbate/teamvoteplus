@@ -17,6 +17,7 @@ export type TeamMatch = {
 export type TeamStanding = {
   rank?: number;
   team: string;
+  badge?: string;
   played?: number;
   goalDiff?: number;
   points?: number;
