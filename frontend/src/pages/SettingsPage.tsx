@@ -138,7 +138,7 @@ export default function SettingsPage() {
   const updateTrainerTeamNameMutation = useMutation({
     mutationFn: ({ teamId, customName }: { teamId: number; customName: string | null }) =>
       settingsAPI.updateTrainerTeamName(teamId, customName),
-    onSuccess: (data: any) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trainer-team-names'] });
       showToast('Teamname gespeichert', 'success');
       setEditingTeamId(null);
