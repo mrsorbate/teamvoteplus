@@ -114,10 +114,11 @@ Für öffentliche Deployments (Domain/Reverse Proxy) zusätzlich `FRONTEND_URL` 
 z. B. `https://app.meinverein.de`, damit Einladungslinks immer die richtige URL enthalten.
 
 Hinweis: Eine Root-Vorlage liegt in [.env.example](.env.example). Für Produktion mit `docker-compose.prod.yml` ergänzt das Setup fehlende Pflichtwerte automatisch:
+- `DOMAIN` und `ACME_EMAIL` werden im interaktiven Setup abgefragt (mit Default-Vorschlag).
 - `JWT_SECRET` wird erzeugt, wenn leer oder unsicher.
 - `VAPID_PUBLIC_KEY` und `VAPID_PRIVATE_KEY` werden erzeugt, wenn leer.
 - `VAPID_SUBJECT` wird auf `mailto:<ACME_EMAIL>` gesetzt, wenn leer.
-- `ACME_EMAIL` wird bei leerem Wert automatisch auf `admin@trainello.de` gesetzt.
+- Im nicht-interaktiven Setup wird `ACME_EMAIL` bei leerem Wert auf `admin@<DOMAIN>` gesetzt.
 
 ### Starten
 ```bash

@@ -42,6 +42,55 @@ is_env_value_empty() {
     [ -z "$(echo "$value" | tr -d '[:space:]')" ]
 }
 
+is_interactive_shell() {
+    [ -t 0 ] && [ -t 1 ]
+}
+
+prompt_env_value() {
+    local env_file="$1"
+    local key="$2"
+    local label="$3"
+    local default_value="$4"
+    local required="$5"
+    local current_value
+    local user_input
+
+    current_value="$(get_env_value "$key" "$env_file" || true)"
+    if ! is_env_value_empty "$current_value"; then
+        return
+    fi
+
+    if [ "${SETUP_NONINTERACTIVE:-false}" = "true" ] || ! is_interactive_shell; then
+        if ! is_env_value_empty "$default_value"; then
+            ensure_env_key "$key" "$default_value" "$env_file"
+            echo -e "${YELLOW}⚠️  ${key} war nicht gesetzt und wurde auf ${default_value} gesetzt${NC}"
+            return
+        fi
+
+        if [ "$required" = "true" ]; then
+            error_exit "${key} fehlt und es ist kein Standardwert verfügbar. Bitte in .env setzen."
+        fi
+
+        return
+    fi
+
+    if ! is_env_value_empty "$default_value"; then
+        read -r -p "${label} [${default_value}]: " user_input
+        user_input="${user_input:-$default_value}"
+    else
+        read -r -p "${label}: " user_input
+    fi
+
+    while [ "$required" = "true" ] && is_env_value_empty "$user_input"; do
+        echo -e "${YELLOW}Bitte einen Wert für ${key} eingeben.${NC}"
+        read -r -p "${label}: " user_input
+    done
+
+    if ! is_env_value_empty "$user_input"; then
+        ensure_env_key "$key" "$user_input" "$env_file"
+    fi
+}
+
 generate_jwt_secret() {
     openssl rand -base64 32
 }
@@ -71,12 +120,13 @@ NODE
 ensure_prod_env_values() {
     local env_file="$1"
     local domain_value
+    local acme_email_default
 
     domain_value="$(get_env_value "DOMAIN" "$env_file" || true)"
     if is_env_value_empty "$domain_value" || [ "$domain_value" = "app.deine-domain.tld" ]; then
-        domain_value="trainello.de"
-        ensure_env_key "DOMAIN" "$domain_value" "$env_file"
-        echo -e "${YELLOW}⚠️  DOMAIN war nicht gesetzt und wurde automatisch auf ${domain_value} gesetzt${NC}"
+        ensure_env_key "DOMAIN" "" "$env_file"
+        prompt_env_value "$env_file" "DOMAIN" "Produktions-Domain" "trainello.de" "true"
+        domain_value="$(get_env_value "DOMAIN" "$env_file" || true)"
     fi
 
     ensure_env_key "FRONTEND_URL" "https://${domain_value}" "$env_file"
@@ -91,9 +141,10 @@ ensure_prod_env_values() {
     local acme_email
     acme_email="$(get_env_value "ACME_EMAIL" "$env_file" || true)"
     if is_env_value_empty "$acme_email" || [ "$acme_email" = "admin@deine-domain.tld" ]; then
-        acme_email="admin@trainello.de"
-        ensure_env_key "ACME_EMAIL" "$acme_email" "$env_file"
-        echo -e "${YELLOW}⚠️  ACME_EMAIL war nicht gesetzt und wurde automatisch auf ${acme_email} gesetzt${NC}"
+        acme_email_default="admin@${domain_value}"
+        ensure_env_key "ACME_EMAIL" "" "$env_file"
+        prompt_env_value "$env_file" "ACME_EMAIL" "E-Mail für Let's Encrypt" "$acme_email_default" "true"
+        acme_email="$(get_env_value "ACME_EMAIL" "$env_file" || true)"
     fi
 
     local vapid_public

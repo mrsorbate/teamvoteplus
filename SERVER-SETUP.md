@@ -57,10 +57,11 @@ VAPID_SUBJECT=mailto:admin@svhochweisel.de
 ```
 
 Beim Start mit `docker-compose.prod.yml` ergänzt `setup-server.sh` fehlende Werte automatisch:
+- `DOMAIN` und `ACME_EMAIL` werden im Setup abgefragt (interaktiv, mit Default-Vorschlag)
 - `JWT_SECRET` (falls leer/unsicher)
 - `VAPID_PUBLIC_KEY` und `VAPID_PRIVATE_KEY` (falls leer)
 - `VAPID_SUBJECT` (falls leer)
-- `ACME_EMAIL` (falls leer, auf `admin@trainello.de`)
+- im nicht-interaktiven Setup: `ACME_EMAIL` (falls leer, auf `admin@<DOMAIN>`)
 
 ### 2. Produktions-Compose starten
 
