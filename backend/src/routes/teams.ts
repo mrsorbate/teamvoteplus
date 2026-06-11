@@ -244,6 +244,31 @@ const calculateRowMatchScore = (rowName: string, configuredName: string): number
   return 0;
 };
 
+const parseExternalLeagueNameFromMatches = (
+  matches: Array<{ competition?: string }>,
+): string | null => {
+  if (!Array.isArray(matches) || matches.length === 0) {
+    return null;
+  }
+
+  const counts = new Map<string, number>();
+  for (const match of matches) {
+    const competition = String(match?.competition || '').trim();
+    if (!competition) continue;
+
+    const normalized = competition.toLowerCase();
+    if (/pokal|freundschaft|testspiel|privat|turnier|futsal/.test(normalized)) {
+      continue;
+    }
+
+    counts.set(competition, (counts.get(competition) || 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .sort((left, right) => right[1] - left[1])
+    .map(([competition]) => competition)[0] || null;
+};
+
 const buildInternalTableRows = (team: any, matches: any[]) => {
   const rows = new Map<string, { team: string; games: number; won: number; draw: number; lost: number; gf: number; ga: number; points: number }>();
 
@@ -1388,6 +1413,174 @@ router.put('/:id/fussballde-id', (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Update fussball.de id error:', error);
     return res.status(500).json({ error: 'Failed to update fussball.de ID' });
+  }
+});
+
+// Get external team table from api-fussball.de
+router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
+  try {
+    const teamId = parseInt(req.params.id, 10);
+
+    const membership = db.prepare(
+      'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
+    ).get(teamId, req.user!.id);
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a team member' });
+    }
+
+    const team = db.prepare('SELECT id, name, fussballde_id, fussballde_team_name FROM teams WHERE id = ?').get(teamId) as any;
+
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    const configuredTeamNames = [...new Set([
+      String(team.name || '').trim(),
+      ...parseFussballDeTeamNames(team.fussballde_team_name),
+    ].filter(Boolean))];
+
+    const externalScheduleSources = parseFussballDeSources(team.fussballde_id);
+    const attempts: Array<{
+      requested_source: string;
+      source_url: string;
+      mode: 'next' | 'last';
+      ok: boolean;
+      row_count: number;
+      error?: string;
+    }> = [];
+
+    if (externalScheduleSources.length === 0) {
+      return res.json({
+        schedules: [],
+        diagnostics: {
+          configured_sources: externalScheduleSources,
+          attempts,
+          fallback_reason: 'no_fussballde_source_configured',
+        },
+      });
+    }
+
+    const client = new FussballDeClient({ timeoutMs: 15000 });
+
+    const schedules = await Promise.all(externalScheduleSources.map(async (sourceEntry) => {
+      const sourceId = extractFussballDeTeamId(sourceEntry) || sourceEntry;
+      const sourceUrl = buildFussballDeTeamPageUrl(sourceEntry);
+
+      try {
+        const [nextGamesRaw, lastGamesRaw] = await Promise.all([
+          client.getSpielplan({ teamPageUrl: sourceUrl }),
+          client.getLastMatches({ teamPageUrl: sourceUrl }),
+        ]);
+
+        attempts.push(
+          {
+            requested_source: sourceEntry,
+            source_url: sourceUrl,
+            mode: 'next',
+            ok: true,
+            row_count: nextGamesRaw.length,
+          },
+          {
+            requested_source: sourceEntry,
+            source_url: sourceUrl,
+            mode: 'last',
+            ok: true,
+            row_count: lastGamesRaw.length,
+          }
+        );
+
+        const dedupeMatches = (matches: any[]) => {
+          const seen = new Set<string>();
+          return matches.filter((match) => {
+            const key = [
+              String(match?.date || ''),
+              String(match?.homeTeam || ''),
+              String(match?.awayTeam || ''),
+              String(match?.competition || ''),
+            ].join('|');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        };
+
+        const nextGames = dedupeMatches(nextGamesRaw);
+        const lastGames = dedupeMatches(lastGamesRaw);
+        const combinedGames = [...nextGames, ...lastGames];
+
+        const leagueName = parseExternalLeagueNameFromMatches(combinedGames) || 'fussball.de Spielplan';
+
+        const rowMatches = combinedGames
+          .flatMap((match: any) => [String(match?.homeTeam || ''), String(match?.awayTeam || '')])
+          .map((rowName) => {
+            const bestScore = configuredTeamNames.reduce((score, configuredName) => {
+              return Math.max(score, calculateRowMatchScore(rowName, configuredName));
+            }, 0);
+            return { rowName, score: bestScore };
+          })
+          .filter((entry) => entry.score > 0)
+          .sort((left, right) => right.score - left.score);
+
+        const matchedTeamName = rowMatches[0]?.rowName || null;
+
+        const toPayloadMatches = (matches: any[]) => matches.map((match) => ({
+          date: String(match?.date || ''),
+          homeTeam: String(match?.homeTeam || ''),
+          awayTeam: String(match?.awayTeam || ''),
+          competition: String(match?.competition || ''),
+          venue: String(match?.venue || ''),
+          statusText: String(match?.statusText || ''),
+          result: match?.result || null,
+        }));
+
+        return {
+          source_id: sourceId,
+          source: 'fussball.de',
+          league_name: leagueName,
+          matched_team_name: matchedTeamName,
+          next_games: toPayloadMatches(nextGames),
+          last_games: toPayloadMatches(lastGames),
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        attempts.push(
+          {
+            requested_source: sourceEntry,
+            source_url: sourceUrl,
+            mode: 'next',
+            ok: false,
+            row_count: 0,
+            error: errorMessage,
+          },
+          {
+            requested_source: sourceEntry,
+            source_url: sourceUrl,
+            mode: 'last',
+            ok: false,
+            row_count: 0,
+            error: errorMessage,
+          }
+        );
+        return null;
+      }
+    }));
+
+    const filteredSchedules = schedules.filter(Boolean);
+
+    return res.json({
+      team_id: teamId,
+      team_name: String(team.name || ''),
+      schedules: filteredSchedules,
+      diagnostics: {
+        configured_sources: externalScheduleSources,
+        attempts,
+        fallback_reason: filteredSchedules.length > 0 ? null : 'no_external_rows_returned',
+      },
+    });
+  } catch (error) {
+    console.error('Get external team schedule error:', error);
+    return res.status(500).json({ error: 'Failed to fetch external schedule' });
   }
 });
 

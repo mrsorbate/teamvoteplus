@@ -1,107 +1,151 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock } from 'lucide-react';
-import { eventsAPI } from '../lib/api';
+import { teamsAPI } from '../lib/api';
 
-const groupEventsByMonth = (events: any[]) => {
-  return events.reduce<Array<{ key: string; label: string; items: any[] }>>((groups, event) => {
-    const startDate = new Date(String(event?.start_time || ''));
-    if (Number.isNaN(startDate.getTime())) {
-      return groups;
-    }
-
-    const key = `${startDate.getFullYear()}-${startDate.getMonth()}`;
-    const existing = groups.find((group) => group.key === key);
-    if (existing) {
-      existing.items.push(event);
-      return groups;
-    }
-
-    groups.push({
-      key,
-      label: startDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-      items: [event],
-    });
-
-    return groups;
-  }, []);
+const normalizeTeamName = (value: unknown): string => {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
 };
 
-const renderEventCard = (event: any, navigate: ReturnType<typeof useNavigate>) => {
-  const startDate = new Date(String(event?.start_time || ''));
-  const dateLabel = Number.isNaN(startDate.getTime())
+const parseMatchDate = (input: unknown): Date | null => {
+  const raw = String(input || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return null;
+
+  const germanMatch = raw.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[^0-9]*(\d{1,2}):(\d{2}))?/);
+  if (germanMatch) {
+    const day = parseInt(germanMatch[1], 10);
+    const month = parseInt(germanMatch[2], 10) - 1;
+    const year = parseInt(germanMatch[3], 10);
+    const hours = germanMatch[4] ? parseInt(germanMatch[4], 10) : 19;
+    const minutes = germanMatch[5] ? parseInt(germanMatch[5], 10) : 0;
+    const date = new Date(year, month, day, hours, minutes, 0);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const isoDate = new Date(raw);
+  return Number.isNaN(isoDate.getTime()) ? null : isoDate;
+};
+
+const formatMatchDate = (input: unknown): string => {
+  const parsed = parseMatchDate(input);
+  return !parsed
     ? '-'
-    : startDate.toLocaleDateString('de-DE', {
+    : parsed.toLocaleDateString('de-DE', {
         weekday: 'short',
         day: '2-digit',
         month: '2-digit',
       });
-  const timeLabel = Number.isNaN(startDate.getTime())
+};
+
+const formatMatchTime = (input: unknown): string => {
+  const parsed = parseMatchDate(input);
+  return !parsed
     ? '-'
-    : startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    : parsed.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+};
+
+const renderMatchCard = (match: any) => {
+  const dateLabel = formatMatchDate(match?.date);
+  const timeLabel = formatMatchTime(match?.date);
+  const homeTeam = String(match?.homeTeam || '-');
+  const awayTeam = String(match?.awayTeam || '-');
+  const competition = String(match?.competition || '').trim();
+  const result = match?.result && (match.result.home !== undefined || match.result.away !== undefined)
+    ? `${match.result.home ?? '-'}:${match.result.away ?? '-'}`
+    : '';
 
   return (
-    <button
-      key={event.id}
-      type="button"
-      onClick={() => navigate(`/events/${event.id}`)}
-      className="w-full text-left rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-    >
-      <p className="text-sm font-semibold text-gray-900 dark:text-white">{String(event?.title || 'Termin')}</p>
-      <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{String(event?.team_name || '')}</p>
+    <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900">
+      <p className="text-sm font-semibold text-gray-900 dark:text-white">{homeTeam} - {awayTeam}</p>
+      {competition ? (
+        <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{competition}</p>
+      ) : null}
       <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
         <span>{dateLabel}</span>
         <span className="inline-flex items-center gap-1">
           <Clock className="w-3.5 h-3.5" />
           {timeLabel} Uhr
         </span>
+        {result ? <span>{result}</span> : null}
       </div>
-    </button>
+    </div>
   );
 };
 
-const renderGroupedEvents = (
-  groups: Array<{ key: string; label: string; items: any[] }>,
-  navigate: ReturnType<typeof useNavigate>
+const renderScheduleSections = (
+  sections: any[],
+  mode: 'next' | 'last'
 ) => (
   <div className="space-y-4">
-    {groups.map((group) => (
-      <div key={group.key} className="card space-y-3">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white capitalize">{group.label}</h2>
+    {sections.map((section) => {
+      const matches = mode === 'next' ? section.nextGames : section.lastGames;
+      if (!Array.isArray(matches) || matches.length === 0) return null;
+
+      return (
+      <div key={`${section.key}-${mode}`} className="card space-y-3">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+          {section.teamName}
+          <span className="ml-2 text-xs sm:text-sm font-normal text-gray-500 dark:text-gray-400">
+            {section.leagueName || 'Unbekannte Liga'}
+          </span>
+        </h2>
+        {section.matchedTeamName && normalizeTeamName(section.matchedTeamName) !== normalizeTeamName(section.teamName) ? (
+          <p className="text-xs text-gray-500 dark:text-gray-400">{section.matchedTeamName}</p>
+        ) : null}
         <div className="space-y-2">
-          {group.items.map((event) => renderEventCard(event, navigate))}
+          {matches.map((match: any, index: number) => (
+            <div key={`${section.key}-${mode}-${index}`}>
+              {renderMatchCard(match)}
+            </div>
+          ))}
         </div>
       </div>
-    ))}
+      );
+    })}
   </div>
 );
 
 export default function MySchedulePage() {
-  const navigate = useNavigate();
-
-  const { data: upcomingEvents, isLoading: upcomingLoading, error: upcomingError } = useQuery({
-    queryKey: ['my-schedule-events', 'upcoming'],
+  const { data: scheduleSections, isLoading, error } = useQuery({
+    queryKey: ['my-schedule-external'],
     queryFn: async () => {
-      const response = await eventsAPI.getMyAll('upcoming');
-      return response.data;
+      const teamsResponse = await teamsAPI.getAll();
+      const teams = Array.isArray(teamsResponse.data) ? teamsResponse.data : [];
+
+      const schedulesPerTeam = await Promise.all(teams.map(async (team: any) => {
+        try {
+          const response = await teamsAPI.getExternalSchedule(Number(team.id));
+          const schedules = Array.isArray(response.data?.schedules) ? response.data.schedules : [];
+          return schedules.map((schedule: any, index: number) => ({
+            key: `${team.id}-${String(schedule?.source_id || index)}`,
+            teamId: Number(team.id),
+            teamName: String(team.name || ''),
+            leagueName: String(schedule?.league_name || ''),
+            matchedTeamName: String(schedule?.matched_team_name || '').trim(),
+            nextGames: Array.isArray(schedule?.next_games) ? schedule.next_games : [],
+            lastGames: Array.isArray(schedule?.last_games) ? schedule.last_games : [],
+          }));
+        } catch {
+          return [];
+        }
+      }));
+
+      return schedulesPerTeam.flat();
     },
   });
 
-  const { data: pastEvents, isLoading: pastLoading, error: pastError } = useQuery({
-    queryKey: ['my-schedule-events', 'past'],
-    queryFn: async () => {
-      const response = await eventsAPI.getMyAll('past');
-      return response.data;
-    },
-  });
-
-  const upcomingGroupedEvents = useMemo(() => groupEventsByMonth(Array.isArray(upcomingEvents) ? upcomingEvents : []), [upcomingEvents]);
-  const pastGroupedEvents = useMemo(() => groupEventsByMonth(Array.isArray(pastEvents) ? pastEvents : []), [pastEvents]);
-
-  const hasAnyEvents = upcomingGroupedEvents.length > 0 || pastGroupedEvents.length > 0;
-  const isLoading = upcomingLoading || pastLoading;
-  const error = upcomingError || pastError;
+  const sections = useMemo(() => (Array.isArray(scheduleSections) ? scheduleSections : []), [scheduleSections]);
+  const hasAnyNextGames = sections.some((section) => Array.isArray(section.nextGames) && section.nextGames.length > 0);
+  const hasAnyLastGames = sections.some((section) => Array.isArray(section.lastGames) && section.lastGames.length > 0);
+  const hasAnyGames = hasAnyNextGames || hasAnyLastGames;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -111,7 +155,7 @@ export default function MySchedulePage() {
           <span>Mein Spielplan</span>
         </h1>
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
-          Kommende und vergangene Termine aus deinen Teams.
+          Nächste und letzte Spiele aus deinen fussball.de Teams.
         </p>
       </div>
 
@@ -119,25 +163,25 @@ export default function MySchedulePage() {
         <div className="text-sm text-gray-500 dark:text-gray-400 py-4">Lädt Spielplan...</div>
       ) : error ? (
         <div className="text-sm text-red-600 dark:text-red-400 py-4">Spielplan konnte nicht geladen werden.</div>
-      ) : !hasAnyEvents ? (
-        <div className="card text-sm text-gray-500 dark:text-gray-400">Keine Termine gefunden.</div>
+      ) : !hasAnyGames ? (
+        <div className="card text-sm text-gray-500 dark:text-gray-400">Keine Spiele gefunden.</div>
       ) : (
         <div className="space-y-6">
           <section className="space-y-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Künftige Termine</h2>
-            {upcomingGroupedEvents.length > 0 ? (
-              renderGroupedEvents(upcomingGroupedEvents, navigate)
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Nächste Spiele</h2>
+            {hasAnyNextGames ? (
+              renderScheduleSections(sections, 'next')
             ) : (
-              <div className="card text-sm text-gray-500 dark:text-gray-400">Keine zukünftigen Termine gefunden.</div>
+              <div className="card text-sm text-gray-500 dark:text-gray-400">Keine nächsten Spiele gefunden.</div>
             )}
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Vergangene Termine</h2>
-            {pastGroupedEvents.length > 0 ? (
-              renderGroupedEvents(pastGroupedEvents, navigate)
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Letzte Spiele</h2>
+            {hasAnyLastGames ? (
+              renderScheduleSections(sections, 'last')
             ) : (
-              <div className="card text-sm text-gray-500 dark:text-gray-400">Keine vergangenen Termine gefunden.</div>
+              <div className="card text-sm text-gray-500 dark:text-gray-400">Keine letzten Spiele gefunden.</div>
             )}
           </section>
         </div>

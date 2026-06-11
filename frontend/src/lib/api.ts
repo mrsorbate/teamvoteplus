@@ -69,6 +69,8 @@ export const teamsAPI = {
 
   getExternalTable: (id: number) => api.get(`/teams/${id}/external-table`),
 
+  getExternalSchedule: (id: number) => api.get(`/teams/${id}/external-schedule`),
+
   updateFussballDeId: (id: number, fussballde_id: string) =>
     api.put(`/teams/${id}/fussballde-id`, { fussballde_id }),
 

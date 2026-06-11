@@ -55,6 +55,25 @@ export class FussballDeClient {
     return parseMatches(html, validated.teamPageUrl);
   }
 
+  public async getLastMatches(input: TeamSourceInput): Promise<TeamMatch[]> {
+    const validated = sourceInputSchema.parse(input);
+    const teamId = this.extractTeamId(validated.teamPageUrl);
+    const url = teamId
+      ? `https://www.fussball.de/ajax.team.prev.games/-/mode/PAGE/team-id/${teamId}`
+      : validated.teamPageUrl;
+    const html = await this.fetchHtml(url);
+    return parseMatches(html, validated.teamPageUrl);
+  }
+
+  public async getAllMatches(input: TeamSourceInput): Promise<TeamMatch[]> {
+    const [lastMatches, nextMatches] = await Promise.all([
+      this.getLastMatches(input),
+      this.getSpielplan(input),
+    ]);
+
+    return [...lastMatches, ...nextMatches];
+  }
+
   public async getTabelle(input: TeamSourceInput): Promise<TeamStanding[]> {
     const result = await this.getTabelleWithDiagnostics(input);
     return result.standings;
