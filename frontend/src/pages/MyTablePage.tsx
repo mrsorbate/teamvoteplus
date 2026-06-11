@@ -64,9 +64,6 @@ export default function MyTablePage() {
           <BarChart3 className="w-6 h-6 text-primary-600" />
           <span>Meine Tabelle</span>
         </h1>
-        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
-          Tabellenansicht aus den API-Daten deiner Teams.
-        </p>
       </div>
 
       {!hasTeams ? (
@@ -80,10 +77,6 @@ export default function MyTablePage() {
               <div>
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{section.teamName}</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{section.leagueName || 'Unbekannte Liga'}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Quelle: {section.source === 'fussball.de' ? 'fussball.de' : 'Interner Fallback'}
-                  {section.fallbackReason ? ` (${section.fallbackReason})` : ''}
-                </p>
               </div>
 
               {Array.isArray(section.rows) && section.rows.length > 0 ? (
