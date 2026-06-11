@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { LogOut, User as UserIcon, Menu, X, Users, Shield, Home } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import { profileAPI, teamsAPI } from '../lib/api';
+import PushInstallPrompt from './PushInstallPrompt';
 
 interface Organization {
   id: number;
@@ -277,6 +278,8 @@ export default function Layout({ organization }: LayoutProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <Outlet />
       </main>
+
+      <PushInstallPrompt userId={user?.id} />
     </div>
   );
 }
