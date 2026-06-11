@@ -445,11 +445,16 @@ router.use(authenticate);
 router.get('/', (req: AuthRequest, res) => {
   try {
     const teams = db.prepare(`
-      SELECT t.*, tm.role as my_role
+      SELECT
+        t.*,
+        tm.role as my_role,
+        tm.trainer_custom_team_name,
+        COALESCE(NULLIF(TRIM(tm.trainer_custom_team_name), ''), t.name) as display_name,
+        COALESCE(NULLIF(TRIM(tm.trainer_custom_team_name), ''), t.name) as name
       FROM teams t
       INNER JOIN team_members tm ON t.id = tm.team_id
       WHERE tm.user_id = ?
-      ORDER BY t.name
+      ORDER BY COALESCE(NULLIF(TRIM(tm.trainer_custom_team_name), ''), t.name)
     `).all(req.user!.id);
 
     res.json(teams);
@@ -473,7 +478,17 @@ router.get('/:id', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
-    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(teamId);
+    const team = db.prepare(`
+      SELECT
+        t.*,
+        tm.trainer_custom_team_name,
+        COALESCE(NULLIF(TRIM(tm.trainer_custom_team_name), ''), t.name) as display_name,
+        COALESCE(NULLIF(TRIM(tm.trainer_custom_team_name), ''), t.name) as name
+      FROM teams t
+      INNER JOIN team_members tm ON t.id = tm.team_id
+      WHERE t.id = ? AND tm.user_id = ?
+      LIMIT 1
+    `).get(teamId, req.user!.id);
     
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });

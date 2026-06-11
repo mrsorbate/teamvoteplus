@@ -614,14 +614,27 @@ export default function TeamSettingsPage() {
                 placeholder="z.B. Mein U19 Team"
                 maxLength={80}
               />
-              <button
-                type="button"
-                onClick={() => updateTrainerTeamNameMutation.mutate(customTeamName.trim() || null)}
-                disabled={updateTrainerTeamNameMutation.isPending}
-                className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
-              >
-                {updateTrainerTeamNameMutation.isPending ? 'Speichert...' : 'Speichern'}
-              </button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => updateTrainerTeamNameMutation.mutate(customTeamName.trim() || null)}
+                  disabled={updateTrainerTeamNameMutation.isPending}
+                  className="btn btn-primary flex-1 sm:flex-none disabled:opacity-50"
+                >
+                  {updateTrainerTeamNameMutation.isPending ? 'Speichert...' : 'Speichern'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomTeamName('');
+                    updateTrainerTeamNameMutation.mutate(null);
+                  }}
+                  disabled={updateTrainerTeamNameMutation.isPending}
+                  className="btn btn-secondary flex-1 sm:flex-none disabled:opacity-50"
+                >
+                  Zurücksetzen
+                </button>
+              </div>
             </div>
           </div>
 
