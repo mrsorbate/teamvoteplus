@@ -1,7 +1,7 @@
 {
-  "name": "sqadX.app",
-  "short_name": "sqadX",
-  "description": "sqadX.app - Team-Management Software für Sportvereine",
+  "name": "trainello",
+  "short_name": "trainello",
+  "description": "trainello - Team-Management Software für Sportvereine",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "/",

@@ -1,4 +1,4 @@
-# 🚀 sqadX.app - Installation & Start
+# 🚀 trainello - Installation & Start
 
 Eine moderne Team-Management-App für Sportvereine.
 

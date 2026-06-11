@@ -85,7 +85,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
     return [
       `Hi ${playerName},`,
       '',
-      `ab sofort organisieren wir unsere Trainings und Spiele über sqadX.app.`,
+      `ab sofort organisieren wir unsere Trainings und Spiele über trainello.`,
       '',
       'Hier ist dein persönlicher Einladungslink:',
       '',

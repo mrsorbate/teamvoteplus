@@ -27,7 +27,7 @@ ensure_env_key() {
     fi
 }
 
-echo -e "${BLUE}🔄 sqadX.app - Server Update${NC}\n"
+echo -e "${BLUE}🔄 trainello - Server Update${NC}\n"
 
 if [ ! -f "docker-compose.yml" ]; then
     error_exit "Bitte im Repository-Root ausführen."

@@ -114,9 +114,9 @@ export default function Layout({ organization }: LayoutProps) {
           <div className="flex justify-between min-h-[3.5rem] sm:h-16 py-1 sm:py-0">
             <div className="flex items-center min-w-0 flex-1">
               <Link to={user?.role === 'admin' ? '/admin' : '/'} className="flex items-center space-x-1 sm:space-x-2 min-w-0">
-                <img src="/sqadx-logo.svg" alt="sqadX.app logo" className="w-6 h-6" />
+                <img src="/trainello-logo.svg" alt="trainello logo" className="w-6 h-6" />
                 <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">sqadX.app</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">trainello</span>
                   {(organizationLogo || organizationName !== 'Dein Verein') && (
                     <>
                       <span className="hidden min-[390px]:inline text-gray-400 dark:text-gray-500">-</span>

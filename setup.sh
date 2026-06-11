@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 sqadX.app - Setup & Start"
+echo "🚀 trainello - Setup & Start"
 echo "================================"
 echo ""
 

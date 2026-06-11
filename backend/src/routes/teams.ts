@@ -373,7 +373,7 @@ router.get('/:id/calendar.ics', (req, res) => {
     const lines: string[] = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//sqadX.app//Team Calendar//DE',
+      'PRODID:-//trainello//Team Calendar//DE',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       `X-WR-CALNAME:${escapeICalText(team.name || `Team ${teamId}`)}`,
@@ -393,7 +393,7 @@ router.get('/:id/calendar.ics', (req, res) => {
         .join(', ') || String(event.location || '').trim();
 
       lines.push('BEGIN:VEVENT');
-      lines.push(`UID:sqadx-team${teamId}-event${event.id}@sqadx.app`);
+      lines.push(`UID:trainello-team${teamId}-event${event.id}@trainello.app`);
       lines.push(`DTSTAMP:${dtStamp}`);
       lines.push(`DTSTART:${dtStart}`);
       lines.push(`DTEND:${dtEnd}`);
@@ -413,7 +413,7 @@ router.get('/:id/calendar.ics', (req, res) => {
       const dtEnd = formatICalDate(deletedEvent.end_time);
 
       lines.push('BEGIN:VEVENT');
-      lines.push(`UID:sqadx-team${teamId}-event${deletedEvent.event_id}@sqadx.app`);
+      lines.push(`UID:trainello-team${teamId}-event${deletedEvent.event_id}@trainello.app`);
       lines.push(`DTSTAMP:${dtStamp}`);
       if (dtStart) {
         lines.push(`DTSTART:${dtStart}`);

@@ -1,7 +1,7 @@
 {
-  "name": "sqadx-backend",
+  "name": "trainello-backend",
   "version": "1.0.0",
-  "description": "Backend for sqadX.app",
+  "description": "Backend for trainello",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

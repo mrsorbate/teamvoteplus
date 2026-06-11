@@ -1,4 +1,4 @@
-# sqadX.app auf einem Server installieren
+# trainello auf einem Server installieren
 
 Diese Anleitung ist für einen blanken Linux-Server gedacht und nutzt Docker Compose.
 
@@ -18,8 +18,8 @@ sudo systemctl enable --now docker
 
 ```bash
 cd /opt
-sudo git clone https://github.com/mrsorbate/sqadx.app.git
-cd sqadx.app
+sudo git clone https://github.com/mrsorbate/trainello.git
+cd trainello
 ```
 
 ### 3. Setup starten
@@ -61,7 +61,7 @@ Danach läuft die App über HTTPS an deiner Domain.
 Wenn du später Änderungen aus dem Git-Repo übernehmen willst:
 
 ```bash
-cd /opt/sqadx.app
+cd /opt/trainello
 sudo bash ./update-server.sh
 ```
 

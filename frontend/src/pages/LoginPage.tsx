@@ -62,8 +62,8 @@ export default function LoginPage() {
         <div className="text-center">
           {/* App Branding */}
           <div className="flex flex-col items-center mb-5 sm:mb-6">
-            <img src="/sqadx-logo.svg" alt="sqadX.app logo" className="h-16 w-16 mb-3" />
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">sqadX.app</h1>
+            <img src="/trainello-logo.svg" alt="trainello logo" className="h-16 w-16 mb-3" />
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">trainello</h1>
           </div>
 
           {/* Separator */}

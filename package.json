@@ -1,7 +1,7 @@
 {
-  "name": "sqadx",
+  "name": "trainello",
   "version": "1.0.0",
-  "description": "sqadX.app - Team-Management Software für Sportvereine",
+  "description": "trainello - Team-Management Software für Sportvereine",
   "scripts": {
     "setup": "chmod +x setup.sh && ./setup.sh",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

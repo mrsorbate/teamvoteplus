@@ -8,7 +8,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-APP_NAME="sqadX.app"
+APP_NAME="trainello"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 FRONTEND_PORT="${FRONTEND_PORT:-8080}"
 BACKEND_PORT="${BACKEND_PORT:-3000}"

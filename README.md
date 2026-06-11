@@ -1,4 +1,4 @@
-# sqadX.app
+# trainello
 
 Eine benutzerfreundliche Team-Management-App für Sportvereine mit Fokus auf Terminverwaltung, Zu-/Absagen und Kaderverwaltung.
 
