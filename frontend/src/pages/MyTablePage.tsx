@@ -20,28 +20,35 @@ export default function MyTablePage() {
         teamList.map(async (team: any) => {
           try {
             const response = await teamsAPI.getExternalTable(Number(team.id));
-            return {
+            const tableEntries = Array.isArray(response.data?.tables) && response.data.tables.length > 0
+              ? response.data.tables
+              : [{
+                  table: response.data?.table,
+                  leagueName: response.data?.leagueName,
+                  source: response.data?.source,
+                  source_id: response.data?.source_id,
+                }];
+
+            return tableEntries.map((entry: any, index: number) => ({
+              key: `${Number(team.id)}-${String(entry?.source_id || index)}`,
               teamId: Number(team.id),
               teamName: String(team.name || ''),
-              leagueName: String(response.data?.leagueName || ''),
-              rows: Array.isArray(response.data?.table) ? response.data.table : [],
-              source: String(response.data?.source || ''),
-              fallbackReason: String(response.data?.diagnostics?.fallback_reason || ''),
-            };
+              leagueName: String(entry?.leagueName || response.data?.leagueName || ''),
+              rows: Array.isArray(entry?.table) ? entry.table : [],
+            }));
           } catch {
-            return {
+            return [{
+              key: `${Number(team.id)}-fallback`,
               teamId: Number(team.id),
               teamName: String(team.name || ''),
               leagueName: '',
               rows: [],
-              source: '',
-              fallbackReason: '',
-            };
+            }];
           }
         })
       );
 
-      return responses;
+      return responses.flat();
     },
     enabled: Array.isArray(teams) && teams.length > 0,
   });
@@ -73,7 +80,7 @@ export default function MyTablePage() {
       ) : (
         <div className="space-y-4">
           {sections.map((section) => (
-            <div key={section.teamId} className="card space-y-3">
+            <div key={section.key || section.teamId} className="card space-y-3">
               <div>
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{section.teamName}</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{section.leagueName || 'Unbekannte Liga'}</p>

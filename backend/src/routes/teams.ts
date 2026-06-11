@@ -1376,6 +1376,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
 
     const candidateTables: Array<{
       sourceEntry: string;
+      sourceId: string;
       table: Array<{
         place: number;
         team: string;
@@ -1460,6 +1461,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
 
           candidateTables.push({
             sourceEntry,
+            sourceId: extractFussballDeTeamId(sourceEntry) || sourceEntry,
             table,
             leagueName,
             matchScore,
@@ -1479,7 +1481,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
       }
 
       if (candidateTables.length > 0) {
-        const selectedCandidate = candidateTables
+        const sortedCandidates = [...candidateTables]
           .sort((left, right) => {
             if (normalizedConfiguredTeamNames.length > 0 && left.matchScore !== right.matchScore) {
               return right.matchScore - left.matchScore;
@@ -1490,19 +1492,28 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
             }
 
             return externalTableSources.indexOf(left.sourceEntry) - externalTableSources.indexOf(right.sourceEntry);
-          })[0];
+          });
+
+        const selectedCandidate = sortedCandidates[0];
+        const tables = sortedCandidates.map((candidate) => ({
+          table: candidate.table,
+          leagueName: candidate.leagueName,
+          source: 'fussball.de',
+          source_id: candidate.sourceId,
+        }));
 
         return res.json({
           table: selectedCandidate.table,
           leagueName: selectedCandidate.leagueName,
           source: 'fussball.de',
-          source_id: extractFussballDeTeamId(selectedCandidate.sourceEntry) || selectedCandidate.sourceEntry,
+          source_id: selectedCandidate.sourceId,
+          tables,
           diagnostics: {
             configured_ids: parseFussballDeIds(team.fussballde_id),
             configured_sources: externalTableSources,
             configured_team_names: configuredTeamNames,
             selected_source: 'fussball.de',
-            selected_source_id: extractFussballDeTeamId(selectedCandidate.sourceEntry) || selectedCandidate.sourceEntry,
+            selected_source_id: selectedCandidate.sourceId,
             attempts: externalAttempts,
             fallback_reason: null,
           },
@@ -1527,6 +1538,14 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
       table,
       leagueName: internalLeagueName,
       source: 'internal',
+      tables: [
+        {
+          table,
+          leagueName: internalLeagueName,
+          source: 'internal',
+          source_id: null,
+        },
+      ],
       diagnostics: {
         configured_ids: parseFussballDeIds(team.fussballde_id),
         configured_sources: externalTableSources,
