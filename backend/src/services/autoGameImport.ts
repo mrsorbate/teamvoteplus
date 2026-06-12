@@ -91,6 +91,9 @@ export const startAutoGameImportJob = () => {
 
   const intervalMinutes = parsePositiveInteger(process.env.AUTO_GAME_IMPORT_INTERVAL_MINUTES, 60);
   const runOnStartup = String(process.env.AUTO_GAME_IMPORT_RUN_ON_STARTUP || 'true').toLowerCase() !== 'false';
+  const now = new Date();
+  const seasonStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  const seasonWindowLabel = `01.07.${seasonStartYear}-30.06.${seasonStartYear + 2}`;
 
   if (runOnStartup) {
     void runAutoImportCycle();
@@ -100,7 +103,7 @@ export const startAutoGameImportJob = () => {
     void runAutoImportCycle();
   }, intervalMinutes * 60 * 1000);
 
-  console.log(`[Auto-Import] Started | every ${intervalMinutes} minute(s), season window 01.07-30.06`);
+  console.log(`[Auto-Import] Started | every ${intervalMinutes} minute(s), season window ${seasonWindowLabel}`);
 };
 
 export const stopAutoGameImportJob = () => {

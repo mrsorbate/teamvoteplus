@@ -1116,11 +1116,23 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
   }
 
   const client = new FussballDeClient({ timeoutMs: 15000 });
+  const now = new Date();
+  const seasonStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  const printableRange = {
+    from: `${seasonStartYear}-07-01`,
+    to: `${seasonStartYear + 2}-06-30`,
+  };
+
   const matchesBySource = await Promise.all(
     fussballdeSources.map(async (sourceEntry) => {
       const teamPageUrl = buildFussballDeTeamPageUrl(sourceEntry);
       try {
-        const sourceMatches = await client.getSpielplan({ teamPageUrl });
+        const [nextMatches, printableMatches] = await Promise.all([
+          client.getSpielplan({ teamPageUrl }),
+          client.getPrintableSeasonMatches({ teamPageUrl }, printableRange),
+        ]);
+
+        const sourceMatches = [...nextMatches, ...printableMatches];
         return sourceMatches.map((match) => ({ ...match, __sourceId: sourceEntry }));
       } catch (error) {
         console.warn(`fussball.de Import fehlgeschlagen für Quelle ${sourceEntry}:`, error);
@@ -1344,7 +1356,6 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     }
 
     // Skip past games without a known result (nothing useful to import)
-    const now = new Date();
     if (gameDate < now && !match.result) {
       skipped.push(`${title}: Vergangenes Spiel ohne Ergebnis`);
       continue;
