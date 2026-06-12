@@ -165,19 +165,48 @@ const renderScheduleSections = (
 
   if (allMatches.length === 0) return null;
 
-  // Sortiere nach Datum
+  // Sortiere nach Datum mit besserem Fallback
   allMatches.sort((a, b) => {
     const dateA = parseMatchDate(a.match?.date);
     const dateB = parseMatchDate(b.match?.date);
     
     if (dateA && dateB) {
-      // Bei "next": aufsteigend (nächste zuerst), bei "last": absteigend (neueste zuerst)
+      // Beide Daten geparst: Nach Datum sortieren
       return mode === 'next' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     }
     
-    // Fallback bei nicht geparstem Datum
+    if (dateA && !dateB) {
+      // Nur A geparst: A kommt zuerst bei 'next', B zuerst bei 'last'
+      return mode === 'next' ? -1 : 1;
+    }
+    
+    if (!dateA && dateB) {
+      // Nur B geparst: B kommt zuerst bei 'next', A zuerst bei 'last'
+      return mode === 'next' ? 1 : -1;
+    }
+    
+    // Keines geparst: Nach Raw-String sortieren (DD.MM Format extrahieren)
+    const extractDateNumbers = (dateStr: string) => {
+      const match = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{2,4})/);
+      if (match) {
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10);
+        const year = parseInt(match[3], 10);
+        return year * 10000 + month * 100 + day;
+      }
+      return 0;
+    };
+    
     const rawA = String(a.match?.date || '');
     const rawB = String(b.match?.date || '');
+    const numA = extractDateNumbers(rawA);
+    const numB = extractDateNumbers(rawB);
+    
+    if (numA !== numB) {
+      return mode === 'next' ? numA - numB : numB - numA;
+    }
+    
+    // Fallback: alphabetisch
     return mode === 'next' ? rawA.localeCompare(rawB) : rawB.localeCompare(rawA);
   });
 
