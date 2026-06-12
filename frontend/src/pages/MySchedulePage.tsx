@@ -82,7 +82,7 @@ const renderMatchCard = (match: any, section: any, cardKey: string) => {
             {weekdayLabel && (
               <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 leading-none">{weekdayLabel}</p>
             )}
-            <p className="mt-0.5 text-2xl sm:text-3xl font-semibold tabular-nums text-gray-900 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
+            <p className="mt-0.5 text-xl sm:text-2xl font-semibold tabular-nums text-gray-900 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
           </div>
         </div>
 
