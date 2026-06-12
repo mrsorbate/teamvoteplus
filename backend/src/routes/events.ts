@@ -1098,10 +1098,14 @@ router.post('/', async (req: AuthRequest, res) => {
 
       const notifyUserIds = invitedUserIds;
       if (notifyUserIds.length > 0) {
+        const firstCreatedEvent = createdEvents[0];
+        const firstStartTime = String(firstCreatedEvent?.start_time || start_time);
+        const additionalCount = Math.max(createdEvents.length - 1, 0);
+        const seriesSuffix = additionalCount > 0 ? ` (+${additionalCount} weitere Termine)` : '';
         await sendPushToUsers(notifyUserIds, {
-          title: 'Neue Terminserie',
-          body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title}: ${createdEvents.length} Termine wurden erstellt.`,
-          url: `/teams/${team_id}/events`,
+          title: 'Neuer Termin',
+          body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${formatEventDateTime(firstStartTime)}${seriesSuffix}`,
+          url: firstCreatedEvent?.id ? `/events/${firstCreatedEvent.id}` : `/teams/${team_id}/events`,
         });
       }
       
