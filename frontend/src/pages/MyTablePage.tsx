@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
-import { teamsAPI, badgeProxyUrl } from '../lib/api';
+import { teamsAPI } from '../lib/api';
 
 export default function MyTablePage() {
   const { data: teams, isLoading: teamsLoading, error: teamsError } = useQuery({
@@ -70,8 +70,16 @@ export default function MyTablePage() {
       .replace(/[^a-z0-9]/g, '');
   };
 
+  const hasReserveMarker = (value: string): boolean => /(?:ii|2)$/.test(value);
+
+  const normalizeBadgeUrl = (value: unknown): string | null => {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    return raw.startsWith('//') ? `https:${raw}` : raw;
+  };
+
   const isOwnTeamRow = (section: any, row: any): boolean => {
-    const ownCandidates = [section?.matchedTeamName || section?.teamName]
+    const ownCandidates = [section?.matchedTeamName, section?.teamName]
       .map((name) => normalizeTeamName(name))
       .filter(Boolean);
     if (ownCandidates.length === 0) return false;
@@ -81,7 +89,12 @@ export default function MyTablePage() {
 
     return ownCandidates.some((candidate) => (
       rowName === candidate
-      || rowName.includes(candidate)
+      || (
+        hasReserveMarker(rowName) === hasReserveMarker(candidate)
+        && rowName.length >= 6
+        && candidate.length >= 6
+        && (rowName.includes(candidate) || candidate.includes(rowName))
+      )
     ));
   };
 
@@ -108,18 +121,18 @@ export default function MyTablePage() {
         <div className="card text-sm text-gray-500 dark:text-gray-400">Keine Tabellen-Daten gefunden.</div>
       ) : (
         <div className="space-y-4">
-          {sections.map((section) => (
+          {sections.map((section) => {
+            const displayTeamName = String(section.matchedTeamName || section.teamName || '').trim();
+
+            return (
             <div key={section.key || section.teamId} className="card space-y-3">
               <div>
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                  {section.teamName}
+                  {displayTeamName || section.teamName}
                   <span className="ml-2 text-xs sm:text-sm font-normal text-gray-500 dark:text-gray-400">
                     {section.leagueName || 'Unbekannte Liga'}
                   </span>
                 </h2>
-                {section.matchedTeamName && normalizeTeamName(section.matchedTeamName) !== normalizeTeamName(section.teamName) && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{section.matchedTeamName}</p>
-                )}
               </div>
 
               {Array.isArray(section.rows) && section.rows.length > 0 ? (
@@ -145,9 +158,9 @@ export default function MyTablePage() {
                           <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">{row.place ?? index + 1}</td>
                           <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
                             <div className="flex items-center gap-2">
-                              {badgeProxyUrl(typeof row.img === 'string' ? row.img : null) ? (
+                              {normalizeBadgeUrl(row?.img) ? (
                                 <img
-                                  src={badgeProxyUrl(typeof row.img === 'string' ? row.img : null)!}
+                                  src={normalizeBadgeUrl(row?.img)!}
                                   alt={`${String(row.team || 'Team')} Wappen`}
                                   className="w-6 h-6 object-contain bg-white rounded"
                                   loading="lazy"
@@ -170,7 +183,8 @@ export default function MyTablePage() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">Für dieses Team ist keine Tabelle verfügbar.</div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
