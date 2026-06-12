@@ -1102,6 +1102,7 @@ router.post('/', async (req: AuthRequest, res) => {
         const firstStartTime = String(firstCreatedEvent?.start_time || start_time);
         const additionalCount = Math.max(createdEvents.length - 1, 0);
         const seriesSuffix = additionalCount > 0 ? ` (+${additionalCount} weitere Termine)` : '';
+        console.log(`Create recurring event series: ${createdEvents.length} events, notifying ${notifyUserIds.length} users`);
         await sendPushToUsers(notifyUserIds, {
           title: 'Neuer Termin',
           body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${formatEventDateTime(firstStartTime)}${seriesSuffix}`,
@@ -1155,6 +1156,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
       const notifyUserIds = invitedUserIds;
       if (notifyUserIds.length > 0) {
+        console.log(`Create single event: notifying ${notifyUserIds.length} users`);
         await sendPushToUsers(notifyUserIds, {
           title: 'Neuer Termin',
           body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${formatEventDateTime(start_time)}`,
