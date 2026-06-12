@@ -69,10 +69,14 @@ export async function sendPushToSubscriptions(subscriptions: StoredPushSubscript
       sent += 1;
     } catch (error: any) {
       const statusCode = Number(error?.statusCode || 0);
+      const errorMessage = error?.message || String(error);
+      
       if (statusCode === 404 || statusCode === 410) {
+        // Subscription expired or invalid
         removeSubscriptionByEndpoint.run(subscription.endpoint);
+        console.warn(`Push: subscription removed (${statusCode}) for endpoint ${subscription.endpoint}`);
       } else {
-        console.error('Web push send error:', error);
+        console.error(`Push send error (status ${statusCode}): ${errorMessage}`, { endpoint: subscription.endpoint });
       }
     }
   }

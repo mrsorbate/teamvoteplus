@@ -244,8 +244,21 @@ export default function SettingsPage() {
       body: 'Push funktioniert auf diesem Gerät.',
       url: '/events',
     }),
-    onSuccess: () => {
-      showToast('Test-Benachrichtigung wurde gesendet', 'success');
+    onSuccess: (response: any) => {
+      const sent = response?.data?.sent || 0;
+      const subscriptions = response?.data?.subscriptions || 0;
+      
+      if (sent === 0) {
+        if (subscriptions === 0) {
+          showToast('Keine Push-Subscriptions gespeichert. Bitte zuerst aktivieren.', 'warning');
+        } else {
+          showToast(`Push-Versand fehlgeschlagen (${subscriptions} Subscriptions, 0 erfolgreich). Server-Log überprüfen.`, 'error');
+        }
+      } else if (sent === subscriptions) {
+        showToast(`Test-Benachrichtigung erfolgreich versendet (${sent}/${subscriptions})`, 'success');
+      } else {
+        showToast(`Teilerweise versendet: ${sent}/${subscriptions}`, 'warning');
+      }
     },
     onError: (error: any) => {
       const message = error?.response?.data?.error || error?.message || 'Test-Benachrichtigung konnte nicht gesendet werden';

@@ -85,9 +85,12 @@ router.get('/status', (req: AuthRequest, res) => {
     .prepare('SELECT COUNT(*) as count FROM push_subscriptions WHERE user_id = ?')
     .get(userId) as { count?: number };
 
+  const count = Number(row?.count || 0);
   return res.json({
     configured: isPushConfigured,
-    subscribed: Number(row?.count || 0) > 0,
+    subscribed: count > 0,
+    subscriptionCount: count,
+    vapidConfigured: Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
   });
 });
 
@@ -146,7 +149,8 @@ router.post('/unsubscribe', (req: AuthRequest, res) => {
 
 router.post('/test', async (req: AuthRequest, res) => {
   if (!isPushConfigured) {
-    return res.status(503).json({ error: 'Push is not configured on server' });
+    console.error('Push test failed: VAPID not configured');
+    return res.status(503).json({ error: 'Push is not configured on server', vapidConfigured: false });
   }
 
   const userId = req.user?.id;
@@ -162,13 +166,20 @@ router.post('/test', async (req: AuthRequest, res) => {
     .prepare('SELECT id, user_id, endpoint, p256dh, auth, expiration_time FROM push_subscriptions WHERE user_id = ?')
     .all(userId) as StoredPushSubscription[];
 
+  if (subscriptions.length === 0) {
+    console.warn(`Push test: no subscriptions found for user ${userId}`);
+    return res.json({ success: false, sent: 0, subscriptions: 0, error: 'No push subscriptions found' });
+  }
+
+  console.log(`Push test: sending to ${subscriptions.length} subscriptions for user ${userId}`);
   const sent = await sendPushToSubscriptions(subscriptions, {
     title: title || 'teamvote+',
     body: body || 'Dies ist eine Test-Benachrichtigung.',
     url: url || '/',
   });
 
-  return res.json({ success: true, sent, subscriptions: subscriptions.length });
+  console.log(`Push test: ${sent}/${subscriptions.length} notifications sent`);
+  return res.json({ success: sent > 0, sent, subscriptions: subscriptions.length, vapidConfigured: isPushConfigured });
 });
 
 export default router;
