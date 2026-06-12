@@ -506,7 +506,13 @@ export default function EventCreatePage() {
       return;
     }
 
-    if (eventData.invited_user_ids.length === 0) {
+    // If invite_all, automatically include all team members
+    let finalInvitedUserIds = eventData.invited_user_ids;
+    if (eventData.invite_all && allMemberIds && allMemberIds.length > 0) {
+      finalInvitedUserIds = allMemberIds;
+    }
+
+    if (finalInvitedUserIds.length === 0) {
       showToast('Bitte waehle mindestens ein Teammitglied aus.', 'warning');
       return;
     }
@@ -557,7 +563,7 @@ export default function EventCreatePage() {
       duration_minutes: eventData.duration_minutes ? parseInt(eventData.duration_minutes, 10) : undefined,
       visibility_all: eventData.visibility_all,
       invite_all: eventData.invite_all,
-      invited_user_ids: eventData.invited_user_ids,
+      invited_user_ids: finalInvitedUserIds,
     };
 
     if (eventData.rsvp_deadline) {
