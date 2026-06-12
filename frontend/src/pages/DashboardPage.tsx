@@ -343,7 +343,7 @@ export default function DashboardPage() {
                           )}
                           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
                         </div>
-                        {teams && teams.length > 1 && event.team_name && (
+                        {event.team_name && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200 whitespace-nowrap">
                             {event.team_name}
                           </span>
