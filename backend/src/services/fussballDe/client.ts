@@ -64,7 +64,7 @@ export class FussballDeClient {
     const validated = sourceInputSchema.parse(input);
     const teamId = this.extractTeamId(validated.teamPageUrl);
     const url = teamId
-      ? `https://www.fussball.de/ajax.team.matchplan/-/mime-type/JSON/mode/PAGE/prev-season-allowed/false/show-filter/false/datum-von/${range.from}/datum-bis/${range.to}/match-type/-1/team-id/${teamId}`
+      ? `https://www.fussball.de/ajax.team.matchplan/-/mime-type/JSON/mode/PAGE/prev-season-allowed/false/show-filter/false/datum-von/${range.from}/datum-bis/${range.to}/match-type/-1/max/999/team-id/${teamId}`
       : validated.teamPageUrl;
     const raw = await this.fetchHtml(url);
     const html = this.extractHtmlFromAjaxPayload(raw);
@@ -249,8 +249,16 @@ export class FussballDeClient {
 
   private async fetchHtml(url: string): Promise<string> {
     const client = createHttpClient(this.timeoutMs);
-    const response = await client.get<string>(url);
-    return response.data;
+    const response = await client.get(url);
+    if (typeof response.data === 'string') {
+      return response.data;
+    }
+
+    try {
+      return JSON.stringify(response.data);
+    } catch {
+      return String(response.data || '');
+    }
   }
 
   private extractHtmlFromAjaxPayload(raw: string): string {
