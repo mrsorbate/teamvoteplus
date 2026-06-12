@@ -1252,6 +1252,8 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
   // When multiple sources are configured, derive a short label per source from the
   // configured team names so that imports from different sources stay distinguishable.
   const sourceLabelMap = new Map<string, string>();
+  // Per-source own-team norms for accurate home/away detection.
+  const sourceOwnTeamNormsMap = new Map<string, string[]>();
   if (fussballdeSources.length > 1) {
     fussballdeSources.forEach((sourceId, idx) => {
       // Try to use the configured team name for this source index as label.
@@ -1260,6 +1262,9 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       const romanMatch = configuredName.match(/\b(IV|III|II|I|VI|V|[0-9]+)\.?\s*$/i);
       const label = romanMatch ? romanMatch[1].toUpperCase() : String(idx + 1);
       sourceLabelMap.set(sourceId, label);
+      // Compute own-team norms specifically for this source.
+      const sourceNorms = configuredName ? [normalizeTeamName(configuredName)].filter(Boolean) : ownTeamNorms;
+      sourceOwnTeamNormsMap.set(sourceId, sourceNorms);
     });
   }
 
@@ -1322,19 +1327,22 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
 
     const homeNorm = normalizeTeamName(match.homeTeam);
     const awayNorm = normalizeTeamName(match.awayTeam);
-    const isHome = ownTeamNorms.some((ownTeamNorm) => (
+    // Use source-specific norms when available for accurate crest assignment.
+    const sourceId = String((match as any).__sourceId || '');
+    const activeOwnTeamNorms = sourceOwnTeamNormsMap.get(sourceId) || ownTeamNorms;
+    const isHome = activeOwnTeamNorms.some((ownTeamNorm) => (
       ownTeamNorm.length >= 4
         ? homeNorm.includes(ownTeamNorm) || ownTeamNorm.includes(homeNorm)
         : homeNorm === ownTeamNorm
     ));
-    const isAway = ownTeamNorms.some((ownTeamNorm) => (
+    const isAway = activeOwnTeamNorms.some((ownTeamNorm) => (
       ownTeamNorm.length >= 4
         ? awayNorm.includes(ownTeamNorm) || ownTeamNorm.includes(awayNorm)
         : awayNorm === ownTeamNorm
     ));
 
     const hasIdentifiedOwnTeam = isHome || isAway;
-    const sourceLabel = sourceLabelMap.get(String((match as any).__sourceId || '')) || '';
+    const sourceLabel = sourceLabelMap.get(sourceId) || '';
     const titlePrefix = sourceLabel ? `[${sourceLabel}] ` : '';
 
     if (!hasIdentifiedOwnTeam && enforceOwnTeamDetection) {
