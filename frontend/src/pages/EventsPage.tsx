@@ -105,14 +105,31 @@ export default function EventsPage() {
     const googleMapsUrl = encodedLocationQuery ? `https://www.google.com/maps/search/?api=1&query=${encodedLocationQuery}` : '';
     const appleMapsUrl = encodedLocationQuery ? `https://maps.apple.com/?q=${encodedLocationQuery}` : '';
 
+    const normalizeTeamSegment = (value: string): string => {
+      return String(value || '')
+        .replace(/^\[(?:I{1,3}|\d+)\]\s*/i, '')
+        .replace(/^\((?:I{1,3}|\d+)\)\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    };
+
+    const isOwnTeamSegment = (value: string): boolean => {
+      const normalizedTeamName = normalizeTeamSegment(String(event?.team_name || ''));
+      const normalizedValue = normalizeTeamSegment(value);
+      if (!normalizedTeamName || !normalizedValue) return false;
+      return normalizedValue === normalizedTeamName || normalizedValue.startsWith(`${normalizedTeamName} `);
+    };
+
     const getOpponentName = () => {
       if (!event.title) return '';
       const parts = event.title.split(' - ');
       if (parts.length === 2) {
-        const trimmedTeamName = event.team_name.trim();
         const part1 = parts[0].trim();
         const part2 = parts[1].trim();
-        return part1 === trimmedTeamName ? part2 : part1;
+        if (isOwnTeamSegment(part1)) return part2;
+        if (isOwnTeamSegment(part2)) return part1;
+        return part1;
       }
       return event.title;
     };
