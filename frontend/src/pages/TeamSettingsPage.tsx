@@ -197,6 +197,18 @@ export default function TeamSettingsPage() {
       const imported = Number(result?.imported || 0);
       const updated = Number(result?.updated || 0);
       const skipped = Number(result?.skipped || 0);
+      const skippedExisting = Number(result?.skipped_existing || 0);
+      const skippedPastNoResult = Number(result?.skipped_past_without_result || 0);
+
+      if (imported === 0 && skipped > 0) {
+        const details = Array.isArray(result?.skippedDetails) ? result.skippedDetails.slice(0, 2).join(' | ') : '';
+        showToast(
+          `0 importiert, ${skipped} übersprungen (bereits vorhanden: ${skippedExisting}, vergangen ohne Ergebnis: ${skippedPastNoResult})${details ? ` – ${details}` : ''}`,
+          'warning'
+        );
+        return;
+      }
+
       showToast(`Nächste Spiele importiert: ${imported}, aktualisiert: ${updated}, übersprungen: ${skipped}`, 'success');
     },
     onError: (mutationError: any) => {

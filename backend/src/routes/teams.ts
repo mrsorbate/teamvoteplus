@@ -1282,6 +1282,8 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
   const created: string[] = [];
   const updated: string[] = [];
   const skipped: string[] = [];
+  let skippedExisting = 0;
+  let skippedPastNoResult = 0;
   const cancelled: string[] = [];
   const rescheduled: string[] = [];
 
@@ -1402,13 +1404,15 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
 
         rescheduled.push(title);
       } else {
-        skipped.push(title);
+        skippedExisting += 1;
+        skipped.push(`${title}: Bereits vorhanden`);
       }
       continue;
     }
 
     // Skip past games without a known result (nothing useful to import)
     if (gameDate < now && !match.result) {
+      skippedPastNoResult += 1;
       skipped.push(`${title}: Vergangenes Spiel ohne Ergebnis`);
       continue;
     }
@@ -1493,6 +1497,8 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     created,
     updatedItems: updated,
     skippedDetails: skipped,
+    skipped_existing: skippedExisting,
+    skipped_past_without_result: skippedPastNoResult,
     mode: 'fussball.de',
     source_ids: fussballdeSources,
   };
