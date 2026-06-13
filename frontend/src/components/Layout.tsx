@@ -71,38 +71,44 @@ export default function Layout({ organization }: LayoutProps) {
       </a>
 
       {/* ── Top navigation bar ── */}
-      <nav className="bg-gray-900/95 backdrop-blur-sm border-b border-gray-700/60 sticky top-0 z-30 pt-safe">
+      <nav className="sticky top-0 z-30 border-b border-gray-700/70 bg-gray-950/90 pt-safe shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-gray-950/78">
         <div className="max-w-7xl mx-auto px-safe sm:px-6 lg:px-8">
-          <div className="flex justify-between min-h-[3.25rem] sm:h-14">
+          <div className="flex justify-between min-h-[3.5rem] sm:h-14">
 
             {/* Left: Logo + Org */}
             <div className="flex items-center min-w-0 flex-1">
               <Link
                 to={user?.role === 'admin' ? '/admin' : '/'}
-                className="flex items-center gap-2 min-w-0"
+                className="group flex min-h-11 min-w-0 items-center gap-2 rounded-xl px-1.5 -ml-1.5 transition-colors hover:bg-gray-800/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                 aria-label="Zur Startseite"
               >
-                <img src="/teamvoteplus-logo.svg" alt="teamvote+" className="h-6 w-auto shrink-0" />
+                <span className="flex h-10 shrink-0 items-center justify-center rounded-xl border border-gray-700/80 bg-gray-900 px-2.5 shadow-card transition-colors group-hover:border-primary-700/70">
+                  <img src="/teamvoteplus-logo.svg" alt="teamvote+" className="h-7 w-auto max-w-[116px]" />
+                </span>
                 <div className="flex items-center gap-1.5 min-w-0">
                   {(organizationLogo || organizationName !== 'Dein Verein') && (
                     <>
-                      <span className="hidden min-[390px]:inline text-gray-600">·</span>
                       {organizationLogo && (
-                        <img
-                          src={resolveAssetUrl(organizationLogo)}
-                          alt="Vereinslogo"
-                          className="h-5 sm:h-6 w-auto object-contain shrink-0"
-                        />
+                        <span className="hidden min-[360px]:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
+                          <img
+                            src={resolveAssetUrl(organizationLogo)}
+                            alt="Vereinslogo"
+                            className="max-h-6 w-auto object-contain"
+                          />
+                        </span>
                       )}
                       {organizationName !== 'Dein Verein' && (
-                        <>
-                          <span className="hidden min-[390px]:block sm:hidden text-xs font-medium text-gray-400 truncate max-w-[95px]">
+                        <span className="flex min-w-0 flex-col leading-none">
+                          <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-primary-400 sm:hidden">
+                            TeamVote+
+                          </span>
+                          <span className="block text-sm font-semibold text-gray-200 truncate max-w-[210px] sm:hidden">
                             {organizationNameMobile}
                           </span>
-                          <span className="hidden sm:block text-sm font-medium text-gray-400 truncate max-w-[220px]">
+                          <span className="hidden text-sm font-semibold text-gray-200 truncate max-w-[220px] sm:block">
                             {organizationName}
                           </span>
-                        </>
+                        </span>
                       )}
                     </>
                   )}
@@ -111,10 +117,10 @@ export default function Layout({ organization }: LayoutProps) {
             </div>
 
             {/* Right side */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="hidden md:flex items-center gap-1 shrink-0">
 
               {/* Desktop nav links */}
-              <div className="hidden md:flex items-center gap-0.5">
+              <div className="flex items-center gap-0.5">
                 {user?.role !== 'admin' && (
                   <Link
                     to="/"
@@ -178,7 +184,7 @@ export default function Layout({ organization }: LayoutProps) {
               </div>
 
               {/* Desktop: Profile + Logout */}
-              <div className="hidden md:flex items-center gap-2 pl-2">
+              <div className="flex items-center gap-2 pl-2">
                 <Link to="/settings" aria-label="Zu den Einstellungen" className="icon-button rounded-full">
                   {menuProfilePicture ? (
                     <img
