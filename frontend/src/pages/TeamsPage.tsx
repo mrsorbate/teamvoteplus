@@ -63,7 +63,24 @@ export default function TeamsPage() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-12">Lädt...</div>;
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div>
+          <div className="skeleton h-8 w-44" />
+          <div className="skeleton h-4 w-72 mt-2 max-w-full" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="card space-y-4">
+              <div className="skeleton h-40 sm:h-48 rounded-lg" />
+              <div className="skeleton h-5 w-2/3" />
+              <div className="skeleton h-4 w-1/2" />
+              <div className="skeleton h-8 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // Wenn Nutzer (außer Admin) nur 1 Team hat, direkt zu diesem Team navigieren
@@ -161,11 +178,11 @@ export default function TeamsPage() {
               </div>
 
               <div className="mt-3 pt-3 border-t border-gray-700 flex flex-wrap gap-3 sm:gap-4">
-                <div className="flex items-center text-sm text-gray-300">
+                <div className="flex items-center text-sm text-gray-300 tabular-nums">
                   <Calendar className="w-4 h-4 mr-1" />
                   <span>Termine</span>
                 </div>
-                <div className="flex items-center text-sm text-gray-300">
+                <div className="flex items-center text-sm text-gray-300 tabular-nums">
                   <BarChart className="w-4 h-4 mr-1" />
                   <span>Statistiken</span>
                 </div>

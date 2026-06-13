@@ -1031,6 +1031,7 @@ export default function EventCreatePage() {
                       }}
                       title="Stunden vor Termin"
                       aria-label="Rückmeldefrist in Stunden vor Termin"
+                      inputMode="numeric"
                       className="input text-center flex-1 min-w-0"
                       placeholder="z.B. 24"
                     />
@@ -1195,9 +1196,14 @@ export default function EventCreatePage() {
       </form>
 
       {inviteSelectionModalOpen && membersForCreate?.length ? (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <h3 className="text-lg font-semibold text-white">Teilnehmer auswählen</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div
+            className="card max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col overscroll-contain rounded-t-2xl sm:rounded-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-invite-selection-title"
+          >
+            <h3 id="create-invite-selection-title" className="text-lg font-semibold text-white">Teilnehmer auswählen</h3>
             <p className="text-sm text-gray-300 mt-1 mb-3">
               Wähle aus, welche Spieler eingeladen werden.
             </p>
@@ -1212,7 +1218,7 @@ export default function EventCreatePage() {
               </button>
             </div>
 
-            <div className="overflow-y-auto pr-1 space-y-2">
+            <div className="overflow-y-auto overscroll-contain pr-1 space-y-2">
               {membersForCreate.map((member: any) => {
                 const isChecked = eventData.invited_user_ids.includes(member.id);
                 const avatarUrl = resolveAssetUrl(member?.profile_picture);

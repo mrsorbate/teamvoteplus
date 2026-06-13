@@ -137,7 +137,7 @@ export default function TeamRosterPage() {
 
   const renderInfoCard = (label: string, value: string, extraClassName = '') => (
     <div className={`rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 ${extraClassName}`}>
-      <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading">{label}</p>
+      <p className="eyebrow-label">{label}</p>
       <p className="mt-0.5 font-semibold text-white break-words">{value}</p>
     </div>
   );
@@ -317,7 +317,7 @@ export default function TeamRosterPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 tabular-nums">
                     Verwendungen: {Number(joinLink.used_count || 0)} von {Number(joinLink.max_uses || 0)}
                   </p>
                   <button

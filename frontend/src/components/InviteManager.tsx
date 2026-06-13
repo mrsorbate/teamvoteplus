@@ -364,7 +364,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                     <td className="py-3 pr-3 text-gray-300">
                       {invite.expires_at ? new Date(invite.expires_at).toLocaleDateString('de-DE') : '-'}
                     </td>
-                    <td className="py-3 pr-3 text-gray-300">
+                    <td className="py-3 pr-3 text-gray-300 tabular-nums">
                       {invite.used_count}{invite.max_uses ? ` / ${invite.max_uses}` : ''}
                     </td>
                     <td className="py-3 pr-3">

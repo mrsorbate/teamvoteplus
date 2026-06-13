@@ -260,6 +260,10 @@
     letter-spacing: 0.02em;
   }
 
+  .eyebrow-label {
+    @apply text-xs font-heading font-semibold uppercase tracking-wider text-gray-500;
+  }
+
   /* ── Stat card elements ── */
   .stat-value {
     @apply text-3xl font-bold text-white leading-none;

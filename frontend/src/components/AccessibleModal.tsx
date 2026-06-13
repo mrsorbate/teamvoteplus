@@ -74,7 +74,7 @@ export default function AccessibleModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 ${className}`}
+      className={`fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overscroll-contain ${className}`}
       onMouseDown={onClose}
     >
       <div
@@ -83,7 +83,7 @@ export default function AccessibleModal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className={panelClassName}
+        className={`overscroll-contain ${panelClassName}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         {children}

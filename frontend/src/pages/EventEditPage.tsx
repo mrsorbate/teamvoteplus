@@ -7,6 +7,10 @@ import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 import { useToast } from '../lib/useToast';
 
+interface EventResponse {
+  user_id?: number | string | null;
+}
+
 export default function EventEditPage() {
   const { id } = useParams<{ id: string }>();
   const eventId = id ? parseInt(id, 10) : NaN;
@@ -286,7 +290,7 @@ export default function EventEditPage() {
 
     const invitedUserIds: number[] = [];
     if (Array.isArray(event.responses)) {
-      for (const response of event.responses as any[]) {
+      for (const response of event.responses as EventResponse[]) {
         const userId = Number(response?.user_id);
         if (Number.isFinite(userId) && !invitedUserIds.includes(userId)) {
           invitedUserIds.push(userId);
@@ -860,6 +864,7 @@ export default function EventEditPage() {
                       }}
                       title="Stunden vor Termin"
                       aria-label="Rückmeldefrist in Stunden vor Termin"
+                      inputMode="numeric"
                       disabled={!eventData.start_time}
                       className="input text-center flex-1 min-w-0"
                       placeholder="z.B. 24"
@@ -1039,9 +1044,14 @@ export default function EventEditPage() {
       </form>
 
       {inviteSelectionModalOpen && membersForEdit?.length ? (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <h3 className="text-lg font-semibold text-white">Teilnehmer auswählen</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div
+            className="card max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col overscroll-contain rounded-t-2xl sm:rounded-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-invite-selection-title"
+          >
+            <h3 id="edit-invite-selection-title" className="text-lg font-semibold text-white">Teilnehmer auswählen</h3>
             <p className="text-sm text-gray-300 mt-1 mb-3">
               Wähle aus, welche Spieler eingeladen werden.
             </p>
@@ -1056,7 +1066,7 @@ export default function EventEditPage() {
               </button>
             </div>
 
-            <div className="overflow-y-auto pr-1 space-y-2">
+            <div className="overflow-y-auto overscroll-contain pr-1 space-y-2">
               {membersForEdit.map((member: any) => {
                 const isChecked = eventData.invited_user_ids.includes(member.id);
                 const avatarUrl = resolveAssetUrl(member?.profile_picture);

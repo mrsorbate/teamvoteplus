@@ -9,6 +9,14 @@ import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
 
+interface EventResponse {
+  id: number;
+  user_id: number;
+  user_name: string;
+  user_profile_picture?: string | null;
+  comment?: string | null;
+}
+
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const eventId = parseInt(id!);
@@ -347,7 +355,7 @@ export default function EventDetailPage() {
     count: number,
     toneClass: string,
     icon: string,
-    responses: any[],
+    responses: EventResponse[],
     currentStatus: 'accepted' | 'declined' | 'tentative' | 'pending'
   ) => {
     if (count === 0) return null;
@@ -364,12 +372,12 @@ export default function EventDetailPage() {
           </span>
         </h3>
         <div className="space-y-2">
-          {responses.map((response: any) => {
+          {responses.map((response) => {
+            const declineComment = typeof response.comment === 'string' ? response.comment.trim() : '';
             const showDeclineReason =
               isTrainer &&
               currentStatus === 'declined' &&
-              typeof response.comment === 'string' &&
-              response.comment.trim().length > 0;
+              declineComment.length > 0;
 
             return (
 	              <div
@@ -388,12 +396,12 @@ export default function EventDetailPage() {
 	                aria-label={isTrainer ? `${response.user_name} Optionen anzeigen` : undefined}
 	                className={`w-full flex ${showDeclineReason ? 'items-start' : 'items-center'} space-x-2 sm:space-x-3 text-sm rounded-lg px-2 py-2 transition-colors hover:bg-gray-700`}
 	              >
-                {renderAvatar(response.user_name, response.user_profile_picture)}
+                {renderAvatar(response.user_name, response.user_profile_picture ?? undefined)}
                 {showDeclineReason ? (
                   <div className="min-w-0 flex-1">
                     <p className="text-white font-medium truncate">{response.user_name}</p>
                     <p className="mt-0 text-xs text-gray-300 break-words">
-                      Grund: {response.comment.trim()}
+                      Grund: {declineComment}
                     </p>
                   </div>
                 ) : (
@@ -489,18 +497,18 @@ export default function EventDetailPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Datum</p>
+                <p className="eyebrow-label">Datum</p>
                 <p className="mt-1 font-semibold text-white">{eventDateLabel}</p>
               </div>
 
               <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Uhrzeit</p>
+                <p className="eyebrow-label">Uhrzeit</p>
                 <p className="mt-1 font-semibold text-white">{eventTimeRangeLabel}</p>
               </div>
 
               {shouldShowAddressBlock && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Ort</p>
+                  <p className="eyebrow-label">Ort</p>
                   {locationLabel ? (
                     <div className="mt-1 space-y-1">
                       <a
@@ -549,7 +557,7 @@ export default function EventDetailPage() {
 
               {hasMeetingInfo && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Treffpunkt</p>
+                  <p className="eyebrow-label">Treffpunkt</p>
                   {event?.meeting_point && (
                     <p className="mt-1 font-semibold text-white break-words">{event.meeting_point}</p>
                   )}
@@ -563,35 +571,35 @@ export default function EventDetailPage() {
 
               {event?.type === 'match' && event?.is_home_match !== undefined && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Spielart</p>
+                  <p className="eyebrow-label">Spielart</p>
                   <p className="mt-1 font-semibold text-white">{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</p>
                 </div>
               )}
 
               {event?.duration_minutes && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Dauer</p>
+                  <p className="eyebrow-label">Dauer</p>
                   <p className="mt-1 font-semibold text-white">{event.duration_minutes} Minuten</p>
                 </div>
               )}
 
               {event?.rsvp_deadline && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Rückmeldefrist</p>
+                  <p className="eyebrow-label">Rückmeldefrist</p>
                   <p className="mt-1 font-semibold text-white">{safeFormatDate(event.rsvp_deadline, 'PPPp')}</p>
                 </div>
               )}
 
               {event?.pitch_type && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Platzart</p>
+                  <p className="eyebrow-label">Platzart</p>
                   <p className="mt-1 font-semibold text-white">{event.pitch_type}</p>
                 </div>
               )}
 
               {event?.description && (
                 <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Beschreibung</p>
+                  <p className="eyebrow-label">Beschreibung</p>
                   <p className="text-gray-300 break-words mt-1">{event.description}</p>
                 </div>
               )}

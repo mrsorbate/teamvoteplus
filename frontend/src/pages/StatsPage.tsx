@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { statsAPI } from '../lib/api';
 import { ArrowLeft, TrendingUp, ChevronDown } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { useSmartBack } from '../hooks/useSmartBack';
 
 interface AttendanceEntry {
   id: number;
@@ -18,8 +20,18 @@ interface AttendanceEntry {
   accepted_other: number;
   total_other: number;
 }
-import { useAuthStore } from '../store/authStore';
-import { useSmartBack } from '../hooks/useSmartBack';
+
+interface TeamStatsResponse {
+  attendance?: AttendanceEntry[];
+  events?: {
+    past?: number;
+    pastByCategory?: {
+      training?: number;
+      match?: number;
+      other?: number;
+    };
+  };
+}
 
 function DonutChart({ accepted, declined, pending }: { accepted: number; declined: number; pending: number }) {
   const size = 104;
@@ -97,7 +109,7 @@ export default function StatsPage() {
     queryKey: ['team-stats', teamId],
     queryFn: async () => {
       const response = await statsAPI.getTeamStats(teamId);
-      return response.data;
+      return response.data as TeamStatsResponse;
     },
   });
 
@@ -171,7 +183,7 @@ export default function StatsPage() {
 
       {/* Overview with Donut Chart */}
       <div className="bg-gray-800 border border-gray-700/60 rounded-2xl p-4 sm:p-5">
-        <p className="text-xs font-heading font-semibold uppercase tracking-wider text-gray-500 mb-4">
+        <p className="eyebrow-label mb-4">
           {isTrainer ? 'Team-Gesamtübersicht' : 'Meine Übersicht'}
         </p>
         <div className="flex items-center gap-5 sm:gap-8">
@@ -200,12 +212,12 @@ export default function StatsPage() {
       {sorted.length > 0 && (
         <div className="bg-gray-800 border border-gray-700/60 rounded-2xl overflow-hidden">
           <div className="px-4 pt-4 pb-3 border-b border-gray-700/50">
-            <p className="text-xs font-heading font-semibold uppercase tracking-wider text-gray-500">
+            <p className="eyebrow-label">
               {isTrainer ? 'Spieler-Rangliste' : 'Anwesenheit nach Kategorie'}
             </p>
           </div>
           <ul className="divide-y divide-gray-700/50">
-            {sorted.map((player: any, idx: number) => {
+            {sorted.map((player: AttendanceEntry, idx: number) => {
               const rate = player.attendance_rate || 0;
               const isExpanded = expandedPlayer === player.id;
               const rateColor = rate >= 80 ? 'text-green-400' : rate >= 50 ? 'text-accent-400' : 'text-primary-400';
@@ -262,15 +274,15 @@ export default function StatsPage() {
                         ].map((cat) => (
                           <div key={cat.label} className="bg-gray-800/60 rounded-xl p-2.5 text-center">
                             <p className="text-[10px] uppercase tracking-wider text-gray-500 font-heading">{cat.label}</p>
-                            <p className={`text-lg font-heading font-bold ${cat.textColor} mt-0.5 leading-none`}>{cat.rate}%</p>
-                            <p className="text-[10px] text-gray-500 mt-1">{cat.accepted}/{cat.total}</p>
+                            <p className={`text-lg font-heading font-bold tabular-nums ${cat.textColor} mt-0.5 leading-none`}>{cat.rate}%</p>
+                            <p className="text-[10px] text-gray-500 mt-1 tabular-nums">{cat.accepted}/{cat.total}</p>
                           </div>
                         ))}
                       </div>
                       <div className="flex gap-4 text-xs">
-                        <span className="text-green-400 font-medium">{player.accepted} Zusagen</span>
-                        <span className="text-primary-400 font-medium">{player.declined} Absagen</span>
-                        <span className="text-gray-500">{player.pending} offen</span>
+                        <span className="text-green-400 font-medium tabular-nums">{player.accepted} Zusagen</span>
+                        <span className="text-primary-400 font-medium tabular-nums">{player.declined} Absagen</span>
+                        <span className="text-gray-500 tabular-nums">{player.pending} offen</span>
                       </div>
                     </div>
                   )}
