@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import { useSmartBack } from '../hooks/useSmartBack';
+import AccessibleModal from '../components/AccessibleModal';
 
 export default function TeamSettingsPage() {
   const { id } = useParams<{ id: string }>();
@@ -852,9 +853,13 @@ export default function TeamSettingsPage() {
             </div>
 
             {showDeleteImportedGamesConfirm && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
-                  <h3 className="text-lg font-bold text-white mb-2">Importierte Spiele wirklich löschen?</h3>
+              <AccessibleModal
+                labelledBy="delete-imported-games-title"
+                onClose={() => setShowDeleteImportedGamesConfirm(false)}
+                className="items-end sm:items-center p-0 sm:p-4"
+                panelClassName="bg-gray-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-modal"
+              >
+                  <h3 id="delete-imported-games-title" className="text-lg font-bold text-white mb-2">Importierte Spiele wirklich löschen?</h3>
                   <p className="text-sm text-gray-300 mb-4">
                     Alle von fussball.de importierten Spiele werden gelöscht. Du kannst sie anschließend neu importieren.
                   </p>
@@ -873,8 +878,7 @@ export default function TeamSettingsPage() {
                       Löschen
                     </button>
                   </div>
-                </div>
-              </div>
+              </AccessibleModal>
             )}
           </div>
 
@@ -1436,9 +1440,13 @@ export default function TeamSettingsPage() {
           </div>
 
           {showDeleteTeamConfirm && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
-                <h3 className="text-lg font-bold text-white mb-2">Team wirklich löschen?</h3>
+            <AccessibleModal
+              labelledBy="delete-team-settings-title"
+              onClose={() => setShowDeleteTeamConfirm(false)}
+              className="items-end sm:items-center p-0 sm:p-4"
+              panelClassName="bg-gray-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-modal"
+            >
+                <h3 id="delete-team-settings-title" className="text-lg font-bold text-white mb-2">Team wirklich löschen?</h3>
                 <p className="text-sm text-gray-300 mb-4">
                   Diese Aktion kann nicht rückgängig gemacht werden.
                 </p>
@@ -1458,8 +1466,7 @@ export default function TeamSettingsPage() {
                     Löschen
                   </button>
                 </div>
-              </div>
-            </div>
+            </AccessibleModal>
           )}
         </>
       )}

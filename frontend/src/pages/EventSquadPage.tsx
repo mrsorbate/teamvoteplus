@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Check, ClipboardList } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -256,7 +256,7 @@ export default function EventSquadPage() {
   const renderAvatar = (name: string, profilePicture?: string, sizeClass = 'w-7 h-7') => {
     const avatarUrl = resolveAssetUrl(profilePicture);
     if (avatarUrl) {
-      return <img src={avatarUrl} alt={`${name} Profilbild`} className={`${sizeClass} rounded-full object-cover border border-gray-700 bg-white`} />;
+      return <img src={avatarUrl} alt={`${name} Profilbild`} className={`${sizeClass} rounded-full object-cover border border-gray-700 bg-gray-100`} />;
     }
     return <div className={`${sizeClass} rounded-full bg-gray-700`} />;
   };
@@ -456,7 +456,7 @@ export default function EventSquadPage() {
             }}
             aria-label="Zurück zum Termin"
             title="Zurück zum Termin"
-            className="text-gray-300 hover:text-gray-900 hover:text-white"
+            className="text-gray-300 hover:text-white"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -476,7 +476,7 @@ export default function EventSquadPage() {
             const target = originFrom || `/events/${eventId}`;
             navigate(target, { replace: true });
           }}
-          className="text-gray-300 hover:text-gray-900 hover:text-white"
+          className="text-gray-300 hover:text-white"
           aria-label="Zurück"
           title="Zurück"
         >
@@ -491,7 +491,7 @@ export default function EventSquadPage() {
       <div className="card">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">{event.title}</h2>
-          <span className={`text-xs px-2 py-1 rounded-full ${matchSquad?.is_released === 1 ? 'bg-green-100 text-green-700 bg-green-900/30 text-green-300' : 'bg-yellow-100 text-yellow-700 bg-yellow-900/30 text-yellow-300'}`}>
+          <span className={`text-xs px-2 py-1 rounded-full border ${matchSquad?.is_released === 1 ? 'bg-green-900/30 text-green-300 border-green-700/50' : 'bg-yellow-900/30 text-yellow-300 border-yellow-700/50'}`}>
             {matchSquad?.is_released === 1 ? 'Freigegeben' : 'Entwurf'}
           </span>
         </div>
@@ -555,7 +555,7 @@ export default function EventSquadPage() {
                       data-board-y={top}
                     >
                       <div
-                        className={`rounded-full border-2 border-white/90 ring-2 ring-green-300/70 ring-green-800/80 shadow-md bg-white/90 bg-gray-900/80 p-0.5 ${isTrainer ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
+                        className={`rounded-full border-2 border-white/90 ring-2 ring-green-800/80 shadow-md bg-gray-900/80 p-0.5 ${isTrainer ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
                         onPointerDown={isTrainer ? (event) => startDrag(player.id, 'board', event) : undefined}
                         title={player.name}
                         aria-label={player.name}
@@ -620,7 +620,9 @@ export default function EventSquadPage() {
                     <div className="rounded-xl border border-gray-700 bg-gray-800/60 p-3 sm:p-4">
                       <h3 className="font-semibold text-sm mb-3 flex items-center justify-between text-gray-100">
                         <span className="flex items-center">
-                          <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-700 bg-green-900/40 text-green-300">✓</span>
+                          <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-900/40 text-green-300 border border-green-700/50">
+                            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                          </span>
                           Zugesagt
                         </span>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-gray-900 text-gray-300 border border-gray-700">
@@ -632,7 +634,7 @@ export default function EventSquadPage() {
                         {acceptedPlayers.map((player) => {
                           const isEnabled = editableSquadUserIds.includes(player.id);
                           return (
-                            <div key={player.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${isEnabled ? 'border-primary-300 bg-primary-50/50 border-primary-700 bg-primary-900/20' : 'border-gray-700 bg-gray-900'}`}>
+                            <div key={player.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${isEnabled ? 'border-primary-700 bg-primary-900/20' : 'border-gray-700 bg-gray-900'}`}>
                               <span className="inline-flex items-center gap-2 min-w-0 flex-1">
                                 {renderAvatar(player.name, player.profile_picture, 'w-8 h-8')}
                                 <span className="text-sm text-gray-200 truncate">{player.name}</span>
@@ -646,7 +648,7 @@ export default function EventSquadPage() {
                                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${isEnabled ? 'bg-primary-600' : 'bg-gray-600'}`}
                               >
                                 <span
-                                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                                  className={`inline-block h-5 w-5 transform rounded-full bg-gray-100 transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
                                 />
                               </button>
                             </div>

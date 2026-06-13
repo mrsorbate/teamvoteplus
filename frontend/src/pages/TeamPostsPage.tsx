@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, MessageSquare, Vote } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, MessageSquare, Vote } from 'lucide-react';
 import { postsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
@@ -34,6 +34,13 @@ export default function TeamPostsPage() {
   const [content, setContent] = useState('');
   const [optionsText, setOptionsText] = useState('Ja\nNein');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const getSegmentButtonClass = (isActive: boolean) =>
+    `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-primary-900/40 border-primary-600 text-primary-100'
+        : 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
+    }`;
 
   const { data: team } = useQuery({
     queryKey: ['team', teamId],
@@ -169,7 +176,7 @@ export default function TeamPostsPage() {
           <button
             type="button"
             onClick={() => goBack(`/teams/${teamId}`)}
-            className="mt-0.5 sm:mt-0 text-gray-300 hover:text-gray-900 hover:text-white"
+            className="mt-0.5 sm:mt-0 text-gray-300 hover:text-white"
             aria-label="Zurück"
             title="Zurück"
           >
@@ -188,27 +195,23 @@ export default function TeamPostsPage() {
         <div className="card space-y-4">
           <h2 className="text-lg font-semibold text-white">Neue Einträge erstellen</h2>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Eintragstyp auswählen">
             <button
               type="button"
               onClick={() => setPostType('announcement')}
-              className={`px-3 py-2 rounded-md text-sm border ${
-                postType === 'announcement'
-                  ? 'bg-primary-100 border-primary-400 text-primary-900 bg-primary-900/40 border-primary-600 text-primary-100'
-                  : 'bg-white border-gray-300 text-gray-700 bg-gray-800 border-gray-600 text-gray-200'
-              }`}
+              className={getSegmentButtonClass(postType === 'announcement')}
+              aria-pressed={postType === 'announcement'}
             >
+              <MessageSquare className="w-4 h-4" />
               Nachricht
             </button>
             <button
               type="button"
               onClick={() => setPostType('poll')}
-              className={`px-3 py-2 rounded-md text-sm border ${
-                postType === 'poll'
-                  ? 'bg-primary-100 border-primary-400 text-primary-900 bg-primary-900/40 border-primary-600 text-primary-100'
-                  : 'bg-white border-gray-300 text-gray-700 bg-gray-800 border-gray-600 text-gray-200'
-              }`}
+              className={getSegmentButtonClass(postType === 'poll')}
+              aria-pressed={postType === 'poll'}
             >
+              <Vote className="w-4 h-4" />
               Umfrage
             </button>
           </div>
@@ -255,7 +258,17 @@ export default function TeamPostsPage() {
             disabled={createPostMutation.isPending}
             className="btn btn-primary"
           >
-            {createPostMutation.isPending ? 'Speichere...' : 'Veröffentlichen'}
+            {createPostMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Speichert...
+              </>
+            ) : (
+              <>
+                {postType === 'announcement' ? <MessageSquare className="w-4 h-4" /> : <Vote className="w-4 h-4" />}
+                Veröffentlichen
+              </>
+            )}
           </button>
         </div>
       )}
@@ -263,26 +276,20 @@ export default function TeamPostsPage() {
       <div className="card space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-white">Offene Einträge</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="group" aria-label="Einträge filtern">
             <button
               type="button"
               onClick={() => handleScopeChange('open')}
-              className={`px-3 py-2 rounded-md text-sm border ${
-                scope === 'open'
-                  ? 'bg-primary-100 border-primary-400 text-primary-900 bg-primary-900/40 border-primary-600 text-primary-100'
-                  : 'bg-white border-gray-300 text-gray-700 bg-gray-800 border-gray-600 text-gray-200'
-              }`}
+              className={getSegmentButtonClass(scope === 'open')}
+              aria-pressed={scope === 'open'}
             >
               Offen
             </button>
             <button
               type="button"
               onClick={() => handleScopeChange('all')}
-              className={`px-3 py-2 rounded-md text-sm border ${
-                scope === 'all'
-                  ? 'bg-primary-100 border-primary-400 text-primary-900 bg-primary-900/40 border-primary-600 text-primary-100'
-                  : 'bg-white border-gray-300 text-gray-700 bg-gray-800 border-gray-600 text-gray-200'
-              }`}
+              className={getSegmentButtonClass(scope === 'all')}
+              aria-pressed={scope === 'all'}
             >
               Alle
             </button>
@@ -290,20 +297,35 @@ export default function TeamPostsPage() {
         </div>
 
         {errorMessage && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 border-red-700 bg-red-900/20 text-red-200">
-            {errorMessage}
+          <div className="flex items-start gap-2 rounded-lg border border-red-700 bg-red-900/20 px-3 py-2 text-sm text-red-200" role="alert">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" aria-hidden="true" />
+            <span>{errorMessage}</span>
           </div>
         )}
 
         {isLoading ? (
-          <p className="text-gray-400">Lade Einträge...</p>
+          <div className="space-y-3" aria-label="Einträge werden geladen">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="rounded-xl border border-gray-700 bg-gray-800 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2 flex-1">
+                    <div className="skeleton h-3 w-20" />
+                    <div className="skeleton h-5 w-2/3" />
+                    <div className="skeleton h-3 w-40" />
+                  </div>
+                  <div className="skeleton h-5 w-16 rounded-full" />
+                </div>
+                <div className="skeleton h-10 w-full" />
+              </div>
+            ))}
+          </div>
         ) : posts && posts.length > 0 ? (
           <div className="space-y-3">
             {posts.map((post) => {
               const isAnnouncementDone = Boolean(post.my_seen_at);
               const isPollDone = typeof post.my_answer_option === 'number' || Boolean(post.my_answered_at);
               return (
-                <article key={post.id} className="rounded-xl border border-gray-200 bg-white p-4 border-gray-700 bg-gray-800">
+                <article key={post.id} className="rounded-xl border border-gray-700 bg-gray-800 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-wide text-gray-400">
@@ -314,9 +336,19 @@ export default function TeamPostsPage() {
                         {formatDate(post.created_at)}{post.created_by_name ? ` • von ${post.created_by_name}` : ''}
                       </p>
                     </div>
-                    <div className="text-xs text-gray-400">
-                      {post.type === 'announcement' && isAnnouncementDone && 'Gelesen'}
-                      {post.type === 'poll' && isPollDone && 'Beantwortet'}
+                    <div className="shrink-0">
+                      {post.type === 'announcement' && isAnnouncementDone && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-300">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Gelesen
+                        </span>
+                      )}
+                      {post.type === 'poll' && isPollDone && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-300">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Beantwortet
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -334,10 +366,10 @@ export default function TeamPostsPage() {
                             type="button"
                             disabled={answerPollMutation.isPending || isPollDone}
                             onClick={() => answerPollMutation.mutate({ postId: post.id, optionIndex })}
-                            className={`w-full text-left px-3 py-2 rounded-md border text-sm transition-colors ${
+                            className={`w-full text-left px-3 py-2 rounded-md border text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
                               isSelected
-                                ? 'bg-green-100 border-green-400 text-green-900 bg-green-900/30 border-green-600 text-green-100'
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
+                                ? 'bg-green-900/30 border-green-600 text-green-100'
+                                : 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
                             }`}
                           >
                             <span className="inline-flex items-center gap-2">
@@ -357,8 +389,8 @@ export default function TeamPostsPage() {
                       disabled={markSeenMutation.isPending}
                       className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-60"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Als gelesen markieren
+                      {markSeenMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {markSeenMutation.isPending ? 'Speichert...' : 'Als gelesen markieren'}
                     </button>
                   )}
                 </article>

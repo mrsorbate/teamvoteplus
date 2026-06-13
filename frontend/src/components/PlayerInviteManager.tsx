@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invitesAPI } from '../lib/api';
 import { Copy, Plus, Trash2, Users } from 'lucide-react';
 import { useToast } from '../lib/useToast';
+import AccessibleModal from './AccessibleModal';
 
 interface PlayerInviteManagerProps {
   teamId: number;
@@ -146,6 +147,24 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
     setInviteToDelete(null);
   };
 
+  const closeCreateModal = () => {
+    if (createMutation.isPending) return;
+    setShowCreateForm(false);
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingId !== null || deleteMutation.isPending) return;
+    setShowDeleteModal(false);
+    setInviteToDelete(null);
+  };
+
+  const closeShareModal = () => {
+    setShowShareModal(false);
+    setSelectedInviteForShare(null);
+    setInviteMessageDraft('');
+    setIsEditingInviteMessage(false);
+  };
+
   const openDeleteModal = (invite: any) => {
     setInviteToDelete(invite);
     setShowDeleteModal(true);
@@ -183,8 +202,12 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
       </div>
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-xl w-full max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="create-player-title">
+        <AccessibleModal
+          labelledBy="create-player-title"
+          onClose={closeCreateModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="create-player-title" className="font-semibold text-white mb-4">Spieler einladen</h3>
 
             <form onSubmit={handleCreate} className="space-y-4">
@@ -243,13 +266,12 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                 <button type="submit" disabled={createMutation.isPending} className="btn btn-primary w-full sm:w-auto">
                   {createMutation.isPending ? 'Erstellt...' : 'Einladung erstellen'}
                 </button>
-                <button type="button" onClick={() => setShowCreateForm(false)} className="btn btn-secondary w-full sm:w-auto">
+                <button type="button" onClick={closeCreateModal} className="btn btn-secondary w-full sm:w-auto">
                   Abbrechen
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {invites && invites.length > 0 ? (
@@ -347,8 +369,12 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
 
       {/* Delete Invite Modal */}
       {showDeleteModal && inviteToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-md w-full overscroll-contain rounded-t-2xl sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="delete-invite-title">
+        <AccessibleModal
+          labelledBy="delete-invite-title"
+          onClose={closeDeleteModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="delete-invite-title" className="font-semibold text-white mb-4">
               Einladung löschen?
             </h3>
@@ -364,23 +390,23 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                 {deletingId === inviteToDelete.id ? 'Wird gelöscht...' : 'Ja, löschen'}
               </button>
               <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setInviteToDelete(null);
-                }}
+                onClick={closeDeleteModal}
                 className="btn btn-secondary flex-1"
               >
                 Abbrechen
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Share Invite Modal */}
       {showShareModal && selectedInviteForShare && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="share-invite-title">
+        <AccessibleModal
+          labelledBy="share-invite-title"
+          onClose={closeShareModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="share-invite-title" className="font-semibold text-white mb-4">
               Einladung für {selectedInviteForShare.player_name} teilen
             </h3>
@@ -431,20 +457,14 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                   {copiedToken === selectedInviteForShare.token ? 'Kopiert!' : 'Text kopieren'}
                 </button>
                 <button
-                  onClick={() => {
-                    setShowShareModal(false);
-                    setSelectedInviteForShare(null);
-                    setInviteMessageDraft('');
-                    setIsEditingInviteMessage(false);
-                  }}
+                  onClick={closeShareModal}
                   className="btn btn-secondary flex-1"
                 >
                   Schließen
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
     </div>
   );

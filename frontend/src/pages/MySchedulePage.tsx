@@ -105,7 +105,7 @@ const renderMatchCard = (match: any, section: any, cardKey: string) => {
   return (
     <div
       key={cardKey}
-      className="p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md bg-white border-gray-200 hover:border-primary-300 bg-gray-800 border-gray-700 hover:border-primary-600"
+      className="p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md bg-gray-800 border-gray-700 hover:border-primary-600"
     >
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="w-16 sm:w-20 shrink-0 flex items-center justify-center">
@@ -126,7 +126,7 @@ const renderMatchCard = (match: any, section: any, cardKey: string) => {
                 <img
                   src={opponentBadge}
                   alt={`${opponent} Wappen`}
-                  className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-contain bg-white flex-shrink-0"
+                  className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-contain bg-gray-100 flex-shrink-0"
                   loading="lazy"
                 />
               ) : (
@@ -157,7 +157,7 @@ const renderMatchCard = (match: any, section: any, cardKey: string) => {
 
           {teamDisplayName && (
             <div className="mt-1 flex items-center gap-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 bg-primary-900/40 text-primary-200 whitespace-nowrap">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-900/40 text-primary-200 whitespace-nowrap">
                 {teamDisplayName}
               </span>
             </div>

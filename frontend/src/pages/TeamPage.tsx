@@ -43,7 +43,7 @@ export default function TeamPage() {
           <button
             type="button"
             onClick={() => goBack('/')}
-            className="mt-0.5 sm:mt-0 text-gray-300 hover:text-gray-900 hover:text-white"
+            className="mt-0.5 sm:mt-0 text-gray-300 hover:text-white"
             aria-label="Zurück"
             title="Zurück"
           >
@@ -64,8 +64,8 @@ export default function TeamPage() {
           to={`/teams/${teamId}/events`}
           className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4"
         >
-          <div className="bg-primary-100 p-2.5 sm:p-3 rounded-lg">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
+          <div className="bg-primary-900/30 border border-primary-700/50 p-2.5 sm:p-3 rounded-lg">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary-300" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-white text-sm sm:text-base">Termine</h3>
@@ -77,8 +77,8 @@ export default function TeamPage() {
           to={`/teams/${teamId}/kader`}
           className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4 text-left"
         >
-          <div className="bg-green-100 p-2.5 sm:p-3 rounded-lg">
-            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+          <div className="bg-green-900/30 border border-green-700/50 p-2.5 sm:p-3 rounded-lg">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-300" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-white text-sm sm:text-base">Trainer &amp; Spieler</h3>
@@ -90,8 +90,8 @@ export default function TeamPage() {
           to={`/teams/${teamId}/stats`}
           className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4"
         >
-          <div className="bg-blue-100 p-2.5 sm:p-3 rounded-lg">
-            <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+          <div className="bg-blue-900/30 border border-blue-700/50 p-2.5 sm:p-3 rounded-lg">
+            <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-300" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-white text-sm sm:text-base">Statistiken</h3>
@@ -103,8 +103,8 @@ export default function TeamPage() {
           to={`/teams/${teamId}/posts`}
           className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4"
         >
-          <div className="bg-amber-100 p-2.5 sm:p-3 rounded-lg">
-            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
+          <div className="bg-amber-900/30 border border-amber-700/50 p-2.5 sm:p-3 rounded-lg">
+            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-white text-sm sm:text-base">Nachrichten &amp; Umfragen</h3>

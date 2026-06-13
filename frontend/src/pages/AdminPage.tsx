@@ -1,4 +1,4 @@
-import { useState, useRef, Fragment, useEffect } from 'react';
+import { useState, useRef, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
@@ -6,6 +6,7 @@ import { Navigate } from 'react-router-dom';
 import { Plus, Trash2, Users, UserPlus, UserMinus, Shield, Settings, Upload, Copy, Share2, Check, KeyRound, Edit2 } from 'lucide-react';
 import { useToast, type ToastType } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
+import AccessibleModal from '../components/AccessibleModal';
 
 const TIMEZONES = [
   'Europe/Berlin',
@@ -87,109 +88,6 @@ export default function AdminPage() {
   const showToast = (message: string, type: ToastType = 'error') => {
     showGlobalToast(message, type, { position: 'bottom-right' });
   };
-
-  useEffect(() => {
-    const hasOpenModal =
-      showAssignTrainer ||
-      showDeleteTeamConfirmModal ||
-      showEditTeamModal ||
-      showRemoveTrainer ||
-      showCreateTeam ||
-      showCreateTrainer ||
-      showCreateAdmin ||
-      showResetPasswordConfirmModal ||
-      showDeleteUserConfirmModal ||
-      showResendTrainerLinkModal ||
-      showGeneratedPasswordModal;
-
-    if (!hasOpenModal) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-
-      if (showGeneratedPasswordModal) {
-        setShowGeneratedPasswordModal(false);
-        setGeneratedPassword('');
-        setCopiedGeneratedPassword(false);
-        return;
-      }
-
-      if (showResendTrainerLinkModal) {
-        setShowResendTrainerLinkModal(false);
-        setResendTrainerName('');
-        setResendTrainerLink('');
-        setCopiedResendTrainerLink(false);
-        return;
-      }
-
-      if (showDeleteUserConfirmModal) {
-        setShowDeleteUserConfirmModal(false);
-        setUserToDelete(null);
-        return;
-      }
-
-      if (showResetPasswordConfirmModal) {
-        setShowResetPasswordConfirmModal(false);
-        setUserToResetPassword(null);
-        return;
-      }
-
-      if (showCreateTrainer) {
-        closeCreateTrainerModal();
-        return;
-      }
-
-      if (showCreateAdmin) {
-        closeCreateAdminModal();
-        return;
-      }
-
-      if (showCreateTeam) {
-        setShowCreateTeam(false);
-        return;
-      }
-
-      if (showRemoveTrainer) {
-        setShowRemoveTrainer(false);
-        setSelectedTrainerToRemove('');
-        return;
-      }
-
-      if (showDeleteTeamConfirmModal) {
-        setShowDeleteTeamConfirmModal(false);
-        setTeamToDelete(null);
-        return;
-      }
-
-      if (showEditTeamModal) {
-        setShowEditTeamModal(false);
-        setTeamToEdit(null);
-        setEditTeamName('');
-        setEditTeamDescription('');
-        return;
-      }
-
-      if (showAssignTrainer) {
-        setShowAssignTrainer(false);
-        setSelectedTrainer('');
-      }
-    };
-
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [
-    showAssignTrainer,
-    showDeleteTeamConfirmModal,
-    showEditTeamModal,
-    showRemoveTrainer,
-    showCreateTeam,
-    showCreateTrainer,
-    showCreateAdmin,
-    showResetPasswordConfirmModal,
-    showDeleteUserConfirmModal,
-    showResendTrainerLinkModal,
-    showGeneratedPasswordModal,
-  ]);
 
   // Redirect if not admin
   if (user?.role !== 'admin') {
@@ -594,6 +492,65 @@ export default function AdminPage() {
     setAdminPassword('');
   };
 
+  const closeAssignTrainerModal = () => {
+    if (addMemberMutation.isPending) return;
+    setShowAssignTrainer(false);
+    setSelectedTrainer('');
+  };
+
+  const closeDeleteTeamModal = () => {
+    if (deleteTeamMutation.isPending) return;
+    setShowDeleteTeamConfirmModal(false);
+    setTeamToDelete(null);
+  };
+
+  const closeEditTeamModal = () => {
+    if (updateTeamMutation.isPending) return;
+    setShowEditTeamModal(false);
+    setTeamToEdit(null);
+    setEditTeamName('');
+    setEditTeamDescription('');
+  };
+
+  const closeRemoveTrainerModal = () => {
+    if (removeMemberMutation.isPending) return;
+    setShowRemoveTrainer(false);
+    setSelectedTrainerToRemove('');
+  };
+
+  const closeCreateTeamModal = () => {
+    if (createTeamMutation.isPending) return;
+    setShowCreateTeam(false);
+  };
+
+  const closeResetPasswordModal = () => {
+    if (resetUserPasswordMutation.isPending) return;
+    setShowResetPasswordConfirmModal(false);
+    setUserToResetPassword(null);
+  };
+
+  const closeDeleteUserModal = () => {
+    if (deleteUserMutation.isPending) return;
+    setShowDeleteUserConfirmModal(false);
+    setUserToDelete(null);
+  };
+
+  const closeResendTrainerLinkModal = () => {
+    setShowResendTrainerLinkModal(false);
+    setResendTrainerName('');
+    setResendTrainerTeams('');
+    setResendTrainerLink('');
+    setResendInviteMessageDraft('');
+    setIsEditingResendInviteMessage(false);
+    setCopiedResendTrainerLink(false);
+  };
+
+  const closeGeneratedPasswordModal = () => {
+    setShowGeneratedPasswordModal(false);
+    setGeneratedPassword('');
+    setCopiedGeneratedPassword(false);
+  };
+
   const handleDeleteUser = (userItem: any) => {
     setUserToDelete(userItem);
     setShowDeleteUserConfirmModal(true);
@@ -828,7 +785,7 @@ export default function AdminPage() {
 
   const getStatusBadgeClasses = (variant: 'ok' | 'warning' | 'error') => {
     if (variant === 'ok') return 'bg-green-900 text-green-100';
-    if (variant === 'warning') return 'bg-yellow-100 text-yellow-800 bg-yellow-900 text-yellow-100';
+    if (variant === 'warning') return 'bg-yellow-900 text-yellow-100';
     return 'bg-red-900 text-red-100';
   };
 
@@ -1023,7 +980,7 @@ export default function AdminPage() {
                   <img
                     src={resolveAssetUrl(settings.logo)}
                     alt="Vereinslogo"
-                    className="w-24 h-24 rounded-lg object-contain bg-white border-2 border-gray-700 p-2"
+                    className="w-24 h-24 rounded-lg object-contain bg-gray-100 border-2 border-gray-700 p-2"
                   />
                 </div>
               )}
@@ -1148,7 +1105,7 @@ export default function AdminPage() {
         
         <div className="space-y-2">
           {filteredTeams.map((team: any) => (
-            <div key={team.id} className="p-3 bg-gray-50/80 border border-gray-200 rounded-md bg-gray-800/60 border-gray-700">
+            <div key={team.id} className="p-3 rounded-md bg-gray-800/60 border border-gray-700">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-white">{team.name}</h3>
@@ -1240,8 +1197,12 @@ export default function AdminPage() {
 
       {/* Assign Trainer Modal */}
       {showAssignTrainer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="assign-trainer-title">
+        <AccessibleModal
+          labelledBy="assign-trainer-title"
+          onClose={closeAssignTrainerModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="assign-trainer-title" className="text-lg font-semibold mb-4 flex items-center">
               <Shield className="w-5 h-5 mr-2 text-blue-600" />
               Trainer zuweisen
@@ -1279,24 +1240,24 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowAssignTrainer(false);
-                    setSelectedTrainer('');
-                  }}
+                  onClick={closeAssignTrainerModal}
                   className="btn btn-secondary w-full sm:w-auto"
                 >
                   Abbrechen
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Delete Team Confirm Modal */}
       {showDeleteTeamConfirmModal && teamToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="delete-team-title">
+        <AccessibleModal
+          labelledBy="delete-team-title"
+          onClose={closeDeleteTeamModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="delete-team-title" className="text-lg font-semibold mb-4">Team löschen</h3>
             <p className="text-sm text-gray-300 mb-4">
               Soll <strong>{teamToDelete.name}</strong> wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.
@@ -1305,10 +1266,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 autoFocus
-                onClick={() => {
-                  setShowDeleteTeamConfirmModal(false);
-                  setTeamToDelete(null);
-                }}
+                onClick={closeDeleteTeamModal}
                 className="btn btn-secondary w-full sm:w-auto"
                 disabled={deleteTeamMutation.isPending}
               >
@@ -1323,14 +1281,17 @@ export default function AdminPage() {
                 {deleteTeamMutation.isPending ? 'Löscht...' : 'Löschen'}
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Edit Team Modal */}
       {showEditTeamModal && teamToEdit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="edit-team-title">
+        <AccessibleModal
+          labelledBy="edit-team-title"
+          onClose={closeEditTeamModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="edit-team-title" className="text-lg font-semibold mb-4">Team bearbeiten</h3>
             <div className="space-y-4">
               <div>
@@ -1368,12 +1329,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowEditTeamModal(false);
-                    setTeamToEdit(null);
-                    setEditTeamName('');
-                    setEditTeamDescription('');
-                  }}
+                  onClick={closeEditTeamModal}
                   className="btn btn-secondary w-full sm:w-auto"
                   disabled={updateTeamMutation.isPending}
                 >
@@ -1381,14 +1337,17 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Remove Trainer Modal */}
       {showRemoveTrainer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="remove-trainer-title">
+        <AccessibleModal
+          labelledBy="remove-trainer-title"
+          onClose={closeRemoveTrainerModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="remove-trainer-title" className="text-lg font-semibold mb-4 flex items-center">
               <UserMinus className="w-5 h-5 mr-2 text-orange-600" />
               Trainer entfernen
@@ -1422,18 +1381,14 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowRemoveTrainer(false);
-                    setSelectedTrainerToRemove('');
-                  }}
+                  onClick={closeRemoveTrainerModal}
                   className="btn btn-secondary w-full sm:w-auto"
                 >
                   Abbrechen
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Users Section */}
@@ -1798,13 +1753,13 @@ export default function AdminPage() {
                 {activeAuditFilterChips.map((chip) => (
                   <span
                     key={chip.key}
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-300"
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-200 border border-blue-800/60"
                   >
                     {chip.label}
                     <button
                       type="button"
                       onClick={chip.clear}
-                      className="text-blue-400 hover:text-blue-900"
+                      className="text-blue-300 hover:text-blue-100"
                       aria-label={`${chip.label} entfernen`}
                     >
                       ×
@@ -1950,8 +1905,12 @@ export default function AdminPage() {
 
       {/* Create Team Modal */}
       {showCreateTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="create-team-title">
+        <AccessibleModal
+          labelledBy="create-team-title"
+          onClose={closeCreateTeamModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="create-team-title" className="text-lg font-semibold mb-4">Neues Team erstellen</h3>
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
@@ -1984,21 +1943,24 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowCreateTeam(false)}
+                  onClick={closeCreateTeamModal}
                   className="btn btn-secondary w-full sm:w-auto"
                 >
                   Abbrechen
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Create Trainer Modal */}
       {showCreateAdmin && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="create-admin-title">
+        <AccessibleModal
+          labelledBy="create-admin-title"
+          onClose={closeCreateAdminModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="create-admin-title" className="text-lg font-semibold mb-4">Neuen Admin erstellen</h3>
             <form onSubmit={handleCreateAdmin} className="space-y-4">
               <div>
@@ -2073,14 +2035,17 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Create Trainer Modal */}
       {showCreateTrainer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-xl w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="create-trainer-title">
+        <AccessibleModal
+          labelledBy="create-trainer-title"
+          onClose={closeCreateTrainerModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="create-trainer-title" className="font-semibold text-white mb-4">Trainer anlegen & Registrierungslink erstellen</h3>
 
             <form onSubmit={handleCreateTrainer} className="space-y-4">
@@ -2192,14 +2157,17 @@ export default function AdminPage() {
                 )}
               </div>
             </form>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Reset Password Confirm Modal */}
       {showResetPasswordConfirmModal && userToResetPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="reset-password-title">
+        <AccessibleModal
+          labelledBy="reset-password-title"
+          onClose={closeResetPasswordModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="reset-password-title" className="text-lg font-semibold mb-4">Passwort zurücksetzen</h3>
             <p className="text-sm text-gray-300 mb-4">
               Soll das Passwort für <strong>{userToResetPassword.name}</strong> wirklich zurückgesetzt und neu generiert werden?
@@ -2208,10 +2176,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 autoFocus
-                onClick={() => {
-                  setShowResetPasswordConfirmModal(false);
-                  setUserToResetPassword(null);
-                }}
+                onClick={closeResetPasswordModal}
                 className="btn btn-secondary w-full sm:w-auto"
                 disabled={resetUserPasswordMutation.isPending}
               >
@@ -2226,14 +2191,17 @@ export default function AdminPage() {
                 {resetUserPasswordMutation.isPending ? 'Setzt zurück...' : 'Zurücksetzen'}
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Delete User Confirm Modal */}
       {showDeleteUserConfirmModal && userToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="delete-user-title">
+        <AccessibleModal
+          labelledBy="delete-user-title"
+          onClose={closeDeleteUserModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="delete-user-title" className="text-lg font-semibold mb-4">Benutzer löschen</h3>
             <p className="text-sm text-gray-300 mb-4">
               Soll <strong>{userToDelete.name}</strong> wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.
@@ -2242,10 +2210,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 autoFocus
-                onClick={() => {
-                  setShowDeleteUserConfirmModal(false);
-                  setUserToDelete(null);
-                }}
+                onClick={closeDeleteUserModal}
                 className="btn btn-secondary w-full sm:w-auto"
                 disabled={deleteUserMutation.isPending}
               >
@@ -2260,14 +2225,17 @@ export default function AdminPage() {
                 {deleteUserMutation.isPending ? 'Löscht...' : 'Löschen'}
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Resend Trainer Link Modal */}
       {showResendTrainerLinkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="resend-link-title">
+        <AccessibleModal
+          labelledBy="resend-link-title"
+          onClose={closeResendTrainerLinkModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="resend-link-title" className="text-lg font-semibold mb-4">Registrierungslink</h3>
             <p className="text-sm text-gray-300 mb-3">
               Neuer Einladungstext für <strong>{resendTrainerName}</strong>:
@@ -2307,28 +2275,23 @@ export default function AdminPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowResendTrainerLinkModal(false);
-                  setResendTrainerName('');
-                  setResendTrainerTeams('');
-                  setResendTrainerLink('');
-                  setResendInviteMessageDraft('');
-                  setIsEditingResendInviteMessage(false);
-                  setCopiedResendTrainerLink(false);
-                }}
+                onClick={closeResendTrainerLinkModal}
                 className="btn btn-primary w-full sm:w-auto"
               >
                 Schließen
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
       {/* Generated Password Modal */}
       {showGeneratedPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="generated-password-title">
+        <AccessibleModal
+          labelledBy="generated-password-title"
+          onClose={closeGeneratedPasswordModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="generated-password-title" className="text-lg font-semibold mb-4">Neues Passwort</h3>
             <p className="text-sm text-gray-300 mb-3">
               Das Passwort wurde zurückgesetzt. Teile dieses Passwort sicher mit dem Benutzer.
@@ -2352,18 +2315,13 @@ export default function AdminPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowGeneratedPasswordModal(false);
-                  setGeneratedPassword('');
-                  setCopiedGeneratedPassword(false);
-                }}
+                onClick={closeGeneratedPasswordModal}
                 className="btn btn-primary w-full sm:w-auto"
               >
                 Schließen
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       )}
 
     </div>

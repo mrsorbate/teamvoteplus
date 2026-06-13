@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invitesAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Copy, Plus, Trash2, Link as LinkIcon, Check, Mail } from 'lucide-react';
+import AccessibleModal from './AccessibleModal';
 
 interface InviteManagerProps {
   teamId: number;
@@ -23,6 +24,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
   const [createdInviteeName, setCreatedInviteeName] = useState('');
   const [inviteMessageDraft, setInviteMessageDraft] = useState('');
   const [isEditingInviteMessage, setIsEditingInviteMessage] = useState(false);
+  const [inviteToDelete, setInviteToDelete] = useState<any | null>(null);
   
   const [inviteData, setInviteData] = useState({
     role: inviteRole,
@@ -132,6 +134,18 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
       return;
     }
     createMutation.mutate();
+  };
+
+  const closeDeleteInviteModal = () => {
+    if (deleteMutation.isPending) return;
+    setInviteToDelete(null);
+  };
+
+  const confirmDeleteInvite = () => {
+    if (!inviteToDelete) return;
+    deleteMutation.mutate(inviteToDelete.id, {
+      onSettled: () => setInviteToDelete(null),
+    });
   };
 
   if (isLoading) {
@@ -387,13 +401,10 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                           )}
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm('Einladungslink wirklich löschen?')) {
-                              deleteMutation.mutate(invite.id);
-                            }
-                          }}
+                          onClick={() => setInviteToDelete(invite)}
                           className="text-red-400 hover:text-red-300"
                           title="Link löschen"
+                          aria-label={`Einladungslink für ${inviteeName} löschen`}
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -411,6 +422,40 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
           <p>Noch keine Einladungslinks erstellt</p>
           <p className="text-sm mt-1">Erstelle einen Link, um {inviteRoleLabel.toLowerCase()} einzuladen</p>
         </div>
+      )}
+
+      {inviteToDelete && (
+        <AccessibleModal
+          labelledBy="delete-invite-link-title"
+          onClose={closeDeleteInviteModal}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl"
+        >
+          <h3 id="delete-invite-link-title" className="text-lg font-semibold text-white mb-3">
+            Einladungslink löschen?
+          </h3>
+          <p className="text-sm text-gray-300 mb-5">
+            Soll der Einladungslink für <strong>{inviteToDelete.player_name || inviteRoleLabel}</strong> wirklich gelöscht werden?
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={closeDeleteInviteModal}
+              disabled={deleteMutation.isPending}
+              className="btn btn-secondary w-full sm:w-auto"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteInvite}
+              disabled={deleteMutation.isPending}
+              className="btn bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
+            >
+              {deleteMutation.isPending ? 'Löscht...' : 'Löschen'}
+            </button>
+          </div>
+        </AccessibleModal>
       )}
     </div>
   );
