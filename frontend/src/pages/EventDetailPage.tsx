@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords } from 'lucide-react';
+import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,11 +18,9 @@ export default function EventDetailPage() {
   const queryClient = useQueryClient();
 
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
-  const [comment, setComment] = useState('');
   const [responseValidationMessage, setResponseValidationMessage] = useState('');
-  const [responseCommentModalOpen, setResponseCommentModalOpen] = useState(false);
-  const [pendingResponseStatus, setPendingResponseStatus] = useState<'declined' | 'tentative' | null>(null);
-  const [pendingResponseComment, setPendingResponseComment] = useState('');
+  const [inlinePanel, setInlinePanel] = useState<'declined' | 'tentative' | null>(null);
+  const [inlineComment, setInlineComment] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -54,7 +52,6 @@ export default function EventDetailPage() {
       eventsAPI.updateResponse(eventId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
-      setComment('');
     },
   });
 
@@ -120,12 +117,7 @@ export default function EventDetailPage() {
       setSelectedStatus('accepted');
     }
 
-    if (typeof myResponse?.comment === 'string') {
-      setComment(myResponse.comment);
-    } else {
-      setComment('');
-    }
-  }, [myResponse?.status, myResponse?.comment]);
+  }, [myResponse?.status]);
 
   const saveOwnResponse = (status: 'accepted' | 'declined' | 'tentative', nextComment: string) => {
     if (status === 'tentative' && !canChooseTentative) {
@@ -145,7 +137,7 @@ export default function EventDetailPage() {
     });
   };
 
-  const openResponseCommentModal = (status: 'declined' | 'tentative') => {
+  const openInlinePanel = (status: 'declined' | 'tentative') => {
     if (status === 'declined' && isTrainer) {
       setSelectedStatus('declined');
       saveOwnResponse('declined', '');
@@ -158,24 +150,8 @@ export default function EventDetailPage() {
     }
 
     setResponseValidationMessage('');
-    setPendingResponseStatus(status);
-    setPendingResponseComment(comment || '');
-    setResponseCommentModalOpen(true);
-  };
-
-  const submitResponseCommentModal = () => {
-    if (!pendingResponseStatus) return;
-
-    if (pendingResponseStatus === 'declined' && !isTrainer && !pendingResponseComment.trim()) {
-      setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
-      return;
-    }
-
-    setSelectedStatus(pendingResponseStatus);
-    saveOwnResponse(pendingResponseStatus, pendingResponseComment);
-    setResponseCommentModalOpen(false);
-    setPendingResponseStatus(null);
-    setPendingResponseComment('');
+    setInlineComment(myResponse?.status === status ? (myResponse?.comment || '') : '');
+    setInlinePanel(prev => (prev === status ? null : status));
   };
 
   const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
@@ -195,18 +171,18 @@ export default function EventDetailPage() {
       const base = 'w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-colors';
 
       if (status === 'accepted') {
-        return `${base} ${isActive ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'}`;
+        return `${base} ${isActive ? 'bg-green-600 text-white' : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'}`;
       }
 
       if (status === 'tentative') {
-        return `${base} ${isActive ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
+        return `${base} ${isActive ? 'bg-yellow-600 text-white' : 'bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50'}`;
       }
 
       if (status === 'declined') {
-        return `${base} ${isActive ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'}`;
+        return `${base} ${isActive ? 'bg-red-600 text-white' : 'bg-red-900/30 text-red-400 hover:bg-red-900/50'}`;
       }
 
-      return `${base} ${isActive ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`;
+      return `${base} ${isActive ? 'bg-gray-600 text-white' : 'bg-gray-700/60 text-gray-400 hover:bg-gray-700'}`;
     };
 
     return (
@@ -219,7 +195,7 @@ export default function EventDetailPage() {
           title="Zugesagt"
           aria-label="Zugesagt"
         >
-          ✓
+          <Check className="w-3.5 h-3.5" />
         </button>
         {canChooseTentative && (
           <button
@@ -230,7 +206,7 @@ export default function EventDetailPage() {
             title="Vielleicht"
             aria-label="Vielleicht"
           >
-            ?
+            <HelpCircle className="w-3.5 h-3.5" />
           </button>
         )}
         <button
@@ -241,7 +217,7 @@ export default function EventDetailPage() {
           title="Abgesagt"
           aria-label="Abgesagt"
         >
-          ✗
+          <X className="w-3.5 h-3.5" />
         </button>
         <button
           type="button"
@@ -251,7 +227,7 @@ export default function EventDetailPage() {
           title="Keine Rückmeldung"
           aria-label="Keine Rückmeldung"
         >
-          ⏳
+          <Clock className="w-3.5 h-3.5" />
         </button>
       </div>
     );
@@ -295,14 +271,14 @@ export default function EventDetailPage() {
         <img
           src={avatarUrl}
           alt={`${name} Profilbild`}
-          className={`${sizeClass} rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white`}
+          className={`${sizeClass} rounded-full object-cover border border-gray-700 bg-gray-800`}
           loading="lazy"
         />
       );
     }
 
     return (
-      <div className={`${sizeClass} rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center justify-center`}>
+      <div className={`${sizeClass} rounded-full bg-gray-700 text-gray-200 text-xs font-semibold flex items-center justify-center`}>
         {getInitials(name)}
       </div>
     );
@@ -358,6 +334,13 @@ export default function EventDetailPage() {
     navigate(target, { replace: true });
   };
 
+  const renderResponseModuleIcon = (iconKey: string, className: string) => {
+    if (iconKey === 'check') return <Check className={className} />;
+    if (iconKey === 'x') return <X className={className} />;
+    if (iconKey === 'help') return <HelpCircle className={className} />;
+    return <Clock className={className} />;
+  };
+
   const renderResponseModule = (
     title: string,
     count: number,
@@ -370,12 +353,12 @@ export default function EventDetailPage() {
 
     return (
       <div className="card">
-        <h3 className={`font-semibold text-base sm:text-lg mb-3 flex items-center justify-between ${toneClass}`}>
-          <span className="flex items-center">
-            <span className="mr-2">{icon}</span>
+        <h3 className={`font-heading font-semibold text-base sm:text-lg mb-3 flex items-center justify-between ${toneClass}`}>
+          <span className="flex items-center gap-2">
+            {renderResponseModuleIcon(icon, 'w-4 h-4')}
             {title}
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-300">
             {count}
           </span>
         </h3>
@@ -414,7 +397,17 @@ export default function EventDetailPage() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="skeleton w-6 h-6 rounded-full" />
+          <div className="skeleton h-8 w-48" />
+        </div>
+        <div className="skeleton h-64 rounded-2xl" />
+        <div className="skeleton h-40 rounded-2xl" />
+        <div className="skeleton h-32 rounded-2xl" />
+      </div>
+    );
   }
 
   if (isError || !event) {
@@ -463,13 +456,13 @@ export default function EventDetailPage() {
                 loading="lazy"
               />
             ) : event?.type === 'training' ? (
-              <Cone className="w-7 h-7 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 shrink-0" />
+              <Cone className="w-7 h-7 sm:w-8 sm:h-8 text-blue-400 shrink-0" />
             ) : event?.type === 'match' ? (
-              <Swords className="w-7 h-7 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 shrink-0" />
+              <Swords className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400 shrink-0" />
             ) : (
-              <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 shrink-0" />
+              <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400 shrink-0" />
             )}
-            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{displayTitle || opponent || event?.title}</h1>
+            <h1 className="text-2xl sm:text-4xl font-heading font-bold text-white tracking-wide break-words">{displayTitle || opponent || event?.title}</h1>
           </div>
         </div>
       </div>
@@ -478,28 +471,31 @@ export default function EventDetailPage() {
         {/* Event Details */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card">
-            <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Termindetails</h2>
+            <h2 className="section-heading mb-4">
+              <Calendar className="w-5 h-5 text-primary-400" />
+              Termindetails
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Datum</p>
-                <p className="mt-1 font-semibold text-gray-900 dark:text-white">{eventDateLabel}</p>
+              <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Datum</p>
+                <p className="mt-1 font-semibold text-white">{eventDateLabel}</p>
               </div>
 
-              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Uhrzeit</p>
-                <p className="mt-1 font-semibold text-gray-900 dark:text-white">{eventTimeRangeLabel}</p>
+              <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Uhrzeit</p>
+                <p className="mt-1 font-semibold text-white">{eventTimeRangeLabel}</p>
               </div>
 
               {shouldShowAddressBlock && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ort</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Ort</p>
                   {locationLabel ? (
                     <div className="mt-1 space-y-1">
                       <a
                         href={googleMapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-gray-900 dark:text-white break-words underline decoration-dotted underline-offset-2 hover:text-primary-600 dark:hover:text-primary-400"
+                        className="font-semibold text-white break-words underline decoration-dotted underline-offset-2 hover:text-primary-400"
                       >
                         {locationLabel}
                       </a>
@@ -508,7 +504,7 @@ export default function EventDetailPage() {
                           href={googleMapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-500"
+                          className="text-primary-400 hover:text-primary-300"
                         >
                           In Google Maps öffnen
                         </a>
@@ -516,7 +512,7 @@ export default function EventDetailPage() {
                           href={appleMapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-500"
+                          className="text-primary-400 hover:text-primary-300"
                         >
                           In Apple Karten öffnen
                         </a>
@@ -524,12 +520,12 @@ export default function EventDetailPage() {
                     </div>
                   ) : (
                     <div className="mt-1 space-y-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-300">Keine Adresse hinterlegt</p>
+                      <p className="text-sm text-gray-400">Keine Adresse hinterlegt</p>
                       {isTrainer && isMatchWithoutAddress && (
                         <Link
                           to={`/events/${eventId}/edit`}
                           state={{ from: resolvedFrom || location.pathname }}
-                          className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                          className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium border border-gray-600 text-gray-200 hover:bg-gray-700"
                         >
                           Adresse ergänzen
                         </Link>
@@ -540,13 +536,13 @@ export default function EventDetailPage() {
               )}
 
               {hasMeetingInfo && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Treffpunkt</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Treffpunkt</p>
                   {event?.meeting_point && (
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{event.meeting_point}</p>
+                    <p className="mt-1 font-semibold text-white break-words">{event.meeting_point}</p>
                   )}
                   {event?.arrival_minutes !== null && event?.arrival_minutes !== undefined && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+                    <p className="text-sm text-gray-400 mt-0.5">
                       {event.arrival_minutes} Minuten vor Beginn
                     </p>
                   )}
@@ -554,37 +550,37 @@ export default function EventDetailPage() {
               )}
 
               {event?.type === 'match' && event?.is_home_match !== undefined && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Spielart</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Spielart</p>
+                  <p className="mt-1 font-semibold text-white">{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</p>
                 </div>
               )}
 
               {event?.duration_minutes && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Dauer</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{event.duration_minutes} Minuten</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Dauer</p>
+                  <p className="mt-1 font-semibold text-white">{event.duration_minutes} Minuten</p>
                 </div>
               )}
 
               {event?.rsvp_deadline && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{safeFormatDate(event.rsvp_deadline, 'PPPp')}</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Rückmeldefrist</p>
+                  <p className="mt-1 font-semibold text-white">{safeFormatDate(event.rsvp_deadline, 'PPPp')}</p>
                 </div>
               )}
 
               {event?.pitch_type && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Platzart</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{event.pitch_type}</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Platzart</p>
+                  <p className="mt-1 font-semibold text-white">{event.pitch_type}</p>
                 </div>
               )}
 
               {event?.description && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Beschreibung</p>
-                  <p className="text-gray-700 dark:text-gray-300 break-words mt-1">{event.description}</p>
+                <div className="rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading letter-spacing-wider">Beschreibung</p>
+                  <p className="text-gray-300 break-words mt-1">{event.description}</p>
                 </div>
               )}
             </div>
@@ -592,8 +588,11 @@ export default function EventDetailPage() {
 
           {isMatchEvent && (
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Kader & Aufstellung</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">
+              <h2 className="section-heading">
+                <Swords className="w-5 h-5 text-primary-400" />
+                Kader & Aufstellung
+              </h2>
+              <p className="text-sm text-gray-400 mt-1 mb-3">
                 {isTrainer ? 'Kader festlegen, Aufstellung bauen und Team freigeben.' : 'Freigegebenen Kader und Aufstellung ansehen.'}
               </p>
               {isTrainer ? (
@@ -605,7 +604,7 @@ export default function EventDetailPage() {
                   Zur Kaderseite
                 </Link>
               ) : (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-sm font-medium text-gray-800 dark:text-gray-200">
+                <div className="rounded-lg bg-gray-700/40 p-3 text-sm font-medium text-gray-200">
                   {playerMatchSquadStatusText}
                 </div>
               )}
@@ -614,74 +613,219 @@ export default function EventDetailPage() {
 
           {/* Your Response */}
           <div className="card">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Deine Rückmeldung</h2>
-            {myResponse && myResponse.status !== 'pending' ? (
-              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Aktuelle Antwort:</p>
-                <p className="font-medium">
-                  {myResponse.status === 'accepted' && '✓ Zugesagt'}
-                  {myResponse.status === 'declined' && '✗ Abgesagt'}
-                  {myResponse.status === 'tentative' && '? Vielleicht'}
-                </p>
-                {myResponse.comment && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{myResponse.comment}</p>
-                )}
-              </div>
-            ) : null}
+            <h2 className="section-heading mb-3">
+              <Users className="w-5 h-5 text-primary-400" />
+              Deine Rückmeldung
+            </h2>
 
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedStatus('accepted');
-                    saveOwnResponse('accepted', '');
-                  }}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
-                    selectedStatus === 'accepted'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:hover:bg-gray-500'
-                  }`}
-                >
-                  ✓ Zusagen
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openResponseCommentModal('tentative')}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
-                    selectedStatus === 'tentative'
-                      ? 'bg-yellow-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:hover:bg-gray-500'
-                  }`}
-                  disabled={!canChooseTentative}
-                >
-                  ? Unsicher
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openResponseCommentModal('declined')}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors sm:col-span-1 ${
-                    selectedStatus === 'declined'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:hover:bg-gray-500'
-                  }`}
-                >
-                  ✗ Absagen
-                </button>
-              </div>
+            {event?.rsvp_deadline && (() => {
+              const deadline = new Date(event.rsvp_deadline);
+              const now = new Date();
+              const diffMs = deadline.getTime() - now.getTime();
+              if (diffMs <= 0) {
+                return (
+                  <div className="mb-3 flex items-center gap-1.5 text-xs text-gray-500">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    Rückmeldefrist abgelaufen
+                  </div>
+                );
+              }
+              const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+              const diffM = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+              const isUrgent = diffH < 3;
+              return (
+                <div className={`mb-3 flex items-center gap-1.5 text-xs ${isUrgent ? 'text-yellow-400' : 'text-gray-400'}`}>
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  {diffH > 0 ? `Noch ${diffH}h ${diffM}min bis Frist` : `Noch ${diffM} Minuten bis Frist`}
+                </div>
+              );
+            })()}
 
-              {!canChooseTentative && (
-                <p className="text-xs text-gray-600 dark:text-gray-400">
+            {myResponse && myResponse.status !== 'pending' && (
+              <div className="mb-4 flex items-start gap-3 p-3 rounded-xl bg-gray-700/40 border border-gray-600/40">
+                {myResponse.status === 'accepted' && <Check className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />}
+                {myResponse.status === 'declined' && <X className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />}
+                {myResponse.status === 'tentative' && <HelpCircle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400 mb-0.5">Aktuelle Antwort</p>
+                  <p className="text-sm font-semibold">
+                    {myResponse.status === 'accepted' && <span className="text-green-400">Zugesagt</span>}
+                    {myResponse.status === 'declined' && <span className="text-red-400">Abgesagt</span>}
+                    {myResponse.status === 'tentative' && <span className="text-yellow-400">Unsicher</span>}
+                  </p>
+                  {myResponse.comment && (
+                    <p className="text-xs text-gray-400 mt-1 break-words">{myResponse.comment}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {/* Zusagen */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInlinePanel(null);
+                  setResponseValidationMessage('');
+                  setSelectedStatus('accepted');
+                  saveOwnResponse('accepted', '');
+                }}
+                disabled={updateResponseMutation.isPending}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-base tracking-wide transition-all duration-200 ${
+                  selectedStatus === 'accepted'
+                    ? 'bg-green-600 text-white shadow-glow-green ring-2 ring-green-500/40'
+                    : 'bg-green-900/30 text-green-300 border border-green-700/50 hover:bg-green-800/50'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                style={{ minHeight: '52px' }}
+              >
+                {updateResponseMutation.isPending && selectedStatus === 'accepted'
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <Check className="w-5 h-5" />}
+                Zusagen
+              </button>
+
+              {/* Unsicher */}
+              <button
+                type="button"
+                onClick={() => openInlinePanel('tentative')}
+                disabled={!canChooseTentative || updateResponseMutation.isPending}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-base tracking-wide transition-all duration-200 ${
+                  selectedStatus === 'tentative'
+                    ? 'bg-yellow-600 text-white ring-2 ring-yellow-500/40'
+                    : inlinePanel === 'tentative'
+                    ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-600/60'
+                    : 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50 hover:bg-yellow-900/40'
+                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                style={{ minHeight: '52px' }}
+              >
+                <HelpCircle className="w-5 h-5" />
+                Unsicher
+              </button>
+
+              {/* Inline panel — Unsicher */}
+              {inlinePanel === 'tentative' && (
+                <div className="rounded-xl border border-yellow-700/40 bg-yellow-900/10 p-3 animate-slide-down">
+                  <label htmlFor="rsvp-tentative-comment" className="block text-xs font-heading font-semibold text-yellow-400 mb-2 uppercase tracking-wide">
+                    Kommentar <span className="text-gray-500 font-normal normal-case tracking-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    id="rsvp-tentative-comment"
+                    value={inlineComment}
+                    onChange={(e) => setInlineComment(e.target.value)}
+                    className="input text-sm"
+                    rows={2}
+                    placeholder="z.B. Entscheidung folgt am Abend"
+                    autoFocus
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStatus('tentative');
+                        saveOwnResponse('tentative', inlineComment);
+                        setInlinePanel(null);
+                      }}
+                      disabled={updateResponseMutation.isPending}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-yellow-600 text-white hover:bg-yellow-500 transition-colors disabled:opacity-50"
+                      style={{ minHeight: '44px' }}
+                    >
+                      {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Bestätigen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setInlinePanel(null); setInlineComment(''); }}
+                      className="px-4 rounded-xl text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-700/60 transition-colors"
+                      style={{ minHeight: '44px' }}
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Absagen */}
+              <button
+                type="button"
+                onClick={() => openInlinePanel('declined')}
+                disabled={updateResponseMutation.isPending}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-base tracking-wide transition-all duration-200 ${
+                  selectedStatus === 'declined'
+                    ? 'bg-red-600 text-white shadow-glow-primary ring-2 ring-red-500/40'
+                    : inlinePanel === 'declined'
+                    ? 'bg-red-900/40 text-red-300 border border-red-600/60'
+                    : 'bg-red-900/30 text-red-300 border border-red-700/50 hover:bg-red-900/40'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                style={{ minHeight: '52px' }}
+              >
+                {updateResponseMutation.isPending && selectedStatus === 'declined'
+                  ? <Loader2 className="w-5 h-5 animate-spin" />
+                  : <X className="w-5 h-5" />}
+                Absagen
+              </button>
+
+              {/* Inline panel — Absagen */}
+              {inlinePanel === 'declined' && (
+                <div className="rounded-xl border border-red-700/40 bg-red-900/10 p-3 animate-slide-down">
+                  <label htmlFor="rsvp-decline-reason" className="block text-xs font-heading font-semibold text-red-400 mb-2 uppercase tracking-wide">
+                    Grund <span className="text-gray-500 font-normal normal-case tracking-normal">(Pflichtfeld)</span>
+                  </label>
+                  <textarea
+                    id="rsvp-decline-reason"
+                    value={inlineComment}
+                    onChange={(e) => {
+                      setInlineComment(e.target.value);
+                      if (responseValidationMessage && e.target.value.trim()) {
+                        setResponseValidationMessage('');
+                      }
+                    }}
+                    className="input text-sm"
+                    rows={2}
+                    placeholder="z.B. Krank, Urlaub, Arbeit…"
+                    autoFocus
+                  />
+                  {responseValidationMessage && (
+                    <p className="text-xs text-red-400 flex items-center gap-1.5 mt-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {responseValidationMessage}
+                    </p>
+                  )}
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!inlineComment.trim()) {
+                          setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
+                          return;
+                        }
+                        setSelectedStatus('declined');
+                        saveOwnResponse('declined', inlineComment);
+                        setInlinePanel(null);
+                      }}
+                      disabled={updateResponseMutation.isPending}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-red-600 text-white hover:bg-red-500 transition-colors disabled:opacity-50"
+                      style={{ minHeight: '44px' }}
+                    >
+                      {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Absage bestätigen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setInlinePanel(null); setInlineComment(''); setResponseValidationMessage(''); }}
+                      className="px-4 rounded-xl text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-700/60 transition-colors"
+                      style={{ minHeight: '44px' }}
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!canChooseTentative && !inlinePanel && (
+                <p className="text-xs text-gray-500 flex items-center gap-1.5 pt-1">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
                   Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.
                 </p>
-              )}
-
-              {responseValidationMessage && (
-                <p className="text-sm text-red-600 dark:text-red-400">{responseValidationMessage}</p>
-              )}
-
-              {updateResponseMutation.isPending && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">Speichert...</p>
               )}
             </div>
           </div>
@@ -695,8 +839,8 @@ export default function EventDetailPage() {
               {renderResponseModule(
                 'Zugesagt',
                 acceptedResponses.length,
-                'text-green-700 dark:text-green-300',
-                '✓',
+                'text-green-400',
+                'check',
                 acceptedResponses,
                 'accepted'
               )}
@@ -704,8 +848,8 @@ export default function EventDetailPage() {
               {renderResponseModule(
                 'Abgesagt',
                 declinedResponses.length,
-                'text-red-700 dark:text-red-300',
-                '✗',
+                'text-red-400',
+                'x',
                 declinedResponses,
                 'declined'
               )}
@@ -713,8 +857,8 @@ export default function EventDetailPage() {
               {renderResponseModule(
                 'Vielleicht',
                 tentativeResponses.length,
-                'text-yellow-700 dark:text-yellow-300',
-                '?',
+                'text-yellow-400',
+                'help',
                 tentativeResponses,
                 'tentative'
               )}
@@ -722,16 +866,16 @@ export default function EventDetailPage() {
               {renderResponseModule(
                 'Keine Antwort',
                 pendingResponses.length,
-                'text-gray-700 dark:text-gray-300',
-                '⏳',
+                'text-gray-400',
+                'clock',
                 pendingResponses,
                 'pending'
               )}
             </>
           ) : (
             <div className="card">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Teilnehmerliste</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Die Teilnehmerliste ist nur fuer Trainer sichtbar.</p>
+              <h3 className="font-semibold text-white mb-2">Teilnehmerliste</h3>
+              <p className="text-sm text-gray-400">Die Teilnehmerliste ist nur für Trainer sichtbar.</p>
             </div>
           )}
         </div>
@@ -739,7 +883,7 @@ export default function EventDetailPage() {
 
       {/* Delete Button Section */}
       {isTrainer && (
-        <div className="card border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 space-y-3">
+        <div className="card border-red-900/60 bg-red-900/10 space-y-3">
           <Link
             to={`/events/${eventId}/edit`}
             state={{ from: resolvedFrom || location.pathname }}
@@ -759,77 +903,21 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Delete Modal */}
-      {responseCommentModalOpen && pendingResponseStatus && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="card max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {pendingResponseStatus === 'declined' ? 'Grund für Absage' : 'Kommentar für Unsicher'}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">
-              {pendingResponseStatus === 'declined'
-                ? 'Bitte gib einen Grund an (Pflichtfeld).'
-                : 'Optionaler Kommentar für den Status Unsicher.'}
-            </p>
-
-            <textarea
-              value={pendingResponseComment}
-              onChange={(e) => {
-                setPendingResponseComment(e.target.value);
-                if (responseValidationMessage && e.target.value.trim()) {
-                  setResponseValidationMessage('');
-                }
-              }}
-              className="input"
-              rows={3}
-              placeholder={pendingResponseStatus === 'declined' ? 'z.B. Krank' : 'z.B. Entscheidung folgt am Abend'}
-            />
-
-            {responseValidationMessage && (
-              <p className="text-sm text-red-600 dark:text-red-400 mt-2">{responseValidationMessage}</p>
-            )}
-
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setResponseCommentModalOpen(false);
-                  setPendingResponseStatus(null);
-                  setPendingResponseComment('');
-                  setResponseValidationMessage('');
-                }}
-                className="btn btn-secondary flex-1"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="button"
-                onClick={submitResponseCommentModal}
-                className="btn btn-primary flex-1"
-                disabled={updateResponseMutation.isPending}
-              >
-                {updateResponseMutation.isPending ? 'Speichert...' : 'Speichern'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {deleteModalOpen && event?.series_id && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="card max-w-md w-full mx-4">
             <div className="flex items-start space-x-3 mb-4">
               <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Termin löschen</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                <h3 className="text-lg font-semibold text-white">Termin löschen</h3>
+                <p className="text-sm text-gray-400 mt-1">
                   Dieser Termin ist teil einer Serie. Wie möchtest du vorgehen?
                 </p>
               </div>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
               <textarea
                 value={deleteNote}
                 onChange={(e) => setDeleteNote(e.target.value)}
@@ -876,15 +964,15 @@ export default function EventDetailPage() {
             <div className="flex items-start space-x-3 mb-4">
               <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Termin löschen</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                <h3 className="text-lg font-semibold text-white">Termin löschen</h3>
+                <p className="text-sm text-gray-400 mt-1">
                   Termin "{event?.title}" wirklich löschen? Dies kann nicht rückgängig gemacht werden.
                 </p>
               </div>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
               <textarea
                 value={deleteNote}
                 onChange={(e) => setDeleteNote(e.target.value)}

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { invitesAPI, teamsAPI } from '../lib/api';
-import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw, Shield, User } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import PlayerInviteManager from '../components/PlayerInviteManager';
 import { useState } from 'react';
@@ -14,6 +14,7 @@ export default function TeamRosterPage() {
   const teamId = parseInt(id!);
   const queryClient = useQueryClient();
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [joinLinkCopied, setJoinLinkCopied] = useState(false);
   const { user } = useAuthStore();
   const goBack = useSmartBack();
@@ -130,14 +131,30 @@ export default function TeamRosterPage() {
   const canOpenPlayerProfiles = user?.role === 'trainer' || user?.role === 'admin';
 
   const renderInfoCard = (label: string, value: string, extraClassName = '') => (
-    <div className={`rounded-lg bg-gray-50 dark:bg-gray-800 p-3 ${extraClassName}`}>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="text-sm text-gray-900 dark:text-white break-words">{value}</p>
+    <div className={`rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 ${extraClassName}`}>
+      <p className="text-[11px] uppercase tracking-wide text-gray-500 font-heading">{label}</p>
+      <p className="mt-0.5 font-semibold text-white break-words">{value}</p>
     </div>
   );
 
   if (teamLoading || membersLoading) {
-    return <div className="text-center py-12">Lädt...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="skeleton h-9 w-56" />
+        <div className="card space-y-3">
+          <div className="skeleton h-6 w-24" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[1, 2].map((i) => <div key={i} className="skeleton h-16 rounded-xl" />)}
+          </div>
+        </div>
+        <div className="card space-y-3">
+          <div className="skeleton h-6 w-20" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-16 rounded-xl" />)}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -146,51 +163,54 @@ export default function TeamRosterPage() {
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
-          className="mt-1 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          className="mt-1 sm:mt-0 text-gray-400 hover:text-white transition-colors"
           aria-label="Zurück"
           title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary-600 shrink-0" />
-            <span>Trainer &amp; Spieler - {team?.name}</span>
+          <h1 className="text-2xl sm:text-4xl font-heading font-bold text-white tracking-wide break-words flex items-center gap-2">
+            <Users className="w-6 h-6 text-primary-400 shrink-0" />
+            <span>Kader — {team?.name}</span>
           </h1>
         </div>
       </div>
 
       <div className="space-y-6">
         <div className="card">
-          <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-900 dark:text-white">
-            <span className="mr-2">👨‍🏫</span>
+          <h2 className="section-heading mb-4">
+            <Shield className="w-5 h-5 text-primary-400" />
             Trainer
-            <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-primary-900/40 text-primary-300 border border-primary-700/40">
               {trainers.length}
             </span>
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
             {trainers.map((trainer: any) => (
               <button
                 key={trainer.id}
-                onClick={() => setSelectedMember(trainer)}
-                className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer text-left"
+                onClick={() => { setSelectedMember(trainer); setConfirmRemove(false); }}
+                className="p-3 bg-gray-700/40 border border-gray-700/50 rounded-xl flex items-center gap-3 hover:bg-gray-700/70 hover:border-gray-600/80 hover:shadow-card transition-all duration-150 cursor-pointer text-left w-full"
               >
-                {resolveAssetUrl(trainer.profile_picture) ? (
-                  <img
-                    src={resolveAssetUrl(trainer.profile_picture)}
-                    alt={trainer.name}
-                    className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                    <span className="text-primary-600 font-semibold">
-                      {trainer.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{trainer.name}</p>
+                <div className="shrink-0">
+                  {resolveAssetUrl(trainer.profile_picture) ? (
+                    <img
+                      src={resolveAssetUrl(trainer.profile_picture)}
+                      alt={trainer.name}
+                      className="w-11 h-11 rounded-full object-cover border border-gray-600"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 bg-primary-900/50 rounded-full flex items-center justify-center border border-primary-700/40">
+                      <span className="text-primary-300 font-heading font-bold text-lg leading-none">
+                        {trainer.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-white text-sm leading-tight truncate">{trainer.name}</p>
+                  <p className="text-xs text-primary-400 mt-0.5">Trainer</p>
                 </div>
               </button>
             ))}
@@ -198,45 +218,62 @@ export default function TeamRosterPage() {
         </div>
 
         <div className="card">
-          <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-900 dark:text-white">
-            <span className="mr-2">⚽</span>
+          <h2 className="section-heading mb-4">
+            <User className="w-5 h-5 text-green-400" />
             Spieler
-            <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200">
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-700/40">
               {players.length}
             </span>
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-            {players.map((player: any) => (
-              <button
-                key={player.id}
-                onClick={canOpenPlayerProfiles ? () => setSelectedMember(player) : undefined}
-                disabled={!canOpenPlayerProfiles}
-                className={`p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center space-x-3 transition-colors text-left ${
-                  canOpenPlayerProfiles
-                    ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
-                    : 'opacity-75 cursor-default'
-                }`}
-              >
-                {resolveAssetUrl(player.profile_picture) ? (
-                  <img
-                    src={resolveAssetUrl(player.profile_picture)}
-                    alt={player.name}
-                    className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-green-600 font-semibold">{player.name.charAt(0)}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+            {players.map((player: any) => {
+              const hasJersey = player.jersey_number != null && player.jersey_number !== '';
+              return (
+                <button
+                  key={player.id}
+                  onClick={canOpenPlayerProfiles ? () => { setSelectedMember(player); setConfirmRemove(false); } : undefined}
+                  disabled={!canOpenPlayerProfiles}
+                  className={`p-3 bg-gray-700/40 border border-gray-700/50 rounded-xl flex items-center gap-3 transition-all duration-150 text-left w-full ${
+                    canOpenPlayerProfiles
+                      ? 'hover:bg-gray-700/70 hover:border-gray-600/80 hover:shadow-card cursor-pointer'
+                      : 'cursor-default'
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    {resolveAssetUrl(player.profile_picture) ? (
+                      <img
+                        src={resolveAssetUrl(player.profile_picture)}
+                        alt={player.name}
+                        className="w-11 h-11 rounded-full object-cover border border-gray-600"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 bg-green-900/50 rounded-full flex items-center justify-center border border-green-700/40">
+                        <span className="text-green-300 font-heading font-bold text-lg leading-none">
+                          {player.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    {hasJersey && (
+                      <span className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] px-0.5 rounded-full bg-gray-900 border border-gray-600 text-[10px] font-heading font-bold text-gray-300 flex items-center justify-center leading-none">
+                        {player.jersey_number}
+                      </span>
+                    )}
                   </div>
-                )}
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{player.name}</p>
-                </div>
-              </button>
-            ))}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white text-sm leading-tight truncate">{player.name}</p>
+                    {player.position ? (
+                      <p className="text-xs text-green-400 mt-0.5 truncate">{player.position}</p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-0.5">Spieler</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
 
             {players.length === 0 && (
-              <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-                <Users className="w-12 h-12 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+              <div className="col-span-full text-center py-8 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-2 text-gray-600" />
                 <p>Noch keine registrierten Spieler im Team</p>
               </div>
             )}
@@ -245,12 +282,12 @@ export default function TeamRosterPage() {
 
         {user?.role === 'trainer' && (
           <div className="card space-y-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <LinkIcon className="w-5 h-5 text-primary-600" />
+            <h2 className="section-heading">
+              <LinkIcon className="w-5 h-5 text-primary-400" />
               Team-Beitrittslink
             </h2>
 
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-sm text-gray-400">
               Spieler können mit diesem allgemeinen Link selbst dem Team beitreten.
             </p>
 
@@ -275,7 +312,7 @@ export default function TeamRosterPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-gray-500">
                     Verwendungen: {Number(joinLink.used_count || 0)} von {Number(joinLink.max_uses || 0)}
                   </p>
                   <button
@@ -307,137 +344,124 @@ export default function TeamRosterPage() {
 
       {/* Member Profile Modal */}
       {selectedMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="member-profile-title">
-            <div className="flex items-start justify-between mb-4">
-              <h3 id="member-profile-title" className="font-semibold text-gray-900 dark:text-white">
-                Profil
-              </h3>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          onClick={() => setSelectedMember(null)}
+        >
+          <div
+            className="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="member-profile-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Hero header */}
+            <div className="relative px-5 pt-6 pb-5 text-center border-b border-gray-700/50">
               <button
                 onClick={() => setSelectedMember(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                title="Schließen"
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-700/60 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
                 aria-label="Modal schließen"
               >
-                <X className="w-6 h-6" />
+                <X className="w-4 h-4" />
               </button>
-            </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-center">
+              {/* Avatar */}
+              <div className="relative inline-block mb-3">
                 {resolveAssetUrl(selectedMember.profile_picture) ? (
                   <img
                     src={resolveAssetUrl(selectedMember.profile_picture)}
                     alt={selectedMember.name}
-                    className="w-32 h-32 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-600"
                   />
                 ) : (
-                  <div className={`w-32 h-32 rounded-full flex items-center justify-center border-2 ${
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center border-2 ${
                     selectedMember.role === 'trainer'
-                      ? 'bg-primary-100 border-primary-200 dark:bg-primary-900/40 dark:border-primary-700'
-                      : 'bg-green-100 border-green-200 dark:bg-green-900/40 dark:border-green-700'
+                      ? 'bg-primary-900/50 border-primary-700/60'
+                      : 'bg-green-900/50 border-green-700/60'
                   }`}>
-                    <span className={`text-5xl font-semibold ${
-                      selectedMember.role === 'trainer'
-                        ? 'text-primary-600 dark:text-primary-300'
-                        : 'text-green-600 dark:text-green-300'
+                    <span className={`text-4xl font-heading font-bold ${
+                      selectedMember.role === 'trainer' ? 'text-primary-300' : 'text-green-300'
                     }`}>
                       {selectedMember.name.charAt(0)}
                     </span>
                   </div>
                 )}
-              </div>
-
-              <div className="text-center">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedMember.name}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                  {selectedMember.role === 'trainer' ? 'Trainer' : 'Spieler'}
-                </p>
-                {selectedMember.nickname && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">„{selectedMember.nickname}“</p>
+                {selectedMember.role !== 'trainer' &&
+                  selectedMember.jersey_number != null &&
+                  selectedMember.jersey_number !== '' && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-gray-900 border border-gray-600 text-xs font-heading font-bold text-white whitespace-nowrap">
+                    #{selectedMember.jersey_number}
+                  </span>
                 )}
               </div>
 
-              {selectedMember.role !== 'trainer' && (
-                (() => {
-                  const hasJerseyNumber = selectedMember.jersey_number !== null && selectedMember.jersey_number !== undefined && selectedMember.jersey_number !== '';
-                  const hasPosition = Boolean(selectedMember.position);
-                  const hasHeight = Boolean(selectedMember.height_cm);
-                  const hasWeight = Boolean(selectedMember.weight_kg);
-                  const hasClothingSize = Boolean(selectedMember.clothing_size);
-                  const hasShoeSize = Boolean(selectedMember.shoe_size);
-                  const hasFootedness = Boolean(selectedMember.footedness);
-                  const hasAnyPlayerInfo = hasJerseyNumber || hasPosition || hasHeight || hasWeight || hasClothingSize || hasShoeSize || hasFootedness;
+              <h3 id="member-profile-title" className="text-xl font-heading font-bold text-white tracking-wide">
+                {selectedMember.name}
+              </h3>
 
-                  if (!hasAnyPlayerInfo) {
-                    return (
-                      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                        Keine Daten hinterlegt.
-                      </p>
-                    );
-                  }
+              <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-heading font-semibold border ${
+                  selectedMember.role === 'trainer'
+                    ? 'bg-primary-900/40 text-primary-300 border-primary-700/40'
+                    : 'bg-green-900/40 text-green-300 border-green-700/40'
+                }`}>
+                  {selectedMember.role === 'trainer' ? (
+                    <><Shield className="w-3 h-3" /> Trainer</>
+                  ) : (
+                    <><User className="w-3 h-3" /> Spieler</>
+                  )}
+                </span>
+                {selectedMember.position && (
+                  <span className="text-sm text-gray-400">{selectedMember.position}</span>
+                )}
+                {selectedMember.nickname && (
+                  <span className="text-sm text-gray-500">„{selectedMember.nickname}"</span>
+                )}
+              </div>
+            </div>
 
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-center">
-                      {hasJerseyNumber && (
-                        renderInfoCard('Trikotnummer', `#${selectedMember.jersey_number}`)
-                      )}
+            {/* Info grid */}
+            <div className="p-5 space-y-4">
+              {selectedMember.role !== 'trainer' && (() => {
+                const hasJerseyNumber = selectedMember.jersey_number != null && selectedMember.jersey_number !== '';
+                const hasPosition = Boolean(selectedMember.position);
+                const hasHeight = Boolean(selectedMember.height_cm);
+                const hasWeight = Boolean(selectedMember.weight_kg);
+                const hasClothingSize = Boolean(selectedMember.clothing_size);
+                const hasShoeSize = Boolean(selectedMember.shoe_size);
+                const hasFootedness = Boolean(selectedMember.footedness);
+                const hasAnyPlayerInfo = hasJerseyNumber || hasPosition || hasHeight || hasWeight || hasClothingSize || hasShoeSize || hasFootedness;
 
-                      {hasPosition && (
-                        renderInfoCard('Position', selectedMember.position)
-                      )}
+                if (!hasAnyPlayerInfo) {
+                  return <p className="text-center text-sm text-gray-500 py-2">Keine Daten hinterlegt.</p>;
+                }
 
-                      {hasHeight && (
-                        renderInfoCard('Größe', `${selectedMember.height_cm} cm`)
-                      )}
+                return (
+                  <div className="grid grid-cols-2 gap-2">
+                    {hasJerseyNumber && renderInfoCard('Trikotnummer', `#${selectedMember.jersey_number}`)}
+                    {hasPosition && renderInfoCard('Position', selectedMember.position)}
+                    {hasHeight && renderInfoCard('Größe', `${selectedMember.height_cm} cm`)}
+                    {hasWeight && renderInfoCard('Gewicht', `${selectedMember.weight_kg} kg`)}
+                    {hasClothingSize && renderInfoCard('Kleidergröße', selectedMember.clothing_size)}
+                    {hasShoeSize && renderInfoCard('Schuhgröße', selectedMember.shoe_size)}
+                    {hasFootedness && renderInfoCard('Füßigkeit', selectedMember.footedness, 'col-span-2 capitalize')}
+                  </div>
+                );
+              })()}
 
-                      {hasWeight && (
-                        renderInfoCard('Gewicht', `${selectedMember.weight_kg} kg`)
-                      )}
-
-                      {hasClothingSize && (
-                        renderInfoCard('Kleidergröße', selectedMember.clothing_size)
-                      )}
-
-                      {hasShoeSize && (
-                        renderInfoCard('Schuhgröße', selectedMember.shoe_size)
-                      )}
-
-                      {hasFootedness && (
-                        renderInfoCard('Füßigkeit', selectedMember.footedness, 'sm:col-span-2 capitalize')
-                      )}
-                    </div>
-                  );
-                })()
-              )}
-
-              {selectedMember.role === 'trainer' && (
-                (() => {
-                  const hasPhoneNumber = Boolean(selectedMember.phone_number);
-                  const hasEmail = Boolean(selectedMember.email);
-                  const hasAnyTrainerInfo = hasPhoneNumber || hasEmail;
-
-                  if (!hasAnyTrainerInfo) {
-                    return (
-                      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                        Keine Daten hinterlegt.
-                      </p>
-                    );
-                  }
-
-                  return (
-                    <div className="grid grid-cols-1 gap-3 text-center">
-                      {hasPhoneNumber && (
-                        renderInfoCard('Handynummer', selectedMember.phone_number)
-                      )}
-
-                      {hasEmail && (
-                        renderInfoCard('E-Mail', selectedMember.email)
-                      )}
-                    </div>
-                  );
-                })()
-              )}
+              {selectedMember.role === 'trainer' && (() => {
+                const hasPhoneNumber = Boolean(selectedMember.phone_number);
+                const hasEmail = Boolean(selectedMember.email);
+                if (!hasPhoneNumber && !hasEmail) {
+                  return <p className="text-center text-sm text-gray-500 py-2">Keine Kontaktdaten hinterlegt.</p>;
+                }
+                return (
+                  <div className="grid grid-cols-1 gap-2">
+                    {hasPhoneNumber && renderInfoCard('Handynummer', selectedMember.phone_number)}
+                    {hasEmail && renderInfoCard('E-Mail', selectedMember.email)}
+                  </div>
+                );
+              })()}
 
               <button
                 onClick={() => setSelectedMember(null)}
@@ -447,18 +471,38 @@ export default function TeamRosterPage() {
               </button>
 
               {user?.role === 'trainer' && selectedMember.role !== 'trainer' && (
-                <button
-                  type="button"
-                  disabled={removePlayerMutation.isPending}
-                  onClick={() => {
-                    const confirmed = window.confirm(`Spieler ${selectedMember.name} wirklich aus dem Team entfernen?`);
-                    if (!confirmed) return;
-                    removePlayerMutation.mutate(selectedMember.id);
-                  }}
-                  className="btn btn-danger w-full disabled:opacity-50"
-                >
-                  {removePlayerMutation.isPending ? 'Entfernt...' : 'Spieler aus Team entfernen'}
-                </button>
+                confirmRemove ? (
+                  <div className="rounded-xl bg-red-900/10 border border-red-700/40 p-3">
+                    <p className="text-sm text-gray-300 text-center mb-3">
+                      <span className="font-semibold text-white">{selectedMember.name}</span> wirklich aus dem Team entfernen?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => removePlayerMutation.mutate(selectedMember.id)}
+                        disabled={removePlayerMutation.isPending}
+                        className="flex-1 btn btn-danger disabled:opacity-50"
+                      >
+                        {removePlayerMutation.isPending ? 'Entfernt…' : 'Ja, entfernen'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRemove(false)}
+                        className="flex-1 btn btn-secondary"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRemove(true)}
+                    className="w-full btn btn-secondary text-red-400 border-red-900/50 hover:bg-red-900/20 hover:border-red-700/50"
+                  >
+                    Aus Team entfernen
+                  </button>
+                )
               )}
             </div>
           </div>

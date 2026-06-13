@@ -90,11 +90,11 @@ export default function EventsPage() {
       const baseClass = 'w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50';
 
       if (status === 'accepted') {
-        return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'}`;
+        return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'}`;
       } else if (status === 'declined') {
-        return `${baseClass} ${isSelected ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'}`;
+        return `${baseClass} ${isSelected ? 'bg-red-600 text-white' : 'bg-red-900/30 text-red-400 hover:bg-red-900/50'}`;
       } else if (status === 'tentative') {
-        return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
+        return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/50'}`;
       }
     };
 
@@ -165,10 +165,6 @@ export default function EventsPage() {
       meetingTimeLabel = meetingDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
     }
 
-    const matchTypeLabel = event?.type === 'match'
-      ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
-      : '';
-
     const handleEventClick = () => {
       const from = `${location.pathname}${location.search}${location.hash}`;
       navigate(`/events/${event.id}`, { state: { from } });
@@ -178,17 +174,17 @@ export default function EventsPage() {
       <div
         key={event.id}
         onClick={handleEventClick}
-        className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600`}
+        className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all duration-200 cursor-pointer bg-gray-800 border-gray-700/70 hover:border-primary-600/60 hover:shadow-card-hover active:scale-[0.99]`}
       >
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="w-20 sm:w-24 shrink-0 flex items-center justify-center">
             <div className="flex flex-col items-center justify-center text-center">
-              <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 leading-none">{weekdayLabel}</p>
-              <p className="mt-1 text-3xl sm:text-4xl font-semibold tabular-nums text-gray-900 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
+              <p className="text-[11px] sm:text-xs font-heading uppercase tracking-wide text-gray-500 leading-none">{weekdayLabel}</p>
+              <p className="mt-1 text-3xl sm:text-4xl font-heading font-bold tabular-nums text-white leading-none tracking-tight">{dateLabel}</p>
             </div>
           </div>
 
-          <div className="w-px bg-gray-200 dark:bg-gray-700 shrink-0 self-stretch" />
+          <div className="w-px bg-gray-700/60 shrink-0 self-stretch" />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -201,22 +197,22 @@ export default function EventsPage() {
                     loading="lazy"
                   />
                 ) : event.type === 'training' ? (
-                  <Cone className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                  <Cone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 shrink-0" />
                 ) : event.type === 'match' ? (
-                  <Swords className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                  <Swords className="w-5 h-5 sm:w-6 sm:h-6 text-primary-400 shrink-0" />
                 ) : (
-                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 shrink-0" />
                 )}
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
+                <h3 className="text-base sm:text-lg font-heading font-semibold text-white truncate">{displayTitle || opponent || event.title}</h3>
               </div>
               {!teamId && (squadIndicator || event.team_name) && (
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${
                     squadIndicator === 'II'
-                      ? 'bg-black text-white dark:bg-black dark:text-white'
+                      ? 'bg-black text-white'
                       : squadIndicator === 'I'
-                        ? 'bg-yellow-300 text-yellow-900 dark:bg-yellow-300 dark:text-yellow-900'
-                        : 'bg-primary-100 text-primary-800 dark:bg-primary-900/40 dark:text-primary-200'
+                        ? 'bg-yellow-300 text-yellow-900'
+                        : 'bg-primary-900/40 text-primary-200'
                   }`}
                 >
                   {squadIndicator || event.team_name}
@@ -224,37 +220,44 @@ export default function EventsPage() {
               )}
             </div>
 
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
-              <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal">Uhr</span></span>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-200">
+              <span className="text-xl sm:text-2xl font-heading font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal text-gray-400">Uhr</span></span>
             </div>
 
-            {meetingTimeLabel && (
-              <div className="mt-0.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                Treffpunkt: {meetingTimeLabel} Uhr
-              </div>
-            )}
-
-            {matchTypeLabel && (
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                {event.is_home_match ? (
-                  <Home className="w-3.5 h-3.5" />
-                ) : (
-                  <Plane className="w-3.5 h-3.5" />
-                )}
-                <span>{matchTypeLabel}</span>
-              </div>
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {event.type === 'training' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-heading font-semibold bg-blue-900/40 text-blue-300 border border-blue-700/40">
+                  <Cone className="w-2.5 h-2.5" />
+                  Training
+                </span>
+              ) : event.type === 'match' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-heading font-semibold bg-primary-900/50 text-primary-300 border border-primary-700/40">
+                  {event.is_home_match ? <Home className="w-2.5 h-2.5" /> : <Plane className="w-2.5 h-2.5" />}
+                  {event.is_home_match ? 'Heim' : 'Auswärts'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-heading font-semibold bg-gray-700/60 text-gray-400 border border-gray-600/40">
+                  <Calendar className="w-2.5 h-2.5" />
+                  Termin
+                </span>
+              )}
+              {meetingTimeLabel && (
+                <span className="text-[11px] text-gray-500">
+                  Treffpunkt {meetingTimeLabel} Uhr
+                </span>
+              )}
+            </div>
 
             <div className="mt-1.5 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm tabular-nums whitespace-nowrap">
-              <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300 font-medium">
+              <span className="inline-flex items-center gap-1 text-green-400 font-medium">
                 <Check className="w-3.5 h-3.5" />
                 {event.accepted_count}
               </span>
-              <span className="inline-flex items-center gap-1 text-yellow-700 dark:text-yellow-300 font-medium">
+              <span className="inline-flex items-center gap-1 text-yellow-400 font-medium">
                 <HelpCircle className="w-3.5 h-3.5" />
                 {event.tentative_count}
               </span>
-              <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-300 font-medium">
+              <span className="inline-flex items-center gap-1 text-red-400 font-medium">
                 <X className="w-3.5 h-3.5" />
                 {event.declined_count}
               </span>
@@ -262,7 +265,7 @@ export default function EventsPage() {
 
             {locationText && (
               <div
-                className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300"
+                className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-400"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -271,7 +274,7 @@ export default function EventsPage() {
                     href={googleMapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="truncate underline decoration-dotted underline-offset-2 hover:text-primary-600 dark:hover:text-primary-400 block"
+                    className="truncate underline decoration-dotted underline-offset-2 hover:text-primary-400 block"
                   >
                     {locationText}
                   </a>
@@ -280,7 +283,7 @@ export default function EventsPage() {
                       href={googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-primary-600 hover:text-primary-500"
+                      className="text-[11px] text-primary-400 hover:text-primary-300"
                     >
                       Google Maps
                     </a>
@@ -288,7 +291,7 @@ export default function EventsPage() {
                       href={appleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-primary-600 hover:text-primary-500"
+                      className="text-[11px] text-primary-400 hover:text-primary-300"
                     >
                       Apple Karten
                     </a>
@@ -310,15 +313,15 @@ export default function EventsPage() {
                 }}
                 className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors ${
                   event.my_status === 'accepted'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                    ? 'bg-green-900/30 text-green-400'
                     : event.my_status === 'declined'
-                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                    ? 'bg-red-900/30 text-red-400'
                     : event.my_status === 'tentative'
-                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                    ? 'bg-yellow-900/30 text-yellow-400'
+                    : 'bg-gray-700 text-gray-400'
                 } ${
                   !isPastView && openQuickActionsEventId === event.id
-                    ? 'ring-2 ring-primary-400 dark:ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
+                    ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-gray-800'
                     : ''
                 }`}
                 title={isPastView ? 'Status anzeigen' : 'Status anzeigen und ändern'}
@@ -336,7 +339,7 @@ export default function EventsPage() {
               </button>
 
               {!isPastView && openQuickActionsEventId === event.id && (
-                <div className="absolute right-0 top-12 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
+                <div className="absolute right-0 top-12 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-gray-800 border border-gray-700 rounded-full px-2 py-2 shadow-card-hover flex items-center gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -393,7 +396,13 @@ export default function EventsPage() {
 
 
   if (isLoading) {
-    return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="skeleton h-9 w-48" />
+        <div className="skeleton h-10 w-full rounded-full" />
+        {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-[88px] rounded-xl" />)}
+      </div>
+    );
   }
 
   return (
@@ -403,14 +412,14 @@ export default function EventsPage() {
           <button
             type="button"
             onClick={() => goBack(teamId ? `/teams/${teamId}` : '/')}
-            className="mt-1 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className="mt-1 sm:mt-0 text-gray-400 hover:text-white transition-colors"
             aria-label="Zurück"
             title="Zurück"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 min-w-0">
-            <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600 shrink-0" />
+          <h1 className="text-3xl sm:text-4xl font-heading font-bold text-white tracking-wide flex items-center gap-3 min-w-0">
+            <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400 shrink-0" />
             <span className="truncate">Terminübersicht</span>
           </h1>
         </div>
@@ -428,20 +437,20 @@ export default function EventsPage() {
       </div>
 
       {createdSuccess && (
-        <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 text-sm text-green-800 dark:text-green-200">
+        <div className="rounded-lg border border-green-800 bg-green-900/20 px-4 py-3 text-sm text-green-300">
           Termin wurde erfolgreich erstellt.
         </div>
       )}
 
       <div className="flex justify-center">
-        <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
+        <div className="inline-flex items-center rounded-full bg-gray-800 p-1 border border-gray-700">
           <button
             type="button"
             onClick={() => handleViewChange('upcoming')}
             className={`min-w-[120px] px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
               !isPastView
                 ? 'bg-primary-600 text-white shadow-sm'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+                : 'text-gray-400 hover:bg-gray-700'
             }`}
           >
             Anstehend
@@ -452,7 +461,7 @@ export default function EventsPage() {
             className={`min-w-[120px] px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
               isPastView
                 ? 'bg-primary-600 text-white shadow-sm'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+                : 'text-gray-400 hover:bg-gray-700'
             }`}
           >
             Vergangen
@@ -464,7 +473,7 @@ export default function EventsPage() {
       <div className="space-y-3 sm:space-y-4">
         {eventGroups.map((group) => (
           <div key={group.key} className="space-y-2">
-            <h2 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 capitalize px-1">
+            <h2 className="text-xs font-heading font-semibold text-gray-500 uppercase tracking-widest px-1">
               {group.label}
             </h2>
             <div className="space-y-3 sm:space-y-4">
@@ -473,9 +482,9 @@ export default function EventsPage() {
           </div>
         ))}
         {eventItems.length === 0 && (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            <Calendar className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-            <p className="text-lg font-medium text-gray-900 dark:text-white">{isPastView ? 'Keine vergangenen Termine' : 'Noch keine Termine'}</p>
+          <div className="text-center py-12 text-gray-500">
+            <Calendar className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-600" />
+            <p className="text-lg font-medium text-white">{isPastView ? 'Keine vergangenen Termine' : 'Noch keine Termine'}</p>
             <p className="text-sm mt-2">
               {isPastView ? (
                 'Es wurden noch keine vergangenen Termine gefunden.'

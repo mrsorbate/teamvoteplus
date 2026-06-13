@@ -25,7 +25,7 @@ export function ToastProvider({ children, duration = 3000 }: { children: ReactNo
     type: ToastType = 'error',
     options?: { position?: 'top-right' | 'bottom-right' }
   ) => {
-    setToast({ message, type, position: options?.position ?? 'top-right' });
+    setToast({ message, type, position: options?.position ?? 'bottom-right' });
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -45,7 +45,7 @@ export function ToastProvider({ children, duration = 3000 }: { children: ReactNo
       {children}
       <ToastMessage
         toast={toast}
-        positionClassName={toast?.position === 'bottom-right' ? 'bottom-4 right-4 z-[70]' : 'top-4 right-4 z-50'}
+        positionClassName={toast?.position === 'top-right' ? 'top-4 right-4 z-[60]' : 'bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 z-[60]'}
         textClassName={toast?.position === 'bottom-right' ? 'text-sm font-medium' : ''}
       />
     </ToastContext.Provider>
