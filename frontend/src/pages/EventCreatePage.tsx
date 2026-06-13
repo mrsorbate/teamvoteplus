@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat, Loader2 } from 'lucide-react';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 import { useToast } from '../lib/useToast';
 import { useSmartBack } from '../hooks/useSmartBack';
@@ -611,7 +611,7 @@ export default function EventCreatePage() {
           <button
             type="button"
             onClick={() => goBack(effectiveTeamId ? `/teams/${effectiveTeamId}/events` : '/events')}
-            className="text-gray-300 hover:text-gray-900 hover:text-white"
+            className="text-gray-300 hover:text-white"
             aria-label="Zurück"
             title="Zurück"
           >
@@ -755,6 +755,7 @@ export default function EventCreatePage() {
                   value={eventData.duration_minutes}
                   onChange={(e) => setEventData({ ...eventData, duration_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'duration_minutes')}
+                  inputMode="numeric"
                   className="input text-center flex-1 min-w-0"
                   placeholder="z.B. 90"
                 />
@@ -904,6 +905,7 @@ export default function EventCreatePage() {
                   value={eventData.arrival_minutes}
                   onChange={(e) => setEventData({ ...eventData, arrival_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'arrival_minutes')}
+                  inputMode="numeric"
                   className="input text-center flex-1 min-w-0"
                   placeholder="z.B. 15"
                 />
@@ -1135,7 +1137,7 @@ export default function EventCreatePage() {
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                               eventData.repeat_days.includes(day.value)
                                 ? 'bg-primary-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-700 text-gray-200 hover:bg-gray-600'
+                                : 'bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600'
                             }`}
                           >
                             {day.label}
@@ -1180,7 +1182,7 @@ export default function EventCreatePage() {
                 !effectiveTeamId
               }
             >
-              {createEventMutation.isPending ? 'Erstellt...' : 'Termin erstellen'}
+              {createEventMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" />Erstellt...</> : 'Termin erstellen'}
             </button>
             <button
               type="button"
@@ -1244,7 +1246,7 @@ export default function EventCreatePage() {
                       className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                         isChecked
                           ? 'bg-primary-600 text-white'
-                          : 'bg-gray-200 text-gray-700 bg-gray-700 text-gray-200'
+                          : 'bg-gray-700 text-gray-200'
                       }`}
                     >
                       <span>{isChecked ? 'ON' : 'OFF'}</span>

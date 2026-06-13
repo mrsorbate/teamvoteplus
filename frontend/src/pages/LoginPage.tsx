@@ -4,14 +4,15 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authAPI, settingsAPI } from '../lib/api';
 import { resolveAssetUrl } from '../lib/utils';
+import { useToast } from '../lib/useToast';
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fromQuery = searchParams.get('reason') === 'session-expired';
@@ -46,13 +47,12 @@ export default function LoginPage() {
       }, 100);
     },
     onError: (error: any) => {
-      setError(error.response?.data?.error || 'Login fehlgeschlagen');
+      showToast(error.response?.data?.error || 'Login fehlgeschlagen', 'error');
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     loginMutation.mutate();
   };
 
@@ -89,14 +89,8 @@ export default function LoginPage() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {sessionExpiredNotice && (
-            <div className="bg-yellow-900/20 border border-yellow-700/60 text-yellow-300 px-4 py-3 rounded-lg text-sm bg-amber-900/30 border-amber-800 text-amber-200">
+            <div className="bg-amber-900/30 border border-amber-800 text-amber-200 px-4 py-3 rounded-lg text-sm">
               Aus Sicherheitsgründen musst du dich alle 30 Tage neu einloggen.
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-900/20 border border-red-700/60 text-red-400 px-4 py-3 rounded-lg">
-              {error}
             </div>
           )}
 

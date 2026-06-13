@@ -3,6 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { statsAPI } from '../lib/api';
 import { ArrowLeft, TrendingUp, ChevronDown } from 'lucide-react';
+
+interface AttendanceEntry {
+  id: number;
+  name: string;
+  attendance_rate: number;
+  accepted: number;
+  declined: number;
+  pending: number;
+  accepted_training: number;
+  total_training: number;
+  accepted_match: number;
+  total_match: number;
+  accepted_other: number;
+  total_other: number;
+}
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
 
@@ -106,7 +121,7 @@ export default function StatsPage() {
     return Math.round((a * 100) / t);
   };
 
-  const attendance: any[] = stats?.attendance ?? [];
+  const attendance: AttendanceEntry[] = stats?.attendance ?? [];
   const sorted = [...attendance].sort((a, b) => (b.attendance_rate || 0) - (a.attendance_rate || 0));
 
   const totals = attendance.reduce(

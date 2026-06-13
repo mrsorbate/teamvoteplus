@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { authAPI, settingsAPI } from '../lib/api';
 import { resolveAssetUrl } from '../lib/utils';
+import { useToast } from '../lib/useToast';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -11,8 +12,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'player' | 'trainer'>('player');
-  const [error, setError] = useState('');
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { showToast } = useToast();
 
   // Fetch organization info
   const { data: organization } = useQuery({
@@ -53,21 +54,17 @@ export default function RegisterPage() {
     },
     onError: (error: any) => {
       let message = 'Registrierung fehlgeschlagen';
-      
       if (error?.message) {
         message = error.message;
       } else if (error?.response?.data?.error) {
         message = error.response.data.error;
       }
-      
-      setError(message);
-      console.error('Registration error:', error);
+      showToast(message, 'error');
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     registerMutation.mutate();
   };
 
@@ -103,12 +100,6 @@ export default function RegisterPage() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-900/20 border border-red-700/60 text-red-400 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-300">
@@ -172,7 +163,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-300">
                 Rolle
               </label>
               <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:gap-4">

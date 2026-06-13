@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invitesAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Copy, Plus, Trash2, Link as LinkIcon, Check } from 'lucide-react';
+import { Copy, Plus, Trash2, Link as LinkIcon, Check, Mail } from 'lucide-react';
 
 interface InviteManagerProps {
   teamId: number;
@@ -143,7 +143,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold flex items-center">
+        <h2 className="text-xl font-semibold flex items-center text-white">
           <LinkIcon className="w-5 h-5 mr-2 text-primary-600" />
           {inviteHeading}
         </h2>
@@ -159,11 +159,11 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
       </div>
 
       {showCreateForm && (
-        <form onSubmit={handleCreate} className="mb-6 p-4 bg-gray-50 rounded-lg space-y-4">
+        <form onSubmit={handleCreate} className="mb-6 p-4 bg-gray-800 rounded-lg space-y-4">
           <h3 className="font-semibold">{createFormTitle}</h3>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Einladungsart
             </label>
             <input
@@ -172,12 +172,12 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
               readOnly
               title="Einladungsart"
               aria-label="Einladungsart"
-              className="input bg-gray-100"
+              className="input bg-gray-700/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Vorgegebener Name
             </label>
             <input
@@ -188,14 +188,14 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
               className="input"
               placeholder={inviteRole === 'trainer' ? 'z. B. Max Trainer' : 'z. B. Lena Spieler'}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Der Name wird bei der Registrierung fest übernommen und kann nicht geändert werden.
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Gültig für (Tage)
               </label>
               <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Max. Verwendungen
               </label>
               <div className="flex items-center gap-2">
@@ -283,9 +283,10 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
       )}
 
       {createdInviteUrl && (
-        <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700/60 rounded-lg space-y-3 bg-blue-900/20 border-blue-800">
-          <p className="text-blue-200 font-semibold">
-            📩 Einladungslink für {createdInviteeName || inviteRoleLabel}
+        <div className="mb-6 p-4 bg-blue-900/20 border border-blue-800 rounded-lg space-y-3">
+          <p className="text-blue-200 font-semibold flex items-center gap-2">
+            <Mail className="w-4 h-4" />
+            Einladungslink für {createdInviteeName || inviteRoleLabel}
           </p>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
@@ -353,11 +354,11 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                     <td className="py-3 pr-3 font-medium text-white">{inviteeName}</td>
                     <td className="py-3 pr-3">
                       {(isExpired || isMaxedOut) ? (
-                        <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded">
+                        <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
                           {isExpired ? 'Abgelaufen' : 'Limit erreicht'}
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Aktiv</span>
+                        <span className="px-2 py-0.5 bg-green-900/30 text-green-300 text-xs rounded">Aktiv</span>
                       )}
                     </td>
                     <td className="py-3 pr-3 text-gray-300">
@@ -391,7 +392,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                               deleteMutation.mutate(invite.id);
                             }
                           }}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-400 hover:text-red-300"
                           title="Link löschen"
                         >
                           <Trash2 className="w-5 h-5" />

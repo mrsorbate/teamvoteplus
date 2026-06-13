@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Users, Calendar, BarChart, Upload, Image as ImageIcon } from 'lucide-react';
+import { Users, Calendar, BarChart, Upload, Image as ImageIcon, GraduationCap, Shirt } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
@@ -86,7 +86,7 @@ export default function TeamsPage() {
             key={team.id} 
             className={`card transition-all ${
               team.created_by === user?.id 
-                ? 'hover:shadow-md bg-blue-50 border-blue-300 bg-blue-900/25 border-blue-700 border-2 ring-1 ring-blue-200 ring-blue-800'
+                ? 'hover:shadow-md bg-blue-900/25 border-blue-700 border-2 ring-1 ring-blue-800'
                 : 'hover:shadow-md'
             }`}
           >
@@ -106,7 +106,7 @@ export default function TeamsPage() {
                         fileInputRefs.current[team.id]?.click();
                       }}
                       disabled={uploadingTeamId === team.id}
-                      className="absolute bottom-2 right-2 bg-white/90 bg-gray-800/90 hover:bg-white hover:bg-gray-800 p-2 rounded-full shadow-lg transition-colors disabled:opacity-50"
+                      className="absolute bottom-2 right-2 bg-gray-800/90 hover:bg-gray-800 p-2 rounded-full shadow-lg transition-colors disabled:opacity-50"
                       title="Neues Bild hochladen"
                     >
                       <Upload className="w-4 h-4 text-gray-200" />
@@ -119,7 +119,7 @@ export default function TeamsPage() {
                       fileInputRefs.current[team.id]?.click();
                     }}
                     disabled={uploadingTeamId === team.id}
-                    className="w-full h-40 sm:h-48 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-primary-500 hover:bg-primary-50 hover:bg-primary-900/20 transition-colors disabled:opacity-50"
+                    className="w-full h-40 sm:h-48 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-primary-500 hover:bg-primary-900/20 transition-colors disabled:opacity-50"
                   >
                     <ImageIcon className="w-10 h-10 text-gray-500 mb-2" />
                     <span className="text-sm text-gray-300">
@@ -145,13 +145,13 @@ export default function TeamsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-base sm:text-lg font-semibold text-white break-words">{team.name}</h3>
                     {team.created_by === user?.id && (
-                      <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-400 text-xs font-medium rounded bg-blue-900/40 text-blue-300 whitespace-nowrap">
+                      <span className="inline-block px-2 py-0.5 bg-blue-900/40 text-blue-300 text-xs font-medium rounded whitespace-nowrap">
                         Meine Mannschaft
                       </span>
                     )}
                   </div>
                   <p className="text-xs sm:text-sm text-gray-300 mt-1">
-                    {team.my_role === 'trainer' ? '👨‍🏫 Trainer' : '⚽ Spieler'}
+                    {team.my_role === 'trainer' ? <><GraduationCap className="w-3.5 h-3.5 inline mr-1" />Trainer</> : <><Shirt className="w-3.5 h-3.5 inline mr-1" />Spieler</>}
                   </p>
                   {team.description && (
                     <p className="text-xs sm:text-sm text-gray-400 mt-2 break-words">{team.description}</p>

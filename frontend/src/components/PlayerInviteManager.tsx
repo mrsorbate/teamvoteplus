@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invitesAPI } from '../lib/api';
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Plus, Trash2, Users } from 'lucide-react';
 import { useToast } from '../lib/useToast';
 
 interface PlayerInviteManagerProps {
@@ -168,7 +168,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
     <div className="card">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h2 className="text-xl font-semibold flex items-center text-white">
-          <span className="mr-2">👥</span>
+          <Users className="w-5 h-5 mr-2" />
           Spieler anlegen & Einladungen
         </h2>
         {!showCreateForm && (
@@ -183,8 +183,8 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
       </div>
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-xl w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="create-player-title">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
+          <div className="card max-w-xl w-full max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="create-player-title">
             <h3 id="create-player-title" className="font-semibold text-white mb-4">Spieler einladen</h3>
 
             <form onSubmit={handleCreate} className="space-y-4">
@@ -311,7 +311,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                     <button
                       onClick={() => copyLink(invite)}
                       disabled={deletingId === invite.id}
-                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-gray-900 hover:text-white"
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-white"
                       title="Einladung teilen"
                       aria-label={`Einladung für ${invite.player_name} teilen`}
                     >
@@ -320,7 +320,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                     <button
                       onClick={() => openDeleteModal(invite)}
                       disabled={deletingId === invite.id}
-                      className="p-2 hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-red-600 hover:text-red-400"
+                      className="p-2 hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-red-400"
                       title="Löschen"
                       aria-label={`Einladung für ${invite.player_name} löschen`}
                     >
@@ -347,8 +347,8 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
 
       {/* Delete Invite Modal */}
       {showDeleteModal && inviteToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="delete-invite-title">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
+          <div className="card max-w-md w-full overscroll-contain rounded-t-2xl sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="delete-invite-title">
             <h3 id="delete-invite-title" className="font-semibold text-white mb-4">
               Einladung löschen?
             </h3>
@@ -379,8 +379,8 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
 
       {/* Share Invite Modal */}
       {showShareModal && selectedInviteForShare && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="share-invite-title">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
+          <div className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain rounded-t-2xl sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="share-invite-title">
             <h3 id="share-invite-title" className="font-semibold text-white mb-4">
               Einladung für {selectedInviteForShare.player_name} teilen
             </h3>
