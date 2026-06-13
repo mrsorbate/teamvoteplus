@@ -33,6 +33,21 @@ interface TeamStatsResponse {
   };
 }
 
+const chartTokens = {
+  accepted: '#22c55e',
+  declined: '#ef4444',
+  pending: '#4b5563',
+  ring: '#1f2937',
+  textMuted: '#9ca3af',
+};
+
+const statAccentClass = {
+  past: 'bg-green-500',
+  training: 'bg-blue-500',
+  match: 'bg-primary-500',
+  other: 'bg-gray-500',
+};
+
 function DonutChart({ accepted, declined, pending }: { accepted: number; declined: number; pending: number }) {
   const size = 104;
   const cx = size / 2;
@@ -43,9 +58,9 @@ function DonutChart({ accepted, declined, pending }: { accepted: number; decline
   const rate = total > 0 ? Math.round((accepted / total) * 100) : 0;
 
   const segments = [
-    { value: accepted, color: '#22c55e' },
-    { value: declined, color: '#ef4444' },
-    { value: pending, color: '#4b5563' },
+    { value: accepted, color: chartTokens.accepted },
+    { value: declined, color: chartTokens.declined },
+    { value: pending, color: chartTokens.pending },
   ];
 
   let cumulative = 0;
@@ -57,7 +72,7 @@ function DonutChart({ accepted, declined, pending }: { accepted: number; decline
       viewBox={`0 0 ${size} ${size}`}
       aria-label={`Anwesenheitsquote ${rate} Prozent`}
     >
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1f2937" strokeWidth="11" />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={chartTokens.ring} strokeWidth="11" />
       {total > 0 && segments.filter(s => s.value > 0).map((seg, i) => {
         const segLen = (seg.value / total) * C;
         const offset = -cumulative;
@@ -88,7 +103,7 @@ function DonutChart({ accepted, declined, pending }: { accepted: number; decline
       <text
         x={cx} y={cy + 11}
         textAnchor="middle"
-        fill="#9ca3af"
+        fill={chartTokens.textMuted}
         fontSize="8.5"
         fontFamily="Barlow, system-ui, sans-serif"
       >
@@ -154,7 +169,7 @@ export default function StatsPage() {
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="icon-button rounded-full"
           aria-label="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -168,10 +183,10 @@ export default function StatsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Vergangene Termine', value: stats?.events?.past || 0, accent: 'bg-green-500' },
-          { label: 'Training', value: stats?.events?.pastByCategory?.training || 0, accent: 'bg-blue-500' },
-          { label: 'Spiele', value: stats?.events?.pastByCategory?.match || 0, accent: 'bg-primary-500' },
-          { label: 'Sonstiges', value: stats?.events?.pastByCategory?.other || 0, accent: 'bg-gray-500' },
+          { label: 'Vergangene Termine', value: stats?.events?.past || 0, accent: statAccentClass.past },
+          { label: 'Training', value: stats?.events?.pastByCategory?.training || 0, accent: statAccentClass.training },
+          { label: 'Spiele', value: stats?.events?.pastByCategory?.match || 0, accent: statAccentClass.match },
+          { label: 'Sonstiges', value: stats?.events?.pastByCategory?.other || 0, accent: statAccentClass.other },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-gray-800 border border-gray-700/60 rounded-2xl p-4">
             <div className={`w-5 h-1 rounded-full ${kpi.accent} mb-2.5`} />

@@ -631,7 +631,7 @@ export default function EventCreatePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {!initialTeamId && teamsForCreate?.length === 1 && (
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300">Teams</label>
+                <p className="block text-sm font-medium text-gray-300">Teams</p>
                 <div className="mt-1 px-3 py-2 rounded-lg border border-gray-600 bg-gray-700 text-sm text-gray-200">
                   {teamsForCreate[0].name}
                 </div>
@@ -639,21 +639,21 @@ export default function EventCreatePage() {
             )}
             {!initialTeamId && (!teamsForCreate || teamsForCreate.length > 1) && (
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300">Teams *</label>
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <p id="event-create-teams-label" className="block text-sm font-medium text-gray-300">Teams *</p>
+                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-labelledby="event-create-teams-label">
                   {teamsForCreate?.length ? (
                     teamsForCreate.map((team: any) => {
                       const checked = selectedTeamIds.includes(team.id);
                       return (
-                        <label
-                          key={team.id}
-                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                        <label htmlFor={`event-create-team-${team.id}`} key={team.id}
+                          className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
                             checked
                               ? 'border-primary-600 bg-primary-900/20'
                               : 'border-gray-600 bg-gray-700'
                           }`}
                         >
                           <input
+                            id={`event-create-team-${team.id}`}
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleTeamSelection(team.id)}
@@ -674,8 +674,8 @@ export default function EventCreatePage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Kategorie *</label>
-              <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-label="Kategorie auswählen">
+              <p id="event-create-category-label" className="block text-sm font-medium text-gray-300">Kategorie *</p>
+              <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-labelledby="event-create-category-label">
                 {categoryOptions.map((option) => {
                   const isActive = eventData.type === option.value;
                   return (
@@ -683,10 +683,10 @@ export default function EventCreatePage() {
                       key={option.value}
                       type="button"
                       onClick={() => setEventData({ ...eventData, type: option.value, rsvp_deadline: '' })}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         isActive
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       {option.label}
@@ -697,8 +697,9 @@ export default function EventCreatePage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300">Titel *</label>
+              <label htmlFor="event-create-title" className="block text-sm font-medium text-gray-300">Titel *</label>
               <input
+                id="event-create-title"
                 type="text"
                 required
                 value={eventData.title}
@@ -709,8 +710,9 @@ export default function EventCreatePage() {
             </div>
 
             <div className="min-w-0">
-              <label className="block text-sm font-medium text-gray-300">Beginn *</label>
+              <label htmlFor="event-create-start-time" className="block text-sm font-medium text-gray-300">Beginn *</label>
               <input
+                id="event-create-start-time"
                 type="datetime-local"
                 required
                 value={eventData.start_time}
@@ -726,7 +728,7 @@ export default function EventCreatePage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-300">Dauer (Minuten) *</label>
+                <label htmlFor="event-create-duration" className="block text-sm font-medium text-gray-300">Dauer (Minuten) *</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -734,7 +736,7 @@ export default function EventCreatePage() {
                       setEventData((prev) => ({ ...prev, duration_minutes: String(categoryDefaultDurationMinutes) }));
                     }
                   }}
-                  className="text-xs text-primary-600 hover:text-primary-500"
+                  className="text-action"
                 >
                   Team-Default
                 </button>
@@ -749,6 +751,7 @@ export default function EventCreatePage() {
                   −
                 </button>
                 <input
+                  id="event-create-duration"
                   type="number"
                   min={durationConfig.min}
                   step={durationConfig.step}
@@ -806,8 +809,9 @@ export default function EventCreatePage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-300">Ort oder Spielstätte</label>
+              <label htmlFor="event-create-location-venue" className="block text-sm font-medium text-gray-300">Ort oder Spielstätte</label>
               <input
+                id="event-create-location-venue"
                 type="text"
                 value={eventData.location_venue}
                 onChange={(e) => setEventData({ ...eventData, location_venue: e.target.value })}
@@ -817,8 +821,9 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Straße</label>
+              <label htmlFor="event-create-location-street" className="block text-sm font-medium text-gray-300">Straße</label>
               <input
+                id="event-create-location-street"
                 type="text"
                 value={eventData.location_street}
                 onChange={(e) => setEventData({ ...eventData, location_street: e.target.value })}
@@ -828,8 +833,9 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">PLZ Ort</label>
+              <label htmlFor="event-create-location-zip-city" className="block text-sm font-medium text-gray-300">PLZ Ort</label>
               <input
+                id="event-create-location-zip-city"
                 type="text"
                 value={eventData.location_zip_city}
                 onChange={(e) => setEventData({ ...eventData, location_zip_city: e.target.value })}
@@ -839,8 +845,8 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Platzart</label>
-              <div className="mt-1 flex flex-wrap gap-2" role="group" aria-label="Platzart auswählen">
+              <p id="event-create-pitch-type-label" className="block text-sm font-medium text-gray-300">Platzart</p>
+              <div className="mt-1 flex flex-wrap gap-2" role="group" aria-labelledby="event-create-pitch-type-label">
                 {pitchTypeOptions.map((option) => {
                   const isActive = eventData.pitch_type === option.value;
                   return (
@@ -848,10 +854,10 @@ export default function EventCreatePage() {
                       key={option.value}
                       type="button"
                       onClick={() => setEventData({ ...eventData, pitch_type: option.value })}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         isActive
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       {option.label}
@@ -862,8 +868,9 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Treffpunkt</label>
+              <label htmlFor="event-create-meeting-point" className="block text-sm font-medium text-gray-300">Treffpunkt</label>
               <input
+                id="event-create-meeting-point"
                 type="text"
                 value={eventData.meeting_point}
                 onChange={(e) => setEventData({ ...eventData, meeting_point: e.target.value })}
@@ -874,7 +881,7 @@ export default function EventCreatePage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-300">X Minuten vor dem Termin</label>
+                <label htmlFor="event-create-arrival-minutes" className="block text-sm font-medium text-gray-300">X Minuten vor dem Termin</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -884,7 +891,7 @@ export default function EventCreatePage() {
                       arrival_minutes: categoryDefaultArrival === null ? '' : String(categoryDefaultArrival),
                     }));
                   }}
-                  className="text-xs text-primary-600 hover:text-primary-500"
+                  className="text-action"
                 >
                   Minuten auf Team-Default
                 </button>
@@ -899,6 +906,7 @@ export default function EventCreatePage() {
                   −
                 </button>
                 <input
+                  id="event-create-arrival-minutes"
                   type="number"
                   min={arrivalConfig.min}
                   max={arrivalConfig.max}
@@ -927,8 +935,9 @@ export default function EventCreatePage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300">Optionale Beschreibung</label>
+              <label htmlFor="event-create-description" className="block text-sm font-medium text-gray-300">Optionale Beschreibung</label>
               <textarea
+                id="event-create-description"
                 value={eventData.description}
                 onChange={(e) => setEventData({ ...eventData, description: e.target.value })}
                 className="input mt-1"
@@ -948,7 +957,7 @@ export default function EventCreatePage() {
               <div className="space-y-4">
                 {membersForCreate?.length ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Teammitglieder</label>
+                    <p className="block text-sm font-medium text-gray-300 mb-2">Teammitglieder</p>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
@@ -966,8 +975,9 @@ export default function EventCreatePage() {
                   </div>
                 ) : null}
 
-                <label className="flex items-center space-x-3">
+                <label htmlFor="event-create-visibility-all" className="flex items-center space-x-3">
                   <input
+                    id="event-create-visibility-all"
                     type="checkbox"
                     checked={eventData.visibility_all}
                     onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
@@ -978,7 +988,7 @@ export default function EventCreatePage() {
 
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <label className="block text-sm font-medium text-gray-300">Rückmeldefrist (Stunden vor Termin)</label>
+                    <label htmlFor="event-create-rsvp-hours" className="block text-sm font-medium text-gray-300">Rückmeldefrist (Stunden vor Termin)</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -990,7 +1000,7 @@ export default function EventCreatePage() {
                           }
                         }
                       }}
-                      className="text-xs text-primary-600 hover:text-primary-500"
+                      className="text-action"
                     >
                       Team-Default
                     </button>
@@ -1013,6 +1023,7 @@ export default function EventCreatePage() {
                       −
                     </button>
                     <input
+                      id="event-create-rsvp-hours"
                       type="number"
                       min={rsvpHoursConfig.min}
                       max={rsvpHoursConfig.max}
@@ -1068,8 +1079,8 @@ export default function EventCreatePage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Serientermin</label>
-                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Serientermin ja oder nein">
+                  <p id="event-create-repeat-label" className="block text-sm font-medium text-gray-300 mb-2">Serientermin</p>
+                  <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="event-create-repeat-label">
                     <button
                       type="button"
                       onClick={() => {
@@ -1082,10 +1093,10 @@ export default function EventCreatePage() {
                           repeat_days: prev.repeat_days.length > 0 ? prev.repeat_days : [fallbackDay],
                         }));
                       }}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         eventData.repeat_type !== 'none'
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       Ja
@@ -1101,10 +1112,10 @@ export default function EventCreatePage() {
                           repeat_until: '',
                         }));
                       }}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         eventData.repeat_type === 'none'
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       Nein
@@ -1115,8 +1126,8 @@ export default function EventCreatePage() {
                 {eventData.repeat_type !== 'none' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Wochentage auswählen</label>
-                      <div className="flex flex-wrap gap-2">
+                      <p id="event-create-repeat-days-label" className="block text-sm font-medium text-gray-300 mb-2">Wochentage auswählen</p>
+                      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="event-create-repeat-days-label">
                         {[
                           { value: 1, label: 'Mo' },
                           { value: 2, label: 'Di' },
@@ -1152,8 +1163,9 @@ export default function EventCreatePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300">Wiederholung endet am *</label>
+                      <label htmlFor="event-create-repeat-until" className="block text-sm font-medium text-gray-300">Wiederholung endet am *</label>
                       <input
+                        id="event-create-repeat-until"
                         type="date"
                         value={eventData.repeat_until}
                         onChange={(e) => {
@@ -1212,7 +1224,7 @@ export default function EventCreatePage() {
               <button
                 type="button"
                 onClick={() => setEventData((prev) => ({ ...prev, invited_user_ids: allMemberIds, invite_all: true }))}
-                className="text-xs text-primary-600 hover:text-primary-500"
+                className="text-action"
               >
                 Alle auswählen
               </button>
@@ -1252,7 +1264,7 @@ export default function EventCreatePage() {
                         const inviteAll = nextIds.length === allMemberIds.length;
                         setEventData((prev) => ({ ...prev, invited_user_ids: nextIds, invite_all: inviteAll }));
                       }}
-                      className={`inline-flex min-w-[4.25rem] items-center justify-between gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${
+                      className={`inline-flex min-h-11 min-w-[4.75rem] items-center justify-between gap-2 rounded-full px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${
                         isChecked
                           ? 'bg-primary-600 text-white'
                           : 'bg-gray-700 text-gray-200'

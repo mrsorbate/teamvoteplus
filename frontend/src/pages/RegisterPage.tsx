@@ -163,12 +163,13 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">
+              <p id="register-role-label" className="block text-sm font-medium text-gray-300">
                 Rolle
-              </label>
-              <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:gap-4">
-                <label className="inline-flex items-center">
+              </p>
+              <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:gap-4" role="radiogroup" aria-labelledby="register-role-label">
+                <label htmlFor="register-role-player" className="inline-flex items-center">
                   <input
+                    id="register-role-player"
                     type="radio"
                     value="player"
                     checked={role === 'player'}
@@ -177,8 +178,9 @@ export default function RegisterPage() {
                   />
                   <span>Spieler</span>
                 </label>
-                <label className="inline-flex items-center">
+                <label htmlFor="register-role-trainer" className="inline-flex items-center">
                   <input
+                    id="register-role-trainer"
                     type="radio"
                     value="trainer"
                     checked={role === 'trainer'}

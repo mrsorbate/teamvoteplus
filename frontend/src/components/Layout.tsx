@@ -179,7 +179,7 @@ export default function Layout({ organization }: LayoutProps) {
 
               {/* Desktop: Profile + Logout */}
               <div className="hidden md:flex items-center gap-2 pl-2">
-                <Link to="/settings" aria-label="Zu den Einstellungen">
+                <Link to="/settings" aria-label="Zu den Einstellungen" className="icon-button rounded-full">
                   {menuProfilePicture ? (
                     <img
                       src={resolveAssetUrl(menuProfilePicture)}
@@ -194,7 +194,7 @@ export default function Layout({ organization }: LayoutProps) {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center justify-center w-9 h-9 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer"
+                  className="icon-button"
                   aria-label="Logout"
                   title="Logout"
                 >
@@ -204,7 +204,7 @@ export default function Layout({ organization }: LayoutProps) {
 
               {/* Mobile: Profile avatar only */}
               <div className="md:hidden flex items-center pr-1">
-                <Link to="/settings" aria-label="Zu den Einstellungen">
+                <Link to="/settings" aria-label="Zu den Einstellungen" className="icon-button rounded-full">
                   {menuProfilePicture ? (
                     <img
                       src={resolveAssetUrl(menuProfilePicture)}

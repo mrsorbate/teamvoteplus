@@ -217,8 +217,9 @@ export default function TeamPostsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Titel</label>
+            <label htmlFor="team-post-title" className="block text-sm font-medium text-gray-300 mb-1">Titel</label>
             <input
+              id="team-post-title"
               type="text"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -229,8 +230,9 @@ export default function TeamPostsPage() {
 
           {postType === 'announcement' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Nachricht</label>
+              <label htmlFor="team-post-content" className="block text-sm font-medium text-gray-300 mb-1">Nachricht</label>
               <textarea
+                id="team-post-content"
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 className="input min-h-[120px]"
@@ -239,8 +241,9 @@ export default function TeamPostsPage() {
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Antwortoptionen (eine pro Zeile)</label>
+              <label htmlFor="team-post-options" className="block text-sm font-medium text-gray-300 mb-1">Antwortoptionen (eine pro Zeile)</label>
               <textarea
+                id="team-post-options"
                 value={optionsText}
                 onChange={(event) => setOptionsText(event.target.value)}
                 className="input min-h-[120px]"

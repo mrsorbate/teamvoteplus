@@ -888,10 +888,10 @@ export default function TeamSettingsPage() {
               Termineinstellungen
             </h2>
             <div>
-              <label htmlFor="default-response" className="block text-sm font-medium text-gray-300 mb-1">
+              <p id="default-response-label" className="block text-sm font-medium text-gray-300 mb-1">
                 Standard-Rückmeldung für neue Termine
-              </label>
-              <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-label="Standard-Rückmeldung auswählen">
+              </p>
+              <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-labelledby="default-response-label">
                 {[
                   { value: 'pending', label: 'Offen' },
                   { value: 'accepted', label: 'Zugesagt' },
@@ -904,10 +904,10 @@ export default function TeamSettingsPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setDefaultResponse(option.value as 'pending' | 'accepted' | 'tentative' | 'declined')}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         isActive
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       {option.label}
@@ -918,9 +918,9 @@ export default function TeamSettingsPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <p id="team-settings-rsvp-defaults-label" className="block text-sm font-medium text-gray-300 mb-1">
                 Standard-Rückmeldefrist je Kategorie
-              </label>
+              </p>
 
               <div>
                 <label htmlFor="default-rsvp-deadline-hours-training" className="block text-xs text-gray-400 mb-1">Training</label>
@@ -1026,9 +1026,9 @@ export default function TeamSettingsPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <p id="team-settings-arrival-defaults-label" className="block text-sm font-medium text-gray-300 mb-1">
                 Standard Treffpunkt Minuten vor Beginn
-              </label>
+              </p>
 
               <div>
                 <label htmlFor="default-arrival-minutes-training" className="block text-xs text-gray-400 mb-1">Training</label>
@@ -1100,9 +1100,9 @@ export default function TeamSettingsPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <p id="team-settings-duration-defaults-label" className="block text-sm font-medium text-gray-300 mb-1">
                 Standard-Dauer je Kategorie (Minuten)
-              </label>
+              </p>
 
               <div>
                 <label htmlFor="default-duration-minutes-training" className="block text-xs text-gray-400 mb-1">Training</label>
@@ -1237,8 +1237,9 @@ export default function TeamSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Standardplatz</label>
+                <label htmlFor="team-settings-default-home-venue" className="block text-xs text-gray-400 mb-1">Standardplatz</label>
                 <select
+                  id="team-settings-default-home-venue"
                   value={defaultHomeVenueName}
                   onChange={(e) => setDefaultHomeVenueName(e.target.value)}
                   className="input"
@@ -1302,8 +1303,9 @@ export default function TeamSettingsPage() {
                               <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                   <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Platzname</label>
+                                    <label htmlFor={`home-venue-name-${index}`} className="block text-xs text-gray-400 mb-1">Platzname</label>
                                     <input
+                                      id={`home-venue-name-${index}`}
                                       type="text"
                                       value={venue.name}
                                       onChange={(e) => updateHomeVenue(index, 'name', e.target.value)}
@@ -1313,8 +1315,9 @@ export default function TeamSettingsPage() {
                                   </div>
 
                                   <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Platzart</label>
+                                    <label htmlFor={`home-venue-pitch-type-${index}`} className="block text-xs text-gray-400 mb-1">Platzart</label>
                                     <select
+                                      id={`home-venue-pitch-type-${index}`}
                                       value={venue.pitch_type}
                                       onChange={(e) => updateHomeVenue(index, 'pitch_type', e.target.value)}
                                       className="input"
@@ -1331,8 +1334,9 @@ export default function TeamSettingsPage() {
                                   </div>
 
                                   <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Straße</label>
+                                    <label htmlFor={`home-venue-street-${index}`} className="block text-xs text-gray-400 mb-1">Straße</label>
                                     <input
+                                      id={`home-venue-street-${index}`}
                                       type="text"
                                       value={venue.street}
                                       onChange={(e) => updateHomeVenue(index, 'street', e.target.value)}
@@ -1342,8 +1346,9 @@ export default function TeamSettingsPage() {
                                   </div>
 
                                   <div>
-                                    <label className="block text-xs text-gray-400 mb-1">PLZ / Ort</label>
+                                    <label htmlFor={`home-venue-zip-city-${index}`} className="block text-xs text-gray-400 mb-1">PLZ / Ort</label>
                                     <input
+                                      id={`home-venue-zip-city-${index}`}
                                       type="text"
                                       value={venue.zip_city}
                                       onChange={(e) => updateHomeVenue(index, 'zip_city', e.target.value)}
@@ -1392,8 +1397,9 @@ export default function TeamSettingsPage() {
             </p>
 
             <div className="space-y-2">
-              <label className="block text-xs text-gray-400">ICS-Feed URL</label>
+              <label htmlFor="team-settings-calendar-feed-url" className="block text-xs text-gray-400">ICS-Feed URL</label>
               <input
+                id="team-settings-calendar-feed-url"
                 type="text"
                 readOnly
                 value={calendarFeedUrl}

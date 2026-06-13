@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Check, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Check, ClipboardList, Swords } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -442,7 +442,12 @@ export default function EventSquadPage() {
   }
 
   if (!event) {
-    return <div className="empty-state">Termin nicht gefunden.</div>;
+    return (
+      <div className="empty-state">
+        <Swords className="empty-state-icon" />
+        <p>Termin nicht gefunden.</p>
+      </div>
+    );
   }
 
   if (event.type !== 'match') {

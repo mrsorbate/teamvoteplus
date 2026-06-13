@@ -206,6 +206,26 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  .compact-icon-button {
+    @apply icon-button;
+  }
+
+  .text-action {
+    @apply inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-primary-300 hover:text-primary-200 hover:bg-primary-900/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900;
+  }
+
+  .segment-option {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900;
+  }
+
+  .segment-option-active {
+    @apply border-primary-500 bg-primary-600 text-white;
+  }
+
+  .segment-option-inactive {
+    @apply border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600;
+  }
+
   .btn-danger {
     @apply bg-red-700 text-white hover:bg-red-600 active:bg-red-800 focus:ring-red-500 shadow-card;
   }
@@ -286,6 +306,10 @@
     @apply rounded-full object-contain bg-gray-100 border border-gray-700/60;
   }
 
+  .logo-preview {
+    @apply object-contain bg-gray-100 border border-gray-700/60;
+  }
+
   .loading-card {
     @apply card flex items-center justify-center gap-2 py-8 text-sm text-gray-300;
   }
@@ -296,6 +320,30 @@
 
   .empty-state-icon {
     @apply w-12 h-12 mx-auto mb-3 text-gray-600;
+  }
+
+  .event-card {
+    @apply p-3 sm:p-4 rounded-xl border transition-all duration-200 cursor-pointer bg-gray-800 border-gray-700/70 hover:border-primary-600/60 hover:shadow-card-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900;
+  }
+
+  .event-date-label {
+    @apply text-[11px] sm:text-xs font-heading font-semibold uppercase tracking-wider text-gray-500 leading-none;
+  }
+
+  .table-shell {
+    @apply overflow-x-auto rounded-xl border border-gray-700/60;
+  }
+
+  .admin-table {
+    @apply min-w-full divide-y divide-gray-700;
+  }
+
+  .setup-stepper {
+    @apply grid grid-cols-4 gap-1.5 text-center text-[10px] sm:text-xs;
+  }
+
+  .setup-stepper-item {
+    @apply min-w-0 truncate rounded-full border px-1.5 py-1 font-medium;
   }
 
   /* ── Stat card elements ── */

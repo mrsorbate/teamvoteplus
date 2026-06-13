@@ -111,7 +111,7 @@ const renderMatchCard = (match: any, section: any, cardKey: string) => {
         <div className="w-16 sm:w-20 shrink-0 flex items-center justify-center">
           <div className="flex flex-col items-center justify-center text-center">
             {weekdayLabel && (
-              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-gray-300 leading-none">{weekdayLabel}</p>
+              <p className="event-date-label text-gray-300">{weekdayLabel}</p>
             )}
             <p className="mt-0.5 text-xl sm:text-2xl font-semibold tabular-nums text-gray-100 leading-none tracking-tight">{dateLabel}</p>
           </div>
@@ -297,7 +297,11 @@ export default function MySchedulePage() {
       ) : error ? (
         <div className="text-sm text-red-400 py-4">Spielplan konnte nicht geladen werden.</div>
       ) : !hasAnyGames ? (
-        <div className="empty-state">Keine Spiele gefunden.</div>
+        <div className="empty-state">
+          <Calendar className="empty-state-icon" />
+          <p>Keine Spiele gefunden.</p>
+          <p className="text-sm mt-1">Prüfe die fussball.de-Verknüpfung in den Team-Einstellungen.</p>
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-3 bg-gray-800 p-1 rounded-full w-fit">
@@ -329,7 +333,10 @@ export default function MySchedulePage() {
                 {hasAnyNextGames ? (
                   renderScheduleSections(sections, 'next')
                 ) : (
-                  <div className="empty-state">Keine nächsten Spiele gefunden.</div>
+                  <div className="empty-state">
+                    <Calendar className="empty-state-icon" />
+                    <p>Keine nächsten Spiele gefunden.</p>
+                  </div>
                 )}
               </section>
             )}
@@ -339,7 +346,10 @@ export default function MySchedulePage() {
                 {hasAnyLastGames ? (
                   renderScheduleSections(sections, 'last')
                 ) : (
-                  <div className="empty-state">Keine letzten Spiele gefunden.</div>
+                  <div className="empty-state">
+                    <Calendar className="empty-state-icon" />
+                    <p>Keine letzten Spiele gefunden.</p>
+                  </div>
                 )}
               </section>
             )}

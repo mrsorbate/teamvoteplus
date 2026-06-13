@@ -214,10 +214,11 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="player-invite-name" className="block text-sm font-medium text-gray-300 mb-1">
                   Spielername
                 </label>
                 <input
+                  id="player-invite-name"
                   type="text"
                   required
                   value={inviteData.inviteeName}
@@ -230,7 +231,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="player-invite-expires-days" className="block text-sm font-medium text-gray-300 mb-1">
                   Gültig für (Tage)
                 </label>
                 <div className="flex items-center gap-2">
@@ -243,6 +244,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                     −
                   </button>
                   <input
+                    id="player-invite-expires-days"
                     type="number"
                     min="1"
                     max="365"
@@ -335,7 +337,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                     <button
                       onClick={() => copyLink(invite)}
                       disabled={deletingId === invite.id}
-                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-white"
+                      className="compact-icon-button disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Einladung teilen"
                       aria-label={`Einladung für ${invite.player_name} teilen`}
                     >
@@ -344,7 +346,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
                     <button
                       onClick={() => openDeleteModal(invite)}
                       disabled={deletingId === invite.id}
-                      className="p-2 hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-red-400"
+                      className="compact-icon-button disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-900/20 hover:text-red-400"
                       title="Löschen"
                       aria-label={`Einladung für ${invite.player_name} löschen`}
                     >

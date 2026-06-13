@@ -154,11 +154,15 @@ export default function DashboardPage() {
         <div className="mt-3">
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['teams'] });
+              queryClient.invalidateQueries({ queryKey: ['upcoming-events'] });
+              queryClient.invalidateQueries({ queryKey: ['open-posts'] });
+            }}
             className="btn btn-secondary w-full sm:w-auto"
           >
             <RotateCw className="w-4 h-4" />
-            Reload
+            Aktualisieren
           </button>
         </div>
       </div>
@@ -331,7 +335,7 @@ export default function DashboardPage() {
 
               const getActionButtonClass = (status: string) => {
                 const isSelected = event.my_status === status;
-                const baseClass = 'w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800';
+                const baseClass = 'w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800';
                 
                 if (status === 'accepted') {
                   return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-900/30 text-green-300 border border-green-700/50 hover:bg-green-900/50'}`;
@@ -423,16 +427,14 @@ export default function DashboardPage() {
 	                  role="button"
 	                  tabIndex={0}
 	                  aria-label={`${displayTitle || opponent || event.title} öffnen`}
-	                  className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
-	                    isToday 
-		                      ? 'bg-primary-900/30 border-primary-600' 
-	                      : 'bg-gray-800 border-gray-700 hover:border-primary-600'
+	                  className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} event-card ${
+	                    isToday ? 'bg-primary-900/30 border-primary-600' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className="w-20 sm:w-24 shrink-0 flex items-center justify-center">
                       <div className="flex flex-col items-center justify-center text-center">
-                        <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-gray-300 leading-none">{weekdayLabel}</p>
+                        <p className="event-date-label text-gray-300">{weekdayLabel}</p>
                         <p className="mt-1 text-3xl sm:text-4xl font-semibold tabular-nums text-gray-100 leading-none tracking-tight">{dateLabel}</p>
                       </div>
                     </div>
@@ -641,7 +643,6 @@ export default function DashboardPage() {
                 aria-invalid={declineReasonError ? 'true' : 'false'}
                 aria-describedby={declineReasonError ? 'dashboard-decline-reason-error' : undefined}
                 className="input min-h-[96px]"
-                autoFocus
               />
 
               {declineReasonError && (

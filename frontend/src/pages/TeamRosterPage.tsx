@@ -168,7 +168,7 @@ export default function TeamRosterPage() {
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
-          className="mt-1 sm:mt-0 text-gray-400 hover:text-white transition-colors"
+          className="mt-1 sm:mt-0 icon-button rounded-full"
           aria-label="Zurück"
           title="Zurück"
         >
@@ -359,7 +359,7 @@ export default function TeamRosterPage() {
 	            <div className="relative px-5 pt-6 pb-5 text-center border-b border-gray-700/50">
 	              <button
 	                onClick={closeMemberModal}
-	                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-700/60 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+	                className="absolute top-3 right-3 compact-icon-button rounded-full bg-gray-700/60"
 	                aria-label="Modal schließen"
               >
                 <X className="w-4 h-4" />

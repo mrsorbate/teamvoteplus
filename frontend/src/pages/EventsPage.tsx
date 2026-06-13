@@ -141,7 +141,7 @@ export default function EventsPage() {
   const renderEventCard = (event: any) => {
     const getActionButtonClass = (status: string) => {
       const isSelected = event.my_status === status;
-      const baseClass = 'w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50';
+      const baseClass = 'w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-50';
 
       if (status === 'accepted') {
         return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'}`;
@@ -237,12 +237,12 @@ export default function EventsPage() {
 	        role="button"
 	        tabIndex={0}
 	        aria-label={`${displayTitle || opponent || event.title} öffnen`}
-	        className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all duration-200 cursor-pointer bg-gray-800 border-gray-700/70 hover:border-primary-600/60 hover:shadow-card-hover active:scale-[0.99]`}
+	        className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} event-card`}
 	      >
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="w-20 sm:w-24 shrink-0 flex items-center justify-center">
             <div className="flex flex-col items-center justify-center text-center">
-              <p className="text-[11px] sm:text-xs font-heading uppercase tracking-wide text-gray-500 leading-none">{weekdayLabel}</p>
+              <p className="event-date-label">{weekdayLabel}</p>
               <p className="mt-1 text-3xl sm:text-4xl font-heading font-bold tabular-nums text-white leading-none tracking-tight">{dateLabel}</p>
             </div>
           </div>
@@ -473,7 +473,7 @@ export default function EventsPage() {
           <button
             type="button"
             onClick={() => goBack(teamId ? `/teams/${teamId}` : '/')}
-            className="mt-1 sm:mt-0 text-gray-400 hover:text-white transition-colors"
+            className="mt-1 sm:mt-0 icon-button rounded-full"
             aria-label="Zurück"
             title="Zurück"
           >
@@ -616,7 +616,6 @@ export default function EventsPage() {
                 aria-describedby={declineReasonError ? 'events-decline-reason-error' : undefined}
                 className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="z.B. krank, Arbeit, privater Termin"
-                autoFocus
               />
               {declineReasonError && (
                 <p id="events-decline-reason-error" className="mt-2 text-sm text-red-300" role="alert">

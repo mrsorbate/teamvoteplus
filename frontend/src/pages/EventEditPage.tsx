@@ -562,8 +562,8 @@ export default function EventEditPage() {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300">Kategorie *</label>
-              <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-label="Kategorie auswählen">
+              <p id="event-edit-category-label" className="block text-sm font-medium text-gray-300">Kategorie *</p>
+              <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-labelledby="event-edit-category-label">
                 {categoryOptions.map((option) => {
                   const isActive = eventData.type === option.value;
                   return (
@@ -571,10 +571,10 @@ export default function EventEditPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setEventData({ ...eventData, type: option.value })}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         isActive
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       {option.label}
@@ -585,8 +585,8 @@ export default function EventEditPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Platzart</label>
-              <div className="mt-1 flex flex-wrap gap-2" role="group" aria-label="Platzart auswählen">
+              <p id="event-edit-pitch-type-label" className="block text-sm font-medium text-gray-300">Platzart</p>
+              <div className="mt-1 flex flex-wrap gap-2" role="group" aria-labelledby="event-edit-pitch-type-label">
                 {pitchTypeOptions.map((option) => {
                   const isActive = eventData.pitch_type === option.value;
                   return (
@@ -594,10 +594,10 @@ export default function EventEditPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setEventData({ ...eventData, pitch_type: option.value })}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         isActive
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       {option.label}
@@ -608,8 +608,9 @@ export default function EventEditPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300">Titel *</label>
+              <label htmlFor="event-edit-title" className="block text-sm font-medium text-gray-300">Titel *</label>
               <input
+                id="event-edit-title"
                 type="text"
                 required
                 value={eventData.title}
@@ -620,8 +621,9 @@ export default function EventEditPage() {
             </div>
 
             <div className="min-w-0">
-              <label className="block text-sm font-medium text-gray-300">Beginn *</label>
+              <label htmlFor="event-edit-start-time" className="block text-sm font-medium text-gray-300">Beginn *</label>
               <input
+                id="event-edit-start-time"
                 type="datetime-local"
                 required
                 value={eventData.start_time}
@@ -635,7 +637,7 @@ export default function EventEditPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Dauer (Minuten) *</label>
+              <label htmlFor="event-edit-duration" className="block text-sm font-medium text-gray-300">Dauer (Minuten) *</label>
               <div className="mt-1 flex items-center gap-2 min-w-0">
                 <button
                   type="button"
@@ -646,6 +648,7 @@ export default function EventEditPage() {
                   −
                 </button>
                 <input
+                  id="event-edit-duration"
                   type="number"
                   min={durationConfig.min}
                   step={durationConfig.step}
@@ -695,8 +698,9 @@ export default function EventEditPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-300">Ort oder Spielstätte</label>
+              <label htmlFor="event-edit-location-venue" className="block text-sm font-medium text-gray-300">Ort oder Spielstätte</label>
               <input
+                id="event-edit-location-venue"
                 type="text"
                 value={eventData.location_venue}
                 onChange={(e) => setEventData({ ...eventData, location_venue: e.target.value })}
@@ -706,8 +710,9 @@ export default function EventEditPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Strasse</label>
+              <label htmlFor="event-edit-location-street" className="block text-sm font-medium text-gray-300">Strasse</label>
               <input
+                id="event-edit-location-street"
                 type="text"
                 value={eventData.location_street}
                 onChange={(e) => setEventData({ ...eventData, location_street: e.target.value })}
@@ -717,8 +722,9 @@ export default function EventEditPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">PLZ Ort</label>
+              <label htmlFor="event-edit-location-zip-city" className="block text-sm font-medium text-gray-300">PLZ Ort</label>
               <input
+                id="event-edit-location-zip-city"
                 type="text"
                 value={eventData.location_zip_city}
                 onChange={(e) => setEventData({ ...eventData, location_zip_city: e.target.value })}
@@ -728,8 +734,9 @@ export default function EventEditPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300">Treffpunkt</label>
+              <label htmlFor="event-edit-meeting-point" className="block text-sm font-medium text-gray-300">Treffpunkt</label>
               <input
+                id="event-edit-meeting-point"
                 type="text"
                 value={eventData.meeting_point}
                 onChange={(e) => setEventData({ ...eventData, meeting_point: e.target.value })}
@@ -740,7 +747,7 @@ export default function EventEditPage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-300">Treffen vor Beginn (Minuten)</label>
+                <label htmlFor="event-edit-arrival-minutes" className="block text-sm font-medium text-gray-300">Treffen vor Beginn (Minuten)</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -750,7 +757,7 @@ export default function EventEditPage() {
                       arrival_minutes: categoryDefaultArrival === null ? '' : String(categoryDefaultArrival),
                     }));
                   }}
-                  className="text-xs text-primary-600 hover:text-primary-500"
+                  className="text-action"
                 >
                   Minuten auf Team-Default
                 </button>
@@ -765,6 +772,7 @@ export default function EventEditPage() {
                   −
                 </button>
                 <input
+                  id="event-edit-arrival-minutes"
                   type="number"
                   min={arrivalConfig.min}
                   max={arrivalConfig.max}
@@ -788,8 +796,9 @@ export default function EventEditPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300">Beschreibung</label>
+              <label htmlFor="event-edit-description" className="block text-sm font-medium text-gray-300">Beschreibung</label>
               <textarea
+                id="event-edit-description"
                 value={eventData.description}
                 onChange={(e) => setEventData({ ...eventData, description: e.target.value })}
                 title="Beschreibung"
@@ -806,9 +815,9 @@ export default function EventEditPage() {
                   Einstellungen
                 </h4>
 
-                <label className="flex items-center space-x-3">
+                <label htmlFor="event-edit-visibility-all" className="flex items-center space-x-3">
                   <input
-                    id="visibility_all"
+                    id="event-edit-visibility-all"
                     type="checkbox"
                     checked={eventData.visibility_all}
                     onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
@@ -819,7 +828,7 @@ export default function EventEditPage() {
 
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <label className="block text-sm font-medium text-gray-300">Rückmeldefrist (Stunden vor Termin)</label>
+                    <label htmlFor="event-edit-rsvp-hours" className="block text-sm font-medium text-gray-300">Rückmeldefrist (Stunden vor Termin)</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -828,7 +837,7 @@ export default function EventEditPage() {
                           applyRsvpDeadlineOffsetHours(defaultHours);
                         }
                       }}
-                      className="text-xs text-primary-600 hover:text-primary-500"
+                      className="text-action"
                     >
                       Team-Default
                     </button>
@@ -850,6 +859,7 @@ export default function EventEditPage() {
                       −
                     </button>
                     <input
+                      id="event-edit-rsvp-hours"
                       type="number"
                       min={rsvpHoursConfig.min}
                       max={rsvpHoursConfig.max}
@@ -893,7 +903,7 @@ export default function EventEditPage() {
 
                 {membersForEdit?.length ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Teammitglieder</label>
+                    <p className="block text-sm font-medium text-gray-300 mb-2">Teammitglieder</p>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
@@ -921,18 +931,18 @@ export default function EventEditPage() {
               </h4>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Ganze Serie speichern</label>
-                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Ganze Serie speichern ja oder nein">
+                  <p id="event-edit-save-series-label" className="block text-sm font-medium text-gray-300 mb-2">Ganze Serie speichern</p>
+                  <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="event-edit-save-series-label">
                     <button
                       type="button"
                       onClick={() => {
                         setSaveWholeSeries(true);
                         setSeriesValidationMessage('');
                       }}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         saveWholeSeries
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       Ja
@@ -943,10 +953,10 @@ export default function EventEditPage() {
                         setSaveWholeSeries(false);
                         setSeriesValidationMessage('');
                       }}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`segment-option ${
                         !saveWholeSeries
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                          ? 'segment-option-active'
+                          : 'segment-option-inactive'
                       }`}
                     >
                       Nein
@@ -962,8 +972,8 @@ export default function EventEditPage() {
                 {saveWholeSeries ? (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Wochentage auswählen</label>
-                      <div className="flex flex-wrap gap-2">
+                      <p id="event-edit-repeat-days-label" className="block text-sm font-medium text-gray-300 mb-2">Wochentage auswählen</p>
+                      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="event-edit-repeat-days-label">
                         {[
                           { value: 1, label: 'Mo' },
                           { value: 2, label: 'Di' },
@@ -997,8 +1007,9 @@ export default function EventEditPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300">Wiederholung endet am *</label>
+                      <label htmlFor="event-edit-repeat-until" className="block text-sm font-medium text-gray-300">Wiederholung endet am *</label>
                       <input
+                        id="event-edit-repeat-until"
                         type="date"
                         required={saveWholeSeries}
                         value={seriesRepeatUntil}
@@ -1060,7 +1071,7 @@ export default function EventEditPage() {
               <button
                 type="button"
                 onClick={() => setEventData((prev) => ({ ...prev, invited_user_ids: allMemberIds, invite_all: true }))}
-                className="text-xs text-primary-600 hover:text-primary-500"
+                className="text-action"
               >
                 Alle auswählen
               </button>
@@ -1100,7 +1111,7 @@ export default function EventEditPage() {
                         const inviteAll = nextIds.length === allMemberIds.length;
                         setEventData((prev) => ({ ...prev, invited_user_ids: nextIds, invite_all: inviteAll }));
                       }}
-                      className={`inline-flex min-w-[4.25rem] items-center justify-between gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${
+                      className={`inline-flex min-h-11 min-w-[4.75rem] items-center justify-between gap-2 rounded-full px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${
                         isChecked
                           ? 'bg-primary-600 text-white'
                           : 'bg-gray-700 text-gray-200'

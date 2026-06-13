@@ -178,10 +178,11 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
           <h3 className="font-semibold">{createFormTitle}</h3>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="invite-role-label" className="block text-sm font-medium text-gray-300 mb-1">
               Einladungsart
             </label>
             <input
+              id="invite-role-label"
               type="text"
               value={inviteRoleLabel}
               readOnly
@@ -192,10 +193,11 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="invite-invitee-name" className="block text-sm font-medium text-gray-300 mb-1">
               Vorgegebener Name
             </label>
             <input
+              id="invite-invitee-name"
               type="text"
               required
               value={inviteData.inviteeName}
@@ -210,7 +212,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="invite-expires-days" className="block text-sm font-medium text-gray-300 mb-1">
                 Gültig für (Tage)
               </label>
               <div className="flex items-center gap-2">
@@ -223,6 +225,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                   −
                 </button>
                 <input
+                  id="invite-expires-days"
                   type="number"
                   min="1"
                   max="365"
@@ -245,7 +248,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="invite-max-uses" className="block text-sm font-medium text-gray-300 mb-1">
                 Max. Verwendungen
               </label>
               <div className="flex items-center gap-2">
@@ -258,6 +261,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                   −
                 </button>
                 <input
+                  id="invite-max-uses"
                   type="number"
                   min="1"
                   placeholder="Unbegrenzt"

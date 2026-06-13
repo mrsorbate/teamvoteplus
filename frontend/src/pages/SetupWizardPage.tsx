@@ -183,11 +183,11 @@ export default function SetupWizardPage() {
           ))}
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-center text-xs mb-8">
-            <span className={step >= 1 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>1 Verein</span>
-            <span className={step >= 2 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>2 Admin</span>
-            <span className={step >= 3 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>3 Zeitzone</span>
-            <span className={step >= 4 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>4 Zusammenf.</span>
+          <div className="setup-stepper mb-8">
+            <span className={`setup-stepper-item ${step >= 1 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>1 Verein</span>
+            <span className={`setup-stepper-item ${step >= 2 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>2 Admin</span>
+            <span className={`setup-stepper-item ${step >= 3 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>3 Zeit</span>
+            <span className={`setup-stepper-item ${step >= 4 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>4 Fertig</span>
           </div>
 
           {error && (
@@ -205,10 +205,11 @@ export default function SetupWizardPage() {
               </h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="setup-organization-name" className="block text-sm font-medium text-gray-300 mb-2">
                   Vereinsname *
                 </label>
                 <input
+                  id="setup-organization-name"
                   type="text"
                   value={setupData.organizationName}
                   onChange={handleNameChange}
@@ -221,10 +222,11 @@ export default function SetupWizardPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="setup-organization-short-name" className="block text-sm font-medium text-gray-300 mb-2">
                   Kurzer Vereinsname (mobil, optional)
                 </label>
                 <input
+                  id="setup-organization-short-name"
                   type="text"
                   value={setupData.organizationShortName}
                   onChange={(e) => setSetupData({ ...setupData, organizationShortName: e.target.value })}
@@ -238,12 +240,13 @@ export default function SetupWizardPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="setup-organization-logo" className="block text-sm font-medium text-gray-300 mb-2">
                   <Upload className="w-4 h-4 inline mr-2" />
                   Vereins-Logo (optional)
                 </label>
-                <label className="flex cursor-pointer">
+                <div className="flex">
                   <input
+                    id="setup-organization-logo"
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
@@ -251,7 +254,7 @@ export default function SetupWizardPage() {
                     aria-label="Vereins-Logo auswählen"
                     className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-primary-700/50 file:text-sm file:font-semibold file:bg-primary-900/40 file:text-primary-200 hover:file:bg-primary-900/60"
                   />
-                </label>
+                </div>
                 <p className="text-xs text-gray-400 mt-1">
                   Maximal 5MB (JPG, PNG, GIF, WebP). Kann später im Admin-Panel geändert werden.
                 </p>
@@ -274,8 +277,9 @@ export default function SetupWizardPage() {
               </h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Admin Benutzername *</label>
+                <label htmlFor="setup-admin-username" className="block text-sm font-medium text-gray-300 mb-2">Admin Benutzername *</label>
                 <input
+                  id="setup-admin-username"
                   type="text"
                   value={setupData.adminUsername}
                   onChange={(e) => setSetupData({ ...setupData, adminUsername: e.target.value })}
@@ -286,8 +290,9 @@ export default function SetupWizardPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Admin E-Mail *</label>
+                <label htmlFor="setup-admin-email" className="block text-sm font-medium text-gray-300 mb-2">Admin E-Mail *</label>
                 <input
+                  id="setup-admin-email"
                   type="email"
                   value={setupData.adminEmail}
                   onChange={(e) => setSetupData({ ...setupData, adminEmail: e.target.value })}
@@ -298,8 +303,9 @@ export default function SetupWizardPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Passwort *</label>
+                <label htmlFor="setup-admin-password" className="block text-sm font-medium text-gray-300 mb-2">Passwort *</label>
                 <input
+                  id="setup-admin-password"
                   type="password"
                   value={setupData.adminPassword}
                   onChange={(e) => setSetupData({ ...setupData, adminPassword: e.target.value })}
@@ -310,8 +316,9 @@ export default function SetupWizardPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Passwort bestätigen *</label>
+                <label htmlFor="setup-confirm-password" className="block text-sm font-medium text-gray-300 mb-2">Passwort bestätigen *</label>
                 <input
+                  id="setup-confirm-password"
                   type="password"
                   value={setupData.confirmPassword}
                   onChange={(e) => setSetupData({ ...setupData, confirmPassword: e.target.value })}
@@ -331,8 +338,9 @@ export default function SetupWizardPage() {
               </h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Zeitzone</label>
+                <label htmlFor="setup-timezone" className="block text-sm font-medium text-gray-300 mb-2">Zeitzone</label>
                 <select
+                  id="setup-timezone"
                   value={setupData.timezone}
                   onChange={handleTimezoneChange}
                   title="Zeitzone auswählen"

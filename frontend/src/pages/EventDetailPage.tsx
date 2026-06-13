@@ -735,7 +735,6 @@ export default function EventDetailPage() {
                     className="input text-sm"
                     rows={2}
                     placeholder="z.B. Entscheidung folgt am Abend"
-                    autoFocus
                   />
                   <div className="mt-2 flex gap-2">
                     <button
@@ -802,7 +801,6 @@ export default function EventDetailPage() {
                     className="input text-sm"
                     rows={2}
                     placeholder="z.B. Krank, Urlaub, Arbeit…"
-                    autoFocus
                   />
                   {responseValidationMessage && (
                     <p className="text-xs text-red-400 flex items-center gap-1.5 mt-1.5">

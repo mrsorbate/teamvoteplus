@@ -123,8 +123,9 @@ export default function TeamsPage() {
                         fileInputRefs.current[team.id]?.click();
                       }}
                       disabled={uploadingTeamId === team.id}
-                      className="absolute bottom-2 right-2 bg-gray-800/90 hover:bg-gray-800 p-2 rounded-full shadow-lg transition-colors disabled:opacity-50"
+                      className="absolute bottom-2 right-2 compact-icon-button rounded-full bg-gray-800/90 hover:bg-gray-800 shadow-lg disabled:opacity-50"
                       title="Neues Bild hochladen"
+                      aria-label={`${team.name} Bild hochladen`}
                     >
                       <Upload className="w-4 h-4 text-gray-200" />
                     </button>

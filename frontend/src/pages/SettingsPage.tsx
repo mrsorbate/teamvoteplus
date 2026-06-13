@@ -15,7 +15,7 @@ import {
 } from '../lib/pushNotifications';
 
 export default function SettingsPage() {
-  const { user: authUser } = useAuthStore();
+  const { user: authUser, token: authToken, setAuth } = useAuthStore();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -131,10 +131,8 @@ export default function SettingsPage() {
       // Update auth store with new profile picture
       if (authUser) {
         const updatedUser = { ...authUser, profile_picture: response.data.profile_picture };
-        const token = localStorage.getItem('auth-token');
-        if (token) {
-          localStorage.setItem('auth-user', JSON.stringify(updatedUser));
-          window.location.reload(); // Reload to update navigation
+        if (authToken) {
+          setAuth(authToken, updatedUser);
         }
       }
     },
@@ -151,10 +149,8 @@ export default function SettingsPage() {
       // Update auth store - remove profile picture
       if (authUser) {
         const updatedUser = { ...authUser, profile_picture: undefined };
-        const token = localStorage.getItem('auth-token');
-        if (token) {
-          localStorage.setItem('auth-user', JSON.stringify(updatedUser));
-          window.location.reload(); // Reload to update navigation
+        if (authToken) {
+          setAuth(authToken, updatedUser);
         }
       }
     },
@@ -521,18 +517,19 @@ export default function SettingsPage() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <p className="block text-sm font-medium text-gray-300">
               Benutzername
-            </label>
+            </p>
             <div className="mt-1 text-white font-medium">{profile?.username || authUser?.username}</div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <label htmlFor="settings-nickname" className="block text-sm font-medium text-gray-300">
               Spitzname
             </label>
             <div className="mt-1 flex flex-col sm:flex-row gap-2 sm:gap-3">
               <input
+                id="settings-nickname"
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
@@ -552,23 +549,23 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <p className="block text-sm font-medium text-gray-300">
               Name
-            </label>
+            </p>
             <div className="mt-1 text-white font-medium">{profile?.name || authUser?.name}</div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <p className="block text-sm font-medium text-gray-300">
               E-Mail
-            </label>
+            </p>
             <div className="mt-1 text-white">{profile?.email || authUser?.email}</div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <p className="block text-sm font-medium text-gray-300">
               Rolle
-            </label>
+            </p>
             <div className="mt-1">
               <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
                 authUser?.role === 'admin'
@@ -584,11 +581,12 @@ export default function SettingsPage() {
 
           {authUser?.role === 'trainer' && (
             <div>
-              <label className="block text-sm font-medium text-gray-300">
+              <label htmlFor="settings-phone-number" className="block text-sm font-medium text-gray-300">
                 Handynummer
               </label>
               <div className="mt-1 flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <input
+                  id="settings-phone-number"
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
@@ -618,8 +616,9 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300">Größe (cm)</label>
+                    <label htmlFor="settings-height-cm" className="block text-sm font-medium text-gray-300">Größe (cm)</label>
                     <input
+                      id="settings-height-cm"
                       type="number"
                       min={100}
                       max={250}
@@ -631,8 +630,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300">Gewicht (kg)</label>
+                    <label htmlFor="settings-weight-kg" className="block text-sm font-medium text-gray-300">Gewicht (kg)</label>
                     <input
+                      id="settings-weight-kg"
                       type="number"
                       min={30}
                       max={250}
@@ -644,8 +644,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300">Kleidergröße</label>
+                    <label htmlFor="settings-clothing-size" className="block text-sm font-medium text-gray-300">Kleidergröße</label>
                     <input
+                      id="settings-clothing-size"
                       type="text"
                       value={clothingSize}
                       onChange={(e) => setClothingSize(e.target.value)}
@@ -656,8 +657,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300">Schuhgröße</label>
+                    <label htmlFor="settings-shoe-size" className="block text-sm font-medium text-gray-300">Schuhgröße</label>
                     <input
+                      id="settings-shoe-size"
                       type="text"
                       value={shoeSize}
                       onChange={(e) => setShoeSize(e.target.value)}
@@ -668,8 +670,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300">Trikotnummer</label>
+                    <label htmlFor="settings-jersey-number" className="block text-sm font-medium text-gray-300">Trikotnummer</label>
                     <input
+                      id="settings-jersey-number"
                       type="number"
                       min={0}
                       max={99}
@@ -681,8 +684,8 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300">Füßigkeit</label>
-                    <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-label="Füßigkeit auswählen">
+                    <p id="settings-footedness-label" className="block text-sm font-medium text-gray-300">Füßigkeit</p>
+                    <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-labelledby="settings-footedness-label">
                       {[
                         { value: 'links', label: 'Links' },
                         { value: 'rechts', label: 'Rechts' },
@@ -708,8 +711,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-300">Position</label>
+                    <label htmlFor="settings-position" className="block text-sm font-medium text-gray-300">Position</label>
                     <input
+                      id="settings-position"
                       type="text"
                       value={position}
                       onChange={(e) => setPosition(e.target.value)}
@@ -782,7 +786,6 @@ export default function SettingsPage() {
                         }
                         placeholder="z.B. Mein U19 Team"
                         className="input mt-2"
-                        autoFocus
                       />
                     ) : (
                       <p className="text-sm text-gray-400 mt-1">
@@ -955,10 +958,11 @@ export default function SettingsPage() {
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <label htmlFor="settings-current-password" className="block text-sm font-medium text-gray-300">
               Aktuelles Passwort
             </label>
             <input
+              id="settings-current-password"
               type="password"
               required
               value={currentPassword}
@@ -969,10 +973,11 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <label htmlFor="settings-new-password" className="block text-sm font-medium text-gray-300">
               Neues Passwort
             </label>
             <input
+              id="settings-new-password"
               type="password"
               required
               value={newPassword}
@@ -984,10 +989,11 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
+            <label htmlFor="settings-confirm-password" className="block text-sm font-medium text-gray-300">
               Neues Passwort bestätigen
             </label>
             <input
+              id="settings-confirm-password"
               type="password"
               required
               value={confirmPassword}

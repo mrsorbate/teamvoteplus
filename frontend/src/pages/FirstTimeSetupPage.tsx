@@ -187,11 +187,11 @@ export default function FirstTimeSetupPage() {
           <div className={`h-2 w-8 rounded-full transition-colors ${step >= 4 ? 'bg-primary-600' : 'bg-gray-300'}`} />
         </div>
 
-        <div className="grid grid-cols-4 gap-2 text-center text-xs">
-          <span className={step >= 1 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>1 Verein</span>
-          <span className={step >= 2 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>2 Admin</span>
-          <span className={step >= 3 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>3 Zeitzone</span>
-          <span className={step >= 4 ? 'text-primary-300 font-medium whitespace-nowrap' : 'text-gray-400 whitespace-nowrap'}>4 Zusammenf.</span>
+        <div className="setup-stepper">
+          <span className={`setup-stepper-item ${step >= 1 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>1 Verein</span>
+          <span className={`setup-stepper-item ${step >= 2 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>2 Admin</span>
+          <span className={`setup-stepper-item ${step >= 3 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>3 Zeit</span>
+          <span className={`setup-stepper-item ${step >= 4 ? 'border-primary-700 bg-primary-900/30 text-primary-200' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>4 Fertig</span>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleNext(); }}>
@@ -216,7 +216,6 @@ export default function FirstTimeSetupPage() {
                   onChange={(e) => setOrganizationName(e.target.value)}
                   className="input mt-1"
                   placeholder="z.B. SV Musterdorf"
-                  autoFocus
                 />
                 <p className="mt-1 text-xs text-gray-400">
                   Dieser Name wird in Navigation, Login und Einladungen angezeigt.
@@ -280,7 +279,6 @@ export default function FirstTimeSetupPage() {
                   onChange={(e) => setAdminUsername(e.target.value)}
                   className="input mt-1"
                   placeholder="admin"
-                  autoFocus
                 />
                 <p className="mt-1 text-xs text-gray-400">
                   Damit meldest du dich später an (nur Kleinbuchstaben, Zahlen und Unterstrich).
@@ -358,7 +356,6 @@ export default function FirstTimeSetupPage() {
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   className="input mt-1"
-                  autoFocus
                 >
                   {TIMEZONES.map((tz) => (
                     <option key={tz} value={tz}>

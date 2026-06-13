@@ -2,34 +2,61 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
 import { teamsAPI } from '../lib/api';
+import type { Team } from '../types/domain';
+
+interface ExternalTableRow {
+  place?: number | string | null;
+  team?: string | null;
+  games?: number | string | null;
+  goal?: string | null;
+  goals?: string | null;
+  img?: string | null;
+  logo?: string | null;
+  points?: number | string | null;
+}
+
+interface ExternalTableEntry {
+  table?: ExternalTableRow[];
+  leagueName?: string | null;
+  source_id?: string | number | null;
+  matched_team_name?: string | null;
+}
+
+interface TableSection {
+  key: string;
+  teamId: number;
+  teamName: string;
+  leagueName: string;
+  matchedTeamName: string;
+  rows: ExternalTableRow[];
+}
 
 export default function MyTablePage() {
-  const { data: teams, isLoading: teamsLoading, error: teamsError } = useQuery({
+  const { data: teams, isLoading: teamsLoading, error: teamsError } = useQuery<Team[]>({
     queryKey: ['my-table-teams'],
     queryFn: async () => {
       const response = await teamsAPI.getAll();
-      return response.data;
+      return response.data as Team[];
     },
   });
 
-  const { data: tableData, isLoading: tableLoading, error: tableError } = useQuery({
-    queryKey: ['my-table-data', Array.isArray(teams) ? teams.map((team: any) => team.id).join(',') : 'none'],
+  const { data: tableData, isLoading: tableLoading, error: tableError } = useQuery<TableSection[]>({
+    queryKey: ['my-table-data', Array.isArray(teams) ? teams.map((team) => team.id).join(',') : 'none'],
     queryFn: async () => {
       const teamList = Array.isArray(teams) ? teams : [];
       const responses = await Promise.all(
-        teamList.map(async (team: any) => {
+        teamList.map(async (team) => {
           try {
             const response = await teamsAPI.getExternalTable(Number(team.id));
-            const tableEntries = Array.isArray(response.data?.tables) && response.data.tables.length > 0
+            const tableEntries: ExternalTableEntry[] = Array.isArray(response.data?.tables) && response.data.tables.length > 0
               ? response.data.tables
               : [{
                   table: response.data?.table,
                   leagueName: response.data?.leagueName,
-                  source: response.data?.source,
                   source_id: response.data?.source_id,
                 }];
 
-            return tableEntries.map((entry: any, index: number) => ({
+            return tableEntries.map((entry, index): TableSection => ({
               key: `${Number(team.id)}-${String(entry?.source_id || index)}`,
               teamId: Number(team.id),
               teamName: String(team.name || ''),
@@ -78,7 +105,7 @@ export default function MyTablePage() {
     return raw.startsWith('//') ? `https:${raw}` : raw;
   };
 
-  const isOwnTeamRow = (section: any, row: any): boolean => {
+  const isOwnTeamRow = (section: TableSection, row: ExternalTableRow): boolean => {
     const ownCandidates = [section?.matchedTeamName, section?.teamName]
       .map((name) => normalizeTeamName(name))
       .filter(Boolean);
@@ -146,15 +173,15 @@ export default function MyTablePage() {
                   <table className="min-w-full divide-y divide-gray-700">
                     <thead className="bg-gray-800">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">#</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">Team</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">Sp</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">Tore</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase">Pkt</th>
+                        <th className="eyebrow-label px-3 py-2 text-left">#</th>
+                        <th className="eyebrow-label px-3 py-2 text-left">Team</th>
+                        <th className="eyebrow-label px-3 py-2 text-left">Sp</th>
+                        <th className="eyebrow-label px-3 py-2 text-left">Tore</th>
+                        <th className="eyebrow-label px-3 py-2 text-left">Pkt</th>
                       </tr>
                     </thead>
                     <tbody className="bg-gray-900 divide-y divide-gray-700">
-                      {section.rows.map((row: any, index: number) => (
+                      {section.rows.map((row, index) => (
                         <tr
                           key={`${section.teamId}-${index}`}
                           className={isOwnTeamRow(section, row)

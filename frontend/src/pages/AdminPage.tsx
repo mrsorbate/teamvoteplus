@@ -911,10 +911,11 @@ export default function AdminPage() {
         {showOrganizationSettings ? (
           <form onSubmit={handleUpdateSettings} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="admin-organization-name" className="block text-sm font-medium text-gray-300 mb-1">
                 Vereinsname
               </label>
               <input
+                id="admin-organization-name"
                 type="text"
                 required
                 value={organizationName}
@@ -927,10 +928,11 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="admin-organization-short-name" className="block text-sm font-medium text-gray-300 mb-1">
                 Kurzer Vereinsname (mobil)
               </label>
               <input
+                id="admin-organization-short-name"
                 type="text"
                 value={organizationShortName}
                 onChange={(e) => setOrganizationShortName(e.target.value)}
@@ -946,10 +948,11 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="admin-organization-timezone" className="block text-sm font-medium text-gray-300 mb-1">
                 Zeitzone
               </label>
               <select
+                id="admin-organization-timezone"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 title="Zeitzone auswählen"
@@ -980,7 +983,7 @@ export default function AdminPage() {
                   <img
                     src={resolveAssetUrl(settings.logo)}
                     alt="Vereinslogo"
-                    className="w-24 h-24 rounded-lg object-contain bg-gray-100 border-2 border-gray-700 p-2"
+                    className="w-24 h-24 rounded-lg logo-preview p-2"
                   />
                 </div>
               )}
@@ -1001,9 +1004,9 @@ export default function AdminPage() {
             </div>
 
             <div className="pt-3 border-t border-gray-700">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <p className="block text-sm font-medium text-gray-300 mb-2">
                 Vereinslogo {settings?.logo ? 'ändern' : 'hochladen'}
-              </label>
+              </p>
               <p className="text-xs text-gray-400 mb-3">
                 Erlaubt: JPG, PNG, GIF, WebP (max. 5MB)
               </p>
@@ -1210,11 +1213,11 @@ export default function AdminPage() {
             </h3>
             <form onSubmit={handleAssignTrainer} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="assign-trainer-select" className="block text-sm font-medium text-gray-300 mb-1">
                   Trainer auswählen *
                 </label>
                 <select
-                  autoFocus
+                  id="assign-trainer-select"
                   required
                   value={selectedTrainer}
                   onChange={(e) => setSelectedTrainer(e.target.value)}
@@ -1266,7 +1269,6 @@ export default function AdminPage() {
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <button
                 type="button"
-                autoFocus
                 onClick={closeDeleteTeamModal}
                 className="btn btn-secondary w-full sm:w-auto"
                 disabled={deleteTeamMutation.isPending}
@@ -1296,10 +1298,10 @@ export default function AdminPage() {
             <h3 id="edit-team-title" className="text-lg font-semibold mb-4">Team bearbeiten</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300">Teamname *</label>
+                <label htmlFor="edit-team-name" className="block text-sm font-medium text-gray-300">Teamname *</label>
                 <input
+                  id="edit-team-name"
                   type="text"
-                  autoFocus
                   required
                   value={editTeamName}
                   onChange={(e) => setEditTeamName(e.target.value)}
@@ -1310,8 +1312,9 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300">Beschreibung</label>
+                <label htmlFor="edit-team-description" className="block text-sm font-medium text-gray-300">Beschreibung</label>
                 <textarea
+                  id="edit-team-description"
                   value={editTeamDescription}
                   onChange={(e) => setEditTeamDescription(e.target.value)}
                   className="input mt-1"
@@ -1355,11 +1358,11 @@ export default function AdminPage() {
             </h3>
             <form onSubmit={handleRemoveTrainer} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="remove-trainer-select" className="block text-sm font-medium text-gray-300 mb-1">
                   Trainer auswählen *
                 </label>
                 <select
-                  autoFocus
+                  id="remove-trainer-select"
                   required
                   value={selectedTrainerToRemove}
                   onChange={(e) => setSelectedTrainerToRemove(e.target.value)}
@@ -1429,8 +1432,8 @@ export default function AdminPage() {
                 aria-label="Admins durchsuchen"
               />
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-[620px] sm:min-w-full divide-y divide-gray-200">
+            <div className="table-shell">
+              <table className="min-w-[620px] sm:min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-800">
                   <tr>
                     <th className={userTableHeadCellClass}>Name</th>
@@ -1452,7 +1455,7 @@ export default function AdminPage() {
                         <div className="text-sm text-gray-300">{admin.email || '-'}</div>
                       </td>
                       <td className={userTableCellClass}>
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-800">
+                        <span className="badge bg-violet-900/40 text-violet-200 border border-violet-700/40">
                           {user?.id === admin.id ? 'Du' : 'Admin'}
                         </span>
                       </td>
@@ -1490,8 +1493,8 @@ export default function AdminPage() {
                 aria-label="Trainer durchsuchen"
               />
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-[760px] sm:min-w-full divide-y divide-gray-200">
+            <div className="table-shell">
+              <table className="min-w-[760px] sm:min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-800">
                   <tr>
                     <th className={userTableHeadCellClass}>Name</th>
@@ -1591,8 +1594,8 @@ export default function AdminPage() {
                 aria-label="Spieler durchsuchen"
               />
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-[760px] sm:min-w-full divide-y divide-gray-200">
+            <div className="table-shell">
+              <table className="min-w-[760px] sm:min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-800">
                   <tr>
                     <th className={userTableHeadCellClass}>Name</th>
@@ -1770,7 +1773,51 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            <div className="md:hidden space-y-2">
+              {filteredAuditLogs.map((log: any) => (
+                <div key={`audit-card-${log.id}`} className="rounded-xl border border-gray-700 bg-gray-900/60 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">{formatAuditAction(log.action)}</p>
+                      <p className="text-xs text-gray-400">{formatDateTime(log.created_at)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedAuditLogId((prev) => (prev === log.id ? null : log.id))}
+                      className="btn btn-secondary text-xs px-3"
+                    >
+                      {expandedAuditLogId === log.id ? 'Weniger' : 'Details'}
+                    </button>
+                  </div>
+                  <div className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-300">
+                    <p><span className="text-gray-500">Admin:</span> {log.actor_name || log.actor_username || `#${log.actor_id}`}</p>
+                    <p><span className="text-gray-500">Ziel:</span> {log.target_type ? `${log.target_type} #${log.target_id ?? '—'}` : '—'}</p>
+                    <p><span className="text-gray-500">Details:</span> {log.details?.team_name || log.details?.target_name || log.details?.trainer_name || '—'}</p>
+                  </div>
+                  {expandedAuditLogId === log.id && (
+                    <div className="mt-3 rounded-lg bg-gray-800 p-2 text-sm text-gray-200">
+                      {log.details && Object.keys(log.details).length > 0 ? (
+                        <div className="space-y-1">
+                          {Object.entries(log.details).map(([detailKey, detailValue]) => (
+                            <p key={detailKey}>
+                              <span className="font-medium">{formatAuditDetailLabel(detailKey)}:</span>{' '}
+                              <span>{String(detailValue)}</span>
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400">Keine zusätzlichen Details vorhanden.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {filteredAuditLogs.length === 0 && (
+                <div className="empty-state">Keine Audit-Einträge für die gewählten Filter.</div>
+              )}
+            </div>
+
+            <div className="table-shell hidden md:block">
             <table className="min-w-[860px] sm:min-w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-400 border-b border-gray-700">
@@ -1915,10 +1962,10 @@ export default function AdminPage() {
             <h3 id="create-team-title" className="text-lg font-semibold mb-4">Neues Team erstellen</h3>
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300">Team Name *</label>
+                <label htmlFor="create-team-name" className="block text-sm font-medium text-gray-300">Team Name *</label>
                 <input
+                  id="create-team-name"
                   type="text"
-                  autoFocus
                   required
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
@@ -1929,8 +1976,9 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300">Beschreibung</label>
+                <label htmlFor="create-team-description" className="block text-sm font-medium text-gray-300">Beschreibung</label>
                 <textarea
+                  id="create-team-description"
                   value={teamDescription}
                   onChange={(e) => setTeamDescription(e.target.value)}
                   className="input mt-1"
@@ -1965,10 +2013,10 @@ export default function AdminPage() {
             <h3 id="create-admin-title" className="text-lg font-semibold mb-4">Neuen Admin erstellen</h3>
             <form onSubmit={handleCreateAdmin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
+                <label htmlFor="create-admin-name" className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
                 <input
+                  id="create-admin-name"
                   type="text"
-                  autoFocus
                   required
                   value={adminName}
                   onChange={(e) => setAdminName(e.target.value)}
@@ -1979,8 +2027,9 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Benutzername *</label>
+                <label htmlFor="create-admin-username" className="block text-sm font-medium text-gray-300 mb-1">Benutzername *</label>
                 <input
+                  id="create-admin-username"
                   type="text"
                   required
                   value={adminUsername}
@@ -1992,8 +2041,9 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">E-Mail *</label>
+                <label htmlFor="create-admin-email" className="block text-sm font-medium text-gray-300 mb-1">E-Mail *</label>
                 <input
+                  id="create-admin-email"
                   type="email"
                   required
                   value={adminEmail}
@@ -2005,8 +2055,9 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Passwort *</label>
+                <label htmlFor="create-admin-password" className="block text-sm font-medium text-gray-300 mb-1">Passwort *</label>
                 <input
+                  id="create-admin-password"
                   type="password"
                   required
                   minLength={6}
@@ -2051,10 +2102,10 @@ export default function AdminPage() {
 
             <form onSubmit={handleCreateTrainer} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
+                <label htmlFor="create-trainer-name" className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
                 <input
+                  id="create-trainer-name"
                   type="text"
-                  autoFocus
                   required
                   value={trainerName}
                   onChange={(e) => setTrainerName(e.target.value)}
@@ -2066,11 +2117,12 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Teams zuweisen *</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-700 rounded-lg p-3 bg-gray-900">
+                <p id="create-trainer-teams-label" className="block text-sm font-medium text-gray-300 mb-2">Teams zuweisen *</p>
+                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-700 rounded-lg p-3 bg-gray-900" role="group" aria-labelledby="create-trainer-teams-label">
                   {teams?.map((team: any) => (
-                    <label key={team.id} className="flex items-center space-x-2 text-sm text-gray-300">
+                    <label key={team.id} htmlFor={`create-trainer-team-${team.id}`} className="flex items-center space-x-2 text-sm text-gray-300">
                       <input
+                        id={`create-trainer-team-${team.id}`}
                         type="checkbox"
                         checked={trainerTeamIds.includes(team.id)}
                         onChange={() => toggleTrainerTeam(team.id)}
@@ -2176,7 +2228,6 @@ export default function AdminPage() {
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <button
                 type="button"
-                autoFocus
                 onClick={closeResetPasswordModal}
                 className="btn btn-secondary w-full sm:w-auto"
                 disabled={resetUserPasswordMutation.isPending}
@@ -2210,7 +2261,6 @@ export default function AdminPage() {
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <button
                 type="button"
-                autoFocus
                 onClick={closeDeleteUserModal}
                 className="btn btn-secondary w-full sm:w-auto"
                 disabled={deleteUserMutation.isPending}
@@ -2242,7 +2292,6 @@ export default function AdminPage() {
               Neuer Einladungstext für <strong>{resendTrainerName}</strong>:
             </p>
             <textarea
-              autoFocus
               readOnly={!isEditingResendInviteMessage}
               value={resendInviteMessage}
               onChange={(e) => setResendInviteMessageDraft(e.target.value)}
@@ -2298,7 +2347,6 @@ export default function AdminPage() {
               Das Passwort wurde zurückgesetzt. Teile dieses Passwort sicher mit dem Benutzer.
             </p>
             <input
-              autoFocus
               readOnly
               value={generatedPassword}
               title="Generiertes Passwort"

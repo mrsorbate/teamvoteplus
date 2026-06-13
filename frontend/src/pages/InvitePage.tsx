@@ -229,9 +229,8 @@ export default function InvitePage() {
                 <button
                   onClick={() => {
                     useAuthStore.getState().logout();
-                    window.location.reload();
                   }}
-                  className="font-medium text-primary-600 hover:text-primary-500"
+                  className="text-action"
                 >
                   Abmelden
                 </button>
