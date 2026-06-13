@@ -19,6 +19,20 @@ const createShortJoinToken = (length = 8): string => {
   return token;
 };
 
+const ensureTeamInviteSchema = () => {
+  const inviteColumns = db.pragma('table_info(team_invites)') as Array<{ name: string }>;
+  const addInviteColumn = (name: string, sqlType: string) => {
+    const exists = inviteColumns.some((col) => col.name === name);
+    if (!exists) {
+      db.exec(`ALTER TABLE team_invites ADD COLUMN ${name} ${sqlType}`);
+    }
+  };
+
+  addInviteColumn('player_name', 'TEXT');
+  addInviteColumn('player_birth_date', 'DATE');
+  addInviteColumn('player_jersey_number', 'INTEGER');
+};
+
 const ensureTrainerInviteSchema = () => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS trainer_invites (
@@ -47,6 +61,8 @@ const ensureTrainerInviteSchema = () => {
 // Create team invite
 router.post('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
   try {
+    ensureTeamInviteSchema();
+
     const teamId = parseInt(req.params.teamId);
     const { role, expiresInDays = 7, maxUses = 1, inviteeName } = req.body;
 
@@ -116,6 +132,8 @@ router.post('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
 // Create or rotate a reusable team join link (trainer/admin)
 router.post('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) => {
   try {
+    ensureTeamInviteSchema();
+
     const teamId = parseInt(req.params.teamId, 10);
 
     if (!Number.isFinite(teamId)) {
@@ -178,6 +196,8 @@ router.post('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) =>
 // Get active reusable team join link (trainer/admin)
 router.get('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) => {
   try {
+    ensureTeamInviteSchema();
+
     const teamId = parseInt(req.params.teamId, 10);
 
     if (!Number.isFinite(teamId)) {
@@ -234,6 +254,8 @@ router.get('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) => 
 // Get team invites
 router.get('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
   try {
+    ensureTeamInviteSchema();
+
     const teamId = parseInt(req.params.teamId);
 
     // Check if user is trainer of this team
@@ -271,6 +293,7 @@ router.get('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
 router.get('/invites/:token', (req, res) => {
   try {
     ensureTrainerInviteSchema();
+    ensureTeamInviteSchema();
 
     const { token } = req.params;
 
@@ -379,6 +402,8 @@ router.get('/invites/:token', (req, res) => {
 // Accept invite (for logged-in users)
 router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
   try {
+    ensureTeamInviteSchema();
+
     const { token } = req.params;
 
     const invite = db.prepare(`
@@ -489,6 +514,7 @@ router.delete('/invites/:id', authenticate, (req: AuthRequest, res) => {
 router.post('/invites/:token/register', async (req, res) => {
   try {
     ensureTrainerInviteSchema();
+    ensureTeamInviteSchema();
 
     const { token } = req.params;
     const { name, username, email, password } = req.body;

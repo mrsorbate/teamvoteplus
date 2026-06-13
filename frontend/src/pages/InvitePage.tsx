@@ -40,6 +40,10 @@ export default function InvitePage() {
     enabled: !!token,
     retry: false,
   });
+  const inviteErrorMessage =
+    (inviteError as any)?.response?.data?.error ||
+    (inviteError as any)?.message ||
+    'Diese Einladung existiert nicht oder ist abgelaufen.';
 
   const acceptMutation = useMutation({
     mutationFn: () => invitesAPI.acceptInvite(token!),
@@ -121,7 +125,7 @@ export default function InvitePage() {
             Einladung ungültig
           </h2>
           <p className="text-gray-300 mb-6">
-            Diese Einladung existiert nicht oder ist abgelaufen.
+            {inviteErrorMessage}
           </p>
           <Link to="/login" className="btn btn-primary">
             Zur Anmeldung

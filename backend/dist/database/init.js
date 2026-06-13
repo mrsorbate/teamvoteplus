@@ -341,13 +341,16 @@ try {
     }
     // Add player info columns to team_invites
     const inviteColumns = db.pragma('table_info(team_invites)');
-    const hasPlayerName = inviteColumns.some((col) => col.name === 'player_name');
-    if (!hasPlayerName) {
-        db.exec('ALTER TABLE team_invites ADD COLUMN player_name TEXT');
-        db.exec('ALTER TABLE team_invites ADD COLUMN player_birth_date DATE');
-        db.exec('ALTER TABLE team_invites ADD COLUMN player_jersey_number INTEGER');
-        console.log('✅ Added player info columns to team_invites table');
-    }
+    const addInviteColumn = (name, sqlType) => {
+        const exists = inviteColumns.some((col) => col.name === name);
+        if (!exists) {
+            db.exec(`ALTER TABLE team_invites ADD COLUMN ${name} ${sqlType}`);
+            console.log(`✅ Added ${name} column to team_invites table`);
+        }
+    };
+    addInviteColumn('player_name', 'TEXT');
+    addInviteColumn('player_birth_date', 'DATE');
+    addInviteColumn('player_jersey_number', 'INTEGER');
     // Add series_id to events for recurring events
     const eventColumns = db.pragma('table_info(events)');
     const hasSeriesId = eventColumns.some((col) => col.name === 'series_id');

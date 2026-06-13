@@ -21,6 +21,18 @@ const createShortJoinToken = (length = 8) => {
     }
     return token;
 };
+const ensureTeamInviteSchema = () => {
+    const inviteColumns = init_1.default.pragma('table_info(team_invites)');
+    const addInviteColumn = (name, sqlType) => {
+        const exists = inviteColumns.some((col) => col.name === name);
+        if (!exists) {
+            init_1.default.exec(`ALTER TABLE team_invites ADD COLUMN ${name} ${sqlType}`);
+        }
+    };
+    addInviteColumn('player_name', 'TEXT');
+    addInviteColumn('player_birth_date', 'DATE');
+    addInviteColumn('player_jersey_number', 'INTEGER');
+};
 const ensureTrainerInviteSchema = () => {
     init_1.default.exec(`
     CREATE TABLE IF NOT EXISTS trainer_invites (
@@ -47,6 +59,7 @@ const ensureTrainerInviteSchema = () => {
 // Create team invite
 router.post('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
     try {
+        ensureTeamInviteSchema();
         const teamId = parseInt(req.params.teamId);
         const { role, expiresInDays = 7, maxUses = 1, inviteeName } = req.body;
         const normalizedInviteeName = String(inviteeName || '').trim();
@@ -105,6 +118,7 @@ router.post('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
 // Create or rotate a reusable team join link (trainer/admin)
 router.post('/teams/:teamId/join-link', auth_1.authenticate, (req, res) => {
     try {
+        ensureTeamInviteSchema();
         const teamId = parseInt(req.params.teamId, 10);
         if (!Number.isFinite(teamId)) {
             return res.status(400).json({ error: 'Invalid team ID' });
@@ -154,6 +168,7 @@ router.post('/teams/:teamId/join-link', auth_1.authenticate, (req, res) => {
 // Get active reusable team join link (trainer/admin)
 router.get('/teams/:teamId/join-link', auth_1.authenticate, (req, res) => {
     try {
+        ensureTeamInviteSchema();
         const teamId = parseInt(req.params.teamId, 10);
         if (!Number.isFinite(teamId)) {
             return res.status(400).json({ error: 'Invalid team ID' });
@@ -201,6 +216,7 @@ router.get('/teams/:teamId/join-link', auth_1.authenticate, (req, res) => {
 // Get team invites
 router.get('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
     try {
+        ensureTeamInviteSchema();
         const teamId = parseInt(req.params.teamId);
         // Check if user is trainer of this team
         const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
@@ -232,6 +248,7 @@ router.get('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
 router.get('/invites/:token', (req, res) => {
     try {
         ensureTrainerInviteSchema();
+        ensureTeamInviteSchema();
         const { token } = req.params;
         const trainerInvite = init_1.default.prepare(`
       SELECT 
@@ -327,6 +344,7 @@ router.get('/invites/:token', (req, res) => {
 // Accept invite (for logged-in users)
 router.post('/invites/:token/accept', auth_1.authenticate, (req, res) => {
     try {
+        ensureTeamInviteSchema();
         const { token } = req.params;
         const invite = init_1.default.prepare(`
       SELECT id, team_id, role, expires_at, max_uses, used_count, player_name
@@ -405,6 +423,7 @@ router.delete('/invites/:id', auth_1.authenticate, (req, res) => {
 router.post('/invites/:token/register', async (req, res) => {
     try {
         ensureTrainerInviteSchema();
+        ensureTeamInviteSchema();
         const { token } = req.params;
         const { name, username, email, password } = req.body;
         if (!username || !email || !password) {

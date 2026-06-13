@@ -2,18 +2,37 @@ import type { Request } from 'express';
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
 
+const isLocalhostBaseUrl = (value: string): boolean => {
+  try {
+    const url = new URL(value);
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
+  } catch {
+    return false;
+  }
+};
+
 export const getPublicFrontendBaseUrl = (req: Request): string => {
   const envFrontendUrl = String(process.env.FRONTEND_URL || '').trim();
-  if (envFrontendUrl) {
+  const originHeader = String(req.headers.origin || '').trim();
+  const refererHeader = String(req.headers.referer || '').trim();
+  const requestOrigin = originHeader || (() => {
+    if (!refererHeader) return '';
+    try {
+      const refererUrl = new URL(refererHeader);
+      return `${refererUrl.protocol}//${refererUrl.host}`;
+    } catch {
+      return '';
+    }
+  })();
+
+  if (envFrontendUrl && (!isLocalhostBaseUrl(envFrontendUrl) || !requestOrigin || isLocalhostBaseUrl(requestOrigin))) {
     return normalizeBaseUrl(envFrontendUrl);
   }
 
-  const originHeader = String(req.headers.origin || '').trim();
   if (originHeader) {
     return normalizeBaseUrl(originHeader);
   }
 
-  const refererHeader = String(req.headers.referer || '').trim();
   if (refererHeader) {
     try {
       const refererUrl = new URL(refererHeader);

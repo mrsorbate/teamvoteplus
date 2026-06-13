@@ -2,16 +2,36 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPublicFrontendBaseUrl = void 0;
 const normalizeBaseUrl = (value) => value.replace(/\/+$/, '');
+const isLocalhostBaseUrl = (value) => {
+    try {
+        const url = new URL(value);
+        return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
+    }
+    catch {
+        return false;
+    }
+};
 const getPublicFrontendBaseUrl = (req) => {
     const envFrontendUrl = String(process.env.FRONTEND_URL || '').trim();
-    if (envFrontendUrl) {
+    const originHeader = String(req.headers.origin || '').trim();
+    const refererHeader = String(req.headers.referer || '').trim();
+    const requestOrigin = originHeader || (() => {
+        if (!refererHeader)
+            return '';
+        try {
+            const refererUrl = new URL(refererHeader);
+            return `${refererUrl.protocol}//${refererUrl.host}`;
+        }
+        catch {
+            return '';
+        }
+    })();
+    if (envFrontendUrl && (!isLocalhostBaseUrl(envFrontendUrl) || !requestOrigin || isLocalhostBaseUrl(requestOrigin))) {
         return normalizeBaseUrl(envFrontendUrl);
     }
-    const originHeader = String(req.headers.origin || '').trim();
     if (originHeader) {
         return normalizeBaseUrl(originHeader);
     }
-    const refererHeader = String(req.headers.referer || '').trim();
     if (refererHeader) {
         try {
             const refererUrl = new URL(refererHeader);
