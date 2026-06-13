@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { invitesAPI, settingsAPI } from '../lib/api';
@@ -44,6 +44,12 @@ export default function InvitePage() {
     (inviteError as any)?.response?.data?.error ||
     (inviteError as any)?.message ||
     'Diese Einladung existiert nicht oder ist abgelaufen.';
+
+  useEffect(() => {
+    if (invite?.invite_type === 'team_join_link' && token) {
+      navigate(`/join/${token}`, { replace: true });
+    }
+  }, [invite?.invite_type, navigate, token]);
 
   const acceptMutation = useMutation({
     mutationFn: () => invitesAPI.acceptInvite(token!),
