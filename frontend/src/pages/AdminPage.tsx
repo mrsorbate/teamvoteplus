@@ -827,9 +827,9 @@ export default function AdminPage() {
   };
 
   const getStatusBadgeClasses = (variant: 'ok' | 'warning' | 'error') => {
-    if (variant === 'ok') return 'bg-green-100 text-green-800 bg-green-900 text-green-100';
+    if (variant === 'ok') return 'bg-green-900 text-green-100';
     if (variant === 'warning') return 'bg-yellow-100 text-yellow-800 bg-yellow-900 text-yellow-100';
-    return 'bg-red-100 text-red-800 bg-red-900 text-red-100';
+    return 'bg-red-900 text-red-100';
   };
 
   const getRegistrationBadge = (registrationStatus: string) => {
@@ -910,7 +910,7 @@ export default function AdminPage() {
   const userTableCellClass = 'px-4 py-2 whitespace-nowrap';
   const userTableTextCellClass = 'px-4 py-2 text-sm text-gray-300';
   const userTableEmptyCellClass = 'px-4 py-3 text-sm text-gray-400';
-  const userActionButtonClass = 'p-2 sm:p-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const userActionButtonClass = 'min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   const auditHeaderCellClass = 'py-1.5 pr-3';
   const auditCellClass = 'py-1.5 pr-3';
   const auditExpandedRowClass = 'py-2 px-2 bg-gray-800';
@@ -1156,7 +1156,10 @@ export default function AdminPage() {
                     <p className="text-xs text-gray-300 mt-0.5">{team.description}</p>
                   )}
                   <div className="flex items-center space-x-3 mt-1 text-xs text-gray-400">
-                    <span>👥 {team.member_count} Mitglieder</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" aria-hidden="true" />
+                      {team.member_count} Mitglieder
+                    </span>
                   </div>
                   <div className="mt-1 text-xs text-gray-300">
                     <span className="font-medium">Trainer:</span> {team.trainer_names || '-'}
@@ -1164,38 +1167,42 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="flex space-x-1.5 sm:space-x-2 ml-2">
-                  <button
-                    onClick={() => handleEditTeam(team)}
-                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                    title="Team bearbeiten"
-                  >
+	                  <button
+	                    onClick={() => handleEditTeam(team)}
+	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-indigo-400 hover:bg-indigo-900/30 rounded-lg transition-colors"
+	                    title="Team bearbeiten"
+	                    aria-label={`${team.name} bearbeiten`}
+	                  >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button
+	                  <button
                     onClick={() => {
                       setSelectedTeam(team.id);
                       setShowAssignTrainer(true);
                     }}
-                    className="p-1.5 text-blue-600 hover:bg-blue-900/30 rounded-md transition-colors"
-                    title="Trainer zuweisen"
-                  >
+	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors"
+	                    title="Trainer zuweisen"
+	                    aria-label={`${team.name} Trainer zuweisen`}
+	                  >
                     <Shield className="w-4 h-4" />
                   </button>
-                  <button
+	                  <button
                     onClick={() => {
                       setSelectedTeam(team.id);
                       setShowRemoveTrainer(true);
                     }}
-                    className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
-                    title="Trainer entfernen"
-                  >
+	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-orange-400 hover:bg-orange-900/30 rounded-lg transition-colors"
+	                    title="Trainer entfernen"
+	                    aria-label={`${team.name} Trainer entfernen`}
+	                  >
                     <UserMinus className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => handleDeleteTeam(team)}
-                    className="p-1.5 text-red-600 hover:bg-red-900/30 rounded-md transition-colors"
-                    title="Team löschen"
-                  >
+	                  <button
+	                    onClick={() => handleDeleteTeam(team)}
+	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
+	                    title="Team löschen"
+	                    aria-label={`${team.name} löschen`}
+	                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -1564,29 +1571,32 @@ export default function AdminPage() {
                       <td className={userTableCellClass}>
                         <div className="flex items-center flex-wrap gap-1 sm:gap-2">
                           {user.registration_status === 'pending' && (
-                            <button
-                              onClick={() => handleResendTrainerInvite(user)}
-                              disabled={resendTrainerInviteMutation.isPending}
-                              className={`${userActionButtonClass} text-blue-600 hover:bg-blue-900/30`}
-                              title="Link neu versenden"
-                            >
+	                            <button
+	                              onClick={() => handleResendTrainerInvite(user)}
+	                              disabled={resendTrainerInviteMutation.isPending}
+	                              className={`${userActionButtonClass} text-blue-400 hover:bg-blue-900/30`}
+	                              title="Link neu versenden"
+	                              aria-label={`Einladungslink für ${user.name} neu versenden`}
+	                            >
                               <Share2 className="w-4 h-4" />
                             </button>
                           )}
-                          <button
-                            onClick={() => handleResetUserPassword(user)}
-                            disabled={resetUserPasswordMutation.isPending}
-                            className={`${userActionButtonClass} text-orange-600 hover:bg-orange-50`}
-                            title="Passwort generieren & zurücksetzen"
-                          >
+	                          <button
+	                            onClick={() => handleResetUserPassword(user)}
+	                            disabled={resetUserPasswordMutation.isPending}
+	                            className={`${userActionButtonClass} text-orange-400 hover:bg-orange-900/30`}
+	                            title="Passwort generieren & zurücksetzen"
+	                            aria-label={`Passwort für ${user.name} zurücksetzen`}
+	                          >
                             <KeyRound className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(user)}
-                            disabled={deleteUserMutation.isPending}
-                            className={`${userActionButtonClass} text-red-600 hover:bg-red-900/30`}
-                            title="Benutzer löschen"
-                          >
+	                          <button
+	                            onClick={() => handleDeleteUser(user)}
+	                            disabled={deleteUserMutation.isPending}
+	                            className={`${userActionButtonClass} text-red-400 hover:bg-red-900/30`}
+	                            title="Benutzer löschen"
+	                            aria-label={`${user.name} löschen`}
+	                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -1659,20 +1669,22 @@ export default function AdminPage() {
                       <td className={userTableTextCellClass}>{user.team_names || '-'}</td>
                       <td className={userTableCellClass}>
                         <div className="flex items-center flex-wrap gap-1 sm:gap-2">
-                          <button
-                            onClick={() => handleResetUserPassword(user)}
-                            disabled={resetUserPasswordMutation.isPending}
-                            className={`${userActionButtonClass} text-orange-600 hover:bg-orange-50`}
-                            title="Passwort generieren & zurücksetzen"
-                          >
+	                          <button
+	                            onClick={() => handleResetUserPassword(user)}
+	                            disabled={resetUserPasswordMutation.isPending}
+	                            className={`${userActionButtonClass} text-orange-400 hover:bg-orange-900/30`}
+	                            title="Passwort generieren & zurücksetzen"
+	                            aria-label={`Passwort für ${user.name} zurücksetzen`}
+	                          >
                             <KeyRound className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(user)}
-                            disabled={deleteUserMutation.isPending}
-                            className={`${userActionButtonClass} text-red-600 hover:bg-red-900/30`}
-                            title="Benutzer löschen"
-                          >
+	                          <button
+	                            onClick={() => handleDeleteUser(user)}
+	                            disabled={deleteUserMutation.isPending}
+	                            className={`${userActionButtonClass} text-red-400 hover:bg-red-900/30`}
+	                            title="Benutzer löschen"
+	                            aria-label={`${user.name} löschen`}
+	                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>

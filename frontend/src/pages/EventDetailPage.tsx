@@ -7,6 +7,7 @@ import { resolveAssetUrl } from '../lib/utils';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
+import AccessibleModal from '../components/AccessibleModal';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -371,11 +372,22 @@ export default function EventDetailPage() {
               response.comment.trim().length > 0;
 
             return (
-              <div
-                key={response.id}
-                onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-                className={`w-full flex ${showDeclineReason ? 'items-start' : 'items-center'} space-x-2 sm:space-x-3 text-sm rounded-lg px-2 py-2 transition-colors hover:bg-gray-700`}
-              >
+	              <div
+	                key={response.id}
+	                onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
+	                onKeyDown={(keyboardEvent) => {
+	                  if (!isTrainer) return;
+	                  if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+	                    keyboardEvent.preventDefault();
+	                    setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id));
+	                  }
+	                }}
+	                role={isTrainer ? 'button' : undefined}
+	                tabIndex={isTrainer ? 0 : undefined}
+	                aria-expanded={isTrainer ? expandedResponseUserId === response.user_id : undefined}
+	                aria-label={isTrainer ? `${response.user_name} Optionen anzeigen` : undefined}
+	                className={`w-full flex ${showDeclineReason ? 'items-start' : 'items-center'} space-x-2 sm:space-x-3 text-sm rounded-lg px-2 py-2 transition-colors hover:bg-gray-700`}
+	              >
                 {renderAvatar(response.user_name, response.user_profile_picture)}
                 {showDeclineReason ? (
                   <div className="min-w-0 flex-1">
@@ -903,13 +915,19 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {deleteModalOpen && event?.series_id && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="card max-w-md w-full mx-4">
-            <div className="flex items-start space-x-3 mb-4">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-lg font-semibold text-white">Termin löschen</h3>
+	      {deleteModalOpen && event?.series_id && (
+	        <AccessibleModal
+	          labelledBy="delete-series-event-title"
+	          onClose={() => {
+	            setDeleteModalOpen(false);
+	            setDeleteNote('');
+	          }}
+	          panelClassName="card max-w-md w-full mx-4"
+	        >
+	            <div className="flex items-start space-x-3 mb-4">
+	              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+	              <div>
+	                <h3 id="delete-series-event-title" className="text-lg font-semibold text-white">Termin löschen</h3>
                 <p className="text-sm text-gray-400 mt-1">
                   Dieser Termin ist teil einer Serie. Wie möchtest du vorgehen?
                 </p>
@@ -917,8 +935,9 @@ export default function EventDetailPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
+              <label htmlFor="delete-series-note" className="block text-sm font-medium text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
               <textarea
+                id="delete-series-note"
                 value={deleteNote}
                 onChange={(e) => setDeleteNote(e.target.value)}
                 className="input"
@@ -950,21 +969,26 @@ export default function EventDetailPage() {
                 disabled={deleteEventMutation.isPending}
                 className="w-full btn btn-secondary"
               >
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+	                Abbrechen
+	              </button>
+	            </div>
+	        </AccessibleModal>
+	      )}
 
       {/* Simple delete confirmation for non-series events */}
-      {deleteModalOpen && !event?.series_id && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="card max-w-md w-full mx-4">
-            <div className="flex items-start space-x-3 mb-4">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-lg font-semibold text-white">Termin löschen</h3>
+	      {deleteModalOpen && !event?.series_id && (
+	        <AccessibleModal
+	          labelledBy="delete-event-title"
+	          onClose={() => {
+	            setDeleteModalOpen(false);
+	            setDeleteNote('');
+	          }}
+	          panelClassName="card max-w-md w-full mx-4"
+	        >
+	            <div className="flex items-start space-x-3 mb-4">
+	              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+	              <div>
+	                <h3 id="delete-event-title" className="text-lg font-semibold text-white">Termin löschen</h3>
                 <p className="text-sm text-gray-400 mt-1">
                   Termin "{event?.title}" wirklich löschen? Dies kann nicht rückgängig gemacht werden.
                 </p>
@@ -972,8 +996,9 @@ export default function EventDetailPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
+              <label htmlFor="delete-event-note" className="block text-sm font-medium text-gray-300 mb-1">Bemerkung für Benachrichtigung (optional)</label>
               <textarea
+                id="delete-event-note"
                 value={deleteNote}
                 onChange={(e) => setDeleteNote(e.target.value)}
                 className="input"
@@ -998,12 +1023,11 @@ export default function EventDetailPage() {
                 disabled={deleteEventMutation.isPending}
                 className="w-full btn btn-secondary"
               >
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+	                Abbrechen
+	              </button>
+	            </div>
+	        </AccessibleModal>
+	      )}
     </div>
   );
 }

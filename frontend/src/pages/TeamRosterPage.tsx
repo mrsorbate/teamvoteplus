@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
 import { useToast } from '../lib/useToast';
+import AccessibleModal from '../components/AccessibleModal';
 
 export default function TeamRosterPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,10 @@ export default function TeamRosterPage() {
   const { user } = useAuthStore();
   const goBack = useSmartBack();
   const { showToast } = useToast();
+  const closeMemberModal = () => {
+    setSelectedMember(null);
+    setConfirmRemove(false);
+  };
 
   const { data: team, isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
@@ -343,24 +348,19 @@ export default function TeamRosterPage() {
       </div>
 
       {/* Member Profile Modal */}
-      {selectedMember && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
-          onClick={() => setSelectedMember(null)}
-        >
-          <div
-            className="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="member-profile-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Hero header */}
-            <div className="relative px-5 pt-6 pb-5 text-center border-b border-gray-700/50">
-              <button
-                onClick={() => setSelectedMember(null)}
-                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-700/60 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                aria-label="Modal schließen"
+	      {selectedMember && (
+	        <AccessibleModal
+	          labelledBy="member-profile-title"
+	          onClose={closeMemberModal}
+	          className="backdrop-blur-sm items-end sm:items-center p-0 sm:p-4"
+	          panelClassName="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal"
+	        >
+	            {/* Hero header */}
+	            <div className="relative px-5 pt-6 pb-5 text-center border-b border-gray-700/50">
+	              <button
+	                onClick={closeMemberModal}
+	                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-700/60 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+	                aria-label="Modal schließen"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -463,10 +463,10 @@ export default function TeamRosterPage() {
                 );
               })()}
 
-              <button
-                onClick={() => setSelectedMember(null)}
-                className="btn btn-secondary w-full"
-              >
+	              <button
+	                onClick={closeMemberModal}
+	                className="btn btn-secondary w-full"
+	              >
                 Schließen
               </button>
 
@@ -505,9 +505,8 @@ export default function TeamRosterPage() {
                 )
               )}
             </div>
-          </div>
-        </div>
-      )}
+	        </AccessibleModal>
+	      )}
     </div>
   );
 }

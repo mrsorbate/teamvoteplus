@@ -5,6 +5,7 @@ import { eventsAPI, postsAPI, teamsAPI, badgeProxyUrl } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Swords, MessageSquare } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
+import AccessibleModal from '../components/AccessibleModal';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -384,11 +385,11 @@ export default function DashboardPage() {
                 .trim();
               const squadIndicator = getSquadIndicator();
               const squadBadgeText = squadIndicator || event.team_name;
-              const squadBadgeClass = squadIndicator === 'II'
-                ? 'bg-black text-white bg-black text-white'
-                : squadIndicator === 'I'
-                  ? 'bg-yellow-300 text-yellow-900 bg-yellow-300 text-yellow-900'
-                  : 'bg-primary-100 text-primary-800 bg-primary-900/40 text-primary-200';
+	              const squadBadgeClass = squadIndicator === 'II'
+	                ? 'bg-gray-950 text-white'
+	                : squadIndicator === 'I'
+	                  ? 'bg-yellow-300 text-yellow-900'
+	                  : 'bg-primary-900/40 text-primary-200';
               const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
               const dayLabel = String(startDate.getDate()).padStart(2, '0');
               const monthLabel = String(startDate.getMonth() + 1).padStart(2, '0');
@@ -410,13 +411,22 @@ export default function DashboardPage() {
                 : '';
 
               return (
-                <div
-                  key={event.id}
-                  onClick={handleCardClick}
-                  className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
-                    isToday 
-                      ? 'bg-primary-900/20 border-primary-700 bg-primary-900/30 border-primary-600' 
-                      : 'bg-white border-gray-200 hover:border-primary-300 bg-gray-800 border-gray-700 hover:border-primary-600'
+	                <div
+	                  key={event.id}
+	                  onClick={handleCardClick}
+	                  onKeyDown={(keyboardEvent) => {
+	                    if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+	                      keyboardEvent.preventDefault();
+	                      handleCardClick();
+	                    }
+	                  }}
+	                  role="button"
+	                  tabIndex={0}
+	                  aria-label={`${displayTitle || opponent || event.title} öffnen`}
+	                  className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
+	                    isToday 
+		                      ? 'bg-primary-900/30 border-primary-600' 
+	                      : 'bg-gray-800 border-gray-700 hover:border-primary-600'
                   }`}
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -510,7 +520,7 @@ export default function DashboardPage() {
                           }}
                           className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)} ${
                             openQuickActionsEventId === event.id
-                              ? 'ring-2 ring-primary-400 ring-primary-500 ring-offset-2 ring-offset-white ring-offset-gray-800'
+	                              ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-gray-800'
                               : ''
                           }`}
                           title="Status anzeigen und ändern"
@@ -582,22 +592,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {pendingDecline && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] flex items-center justify-center px-4"
-          onClick={closeDeclineModal}
-        >
-          <div
-            className="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800 p-4 sm:p-5 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="text-base sm:text-lg font-semibold text-white">Absagegrund</h3>
-            <p className="mt-1 text-sm text-gray-300">
-              Warum möchtest du für {pendingDecline.title} absagen?
+	      {pendingDecline && (
+	        <AccessibleModal
+	          labelledBy="decline-reason-title"
+	          onClose={closeDeclineModal}
+	          className="backdrop-blur-[1px] px-4"
+	          panelClassName="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800 p-4 sm:p-5 shadow-xl"
+	        >
+	            <h3 id="decline-reason-title" className="text-base sm:text-lg font-semibold text-white">Absagegrund</h3>
+	            <p className="mt-1 text-sm text-gray-300">
+	              Warum möchtest du für {pendingDecline.title} absagen?
             </p>
 
             <form className="mt-4 space-y-3" onSubmit={handleDeclineSubmit}>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2" aria-label="Schnelle Absagegründe">
                 {quickDeclineReasons.map((reason) => (
                   <button
                     key={reason}
@@ -608,8 +616,8 @@ export default function DashboardPage() {
                     }}
                     className={`px-3 py-1.5 text-xs sm:text-sm rounded-full border transition-colors ${
                       declineReason === reason
-                        ? 'bg-primary-100 border-primary-400 text-primary-900 bg-primary-900/40 border-primary-600 text-primary-100'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
+	                        ? 'bg-primary-900/40 border-primary-600 text-primary-100'
+	                        : 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
                     }`}
                   >
                     {reason}
@@ -617,7 +625,11 @@ export default function DashboardPage() {
                 ))}
               </div>
 
+              <label htmlFor="dashboard-decline-reason" className="block text-sm font-medium text-gray-200">
+                Grund
+              </label>
               <textarea
+                id="dashboard-decline-reason"
                 value={declineReason}
                 onChange={(event) => {
                   setDeclineReason(event.target.value);
@@ -626,12 +638,14 @@ export default function DashboardPage() {
                   }
                 }}
                 placeholder="Kurz den Grund eingeben..."
+                aria-invalid={declineReasonError ? 'true' : 'false'}
+                aria-describedby={declineReasonError ? 'dashboard-decline-reason-error' : undefined}
                 className="input min-h-[96px]"
                 autoFocus
               />
 
               {declineReasonError && (
-                <p className="text-sm text-red-400">{declineReasonError}</p>
+                <p id="dashboard-decline-reason-error" className="text-sm text-red-300" role="alert">{declineReasonError}</p>
               )}
 
               <div className="flex items-center justify-end gap-2">
@@ -650,11 +664,10 @@ export default function DashboardPage() {
                 >
                   {updateResponseMutation.isPending ? 'Speichern...' : 'Absagen'}
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+	              </div>
+	            </form>
+	        </AccessibleModal>
+	      )}
     </div>
   );
 }

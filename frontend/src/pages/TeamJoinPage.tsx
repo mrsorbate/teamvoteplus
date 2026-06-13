@@ -301,44 +301,61 @@ export default function TeamJoinPage() {
                 <div className="border border-gray-700 rounded-lg p-4 space-y-3">
                   <p className="text-sm font-medium text-white">Neu hier? Direkt registrieren</p>
 
+                  <label htmlFor="join-register-name" className="sr-only">Dein Name</label>
                   <input
+                    id="join-register-name"
                     type="text"
                     className="input w-full"
                     placeholder="Dein Name"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
+                    autoComplete="name"
                   />
 
+                  <label htmlFor="join-register-username" className="sr-only">Benutzername</label>
                   <input
+                    id="join-register-username"
                     type="text"
                     className="input w-full"
                     placeholder="Benutzername"
                     value={registerUsername}
                     onChange={(e) => setRegisterUsername(e.target.value)}
+                    autoComplete="username"
                   />
 
+                  <label htmlFor="join-register-email" className="sr-only">E-Mail</label>
                   <input
+                    id="join-register-email"
                     type="email"
                     className="input w-full"
                     placeholder="E-Mail"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
+                    autoComplete="email"
                   />
 
+                  <label htmlFor="join-register-password" className="sr-only">Passwort</label>
                   <input
+                    id="join-register-password"
                     type="password"
                     className="input w-full"
                     placeholder="Passwort (mind. 6 Zeichen)"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
                   />
 
+                  <label htmlFor="join-register-password-confirm" className="sr-only">Passwort wiederholen</label>
                   <input
+                    id="join-register-password-confirm"
                     type="password"
                     className="input w-full"
                     placeholder="Passwort wiederholen"
                     value={registerPasswordConfirm}
                     onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
                   />
 
                   <button
@@ -353,20 +370,26 @@ export default function TeamJoinPage() {
                 <div className="border border-gray-700 rounded-lg p-4 space-y-3">
                   <p className="text-sm font-medium text-white">Ich habe bereits ein Konto</p>
 
+                  <label htmlFor="join-login-username" className="sr-only">Benutzername</label>
                   <input
+                    id="join-login-username"
                     type="text"
                     className="input w-full"
                     placeholder="Benutzername"
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
+                    autoComplete="username"
                   />
 
+                  <label htmlFor="join-login-password" className="sr-only">Passwort</label>
                   <input
+                    id="join-login-password"
                     type="password"
                     className="input w-full"
                     placeholder="Passwort"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
+                    autoComplete="current-password"
                   />
 
                   <button

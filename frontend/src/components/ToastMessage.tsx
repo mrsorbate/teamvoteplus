@@ -54,15 +54,15 @@ export default function ToastMessage({
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role={displayed.type === 'error' ? 'alert' : 'status'}
+      aria-live={displayed.type === 'error' ? 'assertive' : 'polite'}
       aria-atomic="true"
       className={`fixed ${positionClassName}`}
     >
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-gray-900/95 backdrop-blur-sm shadow-modal transition-all duration-200 ease-out-expo sm:max-w-sm ${border} ${motionCls} ${textClassName}`}
       >
-        <Icon className={`w-5 h-5 shrink-0 ${iconCls}`} />
+        <Icon className={`w-5 h-5 shrink-0 ${iconCls}`} aria-hidden="true" />
         <p className="text-sm font-medium text-white leading-snug">{displayed.message}</p>
       </div>
     </div>
