@@ -4,6 +4,7 @@ import ToastMessage from '../components/ToastMessage';
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface ToastState {
+  id: number;
   message: string;
   type: ToastType;
   position?: 'top-right' | 'bottom-right';
@@ -19,13 +20,15 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 export function ToastProvider({ children, duration = 3000 }: { children: ReactNode; duration?: number }) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastIdRef = useRef(0);
 
   const showToast = (
     message: string,
     type: ToastType = 'error',
     options?: { position?: 'top-right' | 'bottom-right' }
   ) => {
-    setToast({ message, type, position: options?.position ?? 'bottom-right' });
+    toastIdRef.current += 1;
+    setToast({ id: toastIdRef.current, message, type, position: options?.position ?? 'bottom-right' });
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }

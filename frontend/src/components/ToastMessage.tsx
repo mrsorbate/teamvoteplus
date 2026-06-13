@@ -1,12 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
-
-type ToastType = 'success' | 'error' | 'info' | 'warning';
-
-interface ToastState {
-  message: string;
-  type: ToastType;
-}
+import type { ToastState } from '../lib/useToast';
 
 interface ToastMessageProps {
   toast: ToastState | null;
@@ -21,50 +15,39 @@ const CONFIG = {
   info:    { Icon: Info,          border: 'border-blue-700/60',    iconCls: 'text-blue-400'   },
 } as const;
 
+const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
 export default function ToastMessage({
   toast,
   positionClassName = 'bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 z-[60]',
   textClassName = '',
 }: ToastMessageProps) {
-  const [displayed, setDisplayed] = useState<ToastState | null>(null);
-  const [visible, setVisible] = useState(false);
-  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (exitTimer.current) clearTimeout(exitTimer.current);
-    if (toast) {
-      setDisplayed(toast);
-      requestAnimationFrame(() => setVisible(true));
-    } else {
-      setVisible(false);
-      exitTimer.current = setTimeout(() => setDisplayed(null), 300);
-    }
-    return () => { if (exitTimer.current) clearTimeout(exitTimer.current); };
-  }, [toast]);
-
-  if (!displayed) return null;
-
-  const { Icon, border, iconCls } = CONFIG[displayed.type];
+  const prefersReducedMotion = useReducedMotion();
   const fromBottom = positionClassName.includes('bottom');
-  const motionCls = visible
-    ? 'opacity-100 translate-y-0'
-    : fromBottom
-      ? 'opacity-0 translate-y-3'
-      : 'opacity-0 -translate-y-3';
+  const yOffset = prefersReducedMotion ? 0 : (fromBottom ? 10 : -10);
+  const cfg = toast ? CONFIG[toast.type] : null;
+  const Icon = cfg?.Icon;
 
   return (
-    <div
-      role={displayed.type === 'error' ? 'alert' : 'status'}
-      aria-live={displayed.type === 'error' ? 'assertive' : 'polite'}
-      aria-atomic="true"
-      className={`fixed ${positionClassName}`}
-    >
-      <div
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-gray-900/95 backdrop-blur-sm shadow-modal transition-all duration-200 ease-out-expo sm:max-w-sm ${border} ${motionCls} ${textClassName}`}
-      >
-        <Icon className={`w-5 h-5 shrink-0 ${iconCls}`} aria-hidden="true" />
-        <p className="text-sm font-medium text-white leading-snug">{displayed.message}</p>
-      </div>
+    <div className={`fixed ${positionClassName}`}>
+      <AnimatePresence>
+        {toast && cfg && Icon && (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: yOffset }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: yOffset }}
+            transition={{ duration: 0.22, ease: EASE_EXPO }}
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+            aria-atomic="true"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl border bg-gray-900/95 backdrop-blur-sm shadow-modal sm:max-w-sm ${cfg.border} ${textClassName}`}
+          >
+            <Icon className={`w-5 h-5 shrink-0 ${cfg.iconCls}`} aria-hidden="true" />
+            <p className="text-sm font-medium text-white leading-snug">{toast.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

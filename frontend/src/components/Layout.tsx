@@ -1,4 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { LogOut, User as UserIcon, Users, Shield, Home, BarChart3, Calendar } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function Layout({ organization }: LayoutProps) {
     navigate('/login');
   };
 
+  const prefersReducedMotion = useReducedMotion();
   const organizationName = organization?.name || 'Dein Verein';
   const organizationShortName = String(organization?.short_name || '').trim();
   const organizationNameMobile = organizationShortName || organizationName;
@@ -215,7 +217,14 @@ export default function Layout({ organization }: LayoutProps) {
 
       {/* ── Page content ── */}
       <main id="main-content" className="max-w-7xl mx-auto px-safe sm:px-6 lg:px-8 pt-4 sm:pt-6 pwa-main-safe">
-        <Outlet />
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Outlet />
+        </motion.div>
       </main>
 
       <PushInstallPrompt userId={user?.id} />

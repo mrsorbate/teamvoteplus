@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface AccessibleModalProps {
   children: ReactNode;
@@ -17,6 +18,8 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
 export default function AccessibleModal({
   children,
   labelledBy,
@@ -25,6 +28,7 @@ export default function AccessibleModal({
   panelClassName = '',
 }: AccessibleModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const previousActiveElement = document.activeElement as HTMLElement | null;
@@ -73,11 +77,14 @@ export default function AccessibleModal({
   }, [onClose]);
 
   return (
-    <div
+    <motion.div
       className={`fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overscroll-contain ${className}`}
       onMouseDown={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.18 }}
     >
-      <div
+      <motion.div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -85,9 +92,12 @@ export default function AccessibleModal({
         tabIndex={-1}
         className={`overscroll-contain ${panelClassName}`}
         onMouseDown={(event) => event.stopPropagation()}
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20, scale: prefersReducedMotion ? 1 : 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.24, ease: EASE_EXPO }}
       >
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
