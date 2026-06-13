@@ -256,7 +256,7 @@ export default function EventsPage() {
                   <img
                     src={opponentCrestUrl}
                     alt={`${displayTitle || 'Gegner'} Wappen`}
-                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-contain bg-white"
+                    className="w-5 h-5 sm:w-6 sm:h-6 crest-badge"
                     loading="lazy"
                   />
                 ) : event.type === 'training' ? (
@@ -534,7 +534,7 @@ export default function EventsPage() {
       <div className="space-y-3 sm:space-y-4">
         {eventGroups.map((group) => (
           <div key={group.key} className="space-y-2">
-            <h2 className="text-xs font-heading font-semibold text-gray-500 uppercase tracking-widest px-1">
+            <h2 className="eyebrow-label px-1">
               {group.label}
             </h2>
             <div className="space-y-3 sm:space-y-4">
@@ -543,8 +543,8 @@ export default function EventsPage() {
           </div>
         ))}
         {eventItems.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            <Calendar className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-600" />
+          <div className="empty-state">
+            <Calendar className="empty-state-icon" />
             <p className="text-lg font-medium text-white">{isPastView ? 'Keine vergangenen Termine' : 'Noch keine Termine'}</p>
             <p className="text-sm mt-2">
               {isPastView ? (

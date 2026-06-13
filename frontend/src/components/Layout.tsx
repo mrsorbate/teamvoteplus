@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
@@ -29,51 +28,6 @@ export default function Layout({ organization }: LayoutProps) {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
-
-  useEffect(() => {
-    let startY = 0;
-    let isPulling = false;
-    let hasTriggeredRefresh = false;
-    const pullThreshold = 90;
-
-    const onTouchStart = (event: TouchEvent) => {
-      if (window.scrollY > 0) {
-        isPulling = false;
-        return;
-      }
-      startY = event.touches[0]?.clientY ?? 0;
-      isPulling = true;
-      hasTriggeredRefresh = false;
-    };
-
-    const onTouchMove = (event: TouchEvent) => {
-      if (!isPulling || hasTriggeredRefresh) return;
-      if (window.scrollY > 0) {
-        isPulling = false;
-        return;
-      }
-      const currentY = event.touches[0]?.clientY ?? startY;
-      if (currentY - startY > pullThreshold) {
-        hasTriggeredRefresh = true;
-        window.location.reload();
-      }
-    };
-
-    const onTouchEnd = () => {
-      isPulling = false;
-      hasTriggeredRefresh = false;
-    };
-
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-    };
-  }, []);
 
   const handleLogout = () => {
     logout();

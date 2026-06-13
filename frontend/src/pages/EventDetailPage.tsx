@@ -436,7 +436,7 @@ export default function EventDetailPage() {
         <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
           <button
             onClick={() => handleBackNavigation()}
-            className="text-gray-300 hover:text-gray-900 hover:text-white"
+            className="text-gray-300 hover:text-white"
             aria-label="Zurück"
             title="Zurück"
           >
@@ -460,7 +460,7 @@ export default function EventDetailPage() {
         <button
           type="button"
           onClick={() => handleBackNavigation()}
-          className="text-gray-300 hover:text-gray-900 hover:text-white"
+          className="text-gray-300 hover:text-white"
           aria-label="Zurück"
           title="Zurück"
         >
@@ -472,7 +472,7 @@ export default function EventDetailPage() {
               <img
                 src={opponentCrestUrl}
                 alt={`${displayTitle || 'Gegner'} Wappen`}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-contain bg-white"
+                className="w-7 h-7 sm:w-8 sm:h-8 crest-badge"
                 loading="lazy"
               />
             ) : event?.type === 'training' ? (
@@ -823,7 +823,7 @@ export default function EventDetailPage() {
                         setInlinePanel(null);
                       }}
                       disabled={updateResponseMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-red-600 text-white hover:bg-red-900/300 transition-colors disabled:opacity-50"
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
                       style={{ minHeight: '44px' }}
                     >
                       {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}

@@ -252,9 +252,9 @@ export default function DashboardPage() {
               <Link
                 key={post.id}
                 to={`/teams/${post.team_id}/posts`}
-                className="block rounded-lg border border-amber-200 bg-amber-50 p-3 hover:bg-amber-100 border-amber-800 bg-amber-900/20 hover:bg-amber-900/30"
+                className="block rounded-lg border border-amber-800 bg-amber-900/20 p-3 hover:bg-amber-900/30 transition-colors"
               >
-                <p className="text-xs uppercase tracking-wide text-amber-300">
+                <p className="eyebrow-label text-amber-300">
                   {post.type === 'poll' ? 'Umfrage' : 'Nachricht'}
                 </p>
                 <p className="text-sm font-semibold text-white mt-0.5">{post.title}</p>
@@ -280,7 +280,7 @@ export default function DashboardPage() {
         </div>
         
         {eventsLoading ? (
-          <div className="text-center py-8 text-gray-400">Lädt...</div>
+          <div className="loading-card">Termine werden geladen...</div>
         ) : upcomingEvents && upcomingEvents.length > 0 ? (
           <div className="space-y-3">
             {upcomingEvents.map((event: any) => {
@@ -299,13 +299,13 @@ export default function DashboardPage() {
               const getStatusCircleClass = (status: string) => {
                 switch (status) {
                   case 'accepted':
-                    return 'bg-green-100 text-green-700 bg-green-900/30 text-green-300';
+                    return 'bg-green-900/30 text-green-300 border border-green-700/50';
                   case 'declined':
-                    return 'bg-red-100 text-red-700 bg-red-900/30 text-red-300';
+                    return 'bg-red-900/30 text-red-300 border border-red-700/50';
                   case 'tentative':
-                    return 'bg-yellow-100 text-yellow-700 bg-yellow-900/30 text-yellow-300';
+                    return 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50';
                   default:
-                    return 'bg-gray-100 text-gray-600 bg-gray-700 text-gray-300';
+                    return 'bg-gray-700 text-gray-300 border border-gray-600/60';
                 }
               };
 
@@ -331,14 +331,14 @@ export default function DashboardPage() {
 
               const getActionButtonClass = (status: string) => {
                 const isSelected = event.my_status === status;
-                const baseClass = 'w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50';
+                const baseClass = 'w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800';
                 
                 if (status === 'accepted') {
-                  return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-900/30 text-green-300 hover:bg-green-900/50'}`;
+                  return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-900/30 text-green-300 border border-green-700/50 hover:bg-green-900/50'}`;
                 } else if (status === 'declined') {
-                  return `${baseClass} ${isSelected ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-900/30 text-red-300 hover:bg-red-900/50'}`;
+                  return `${baseClass} ${isSelected ? 'bg-red-600 text-white' : 'bg-red-900/30 text-red-300 border border-red-700/50 hover:bg-red-900/50'}`;
                 } else if (status === 'tentative') {
-                  return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-900/30 text-yellow-300 hover:bg-yellow-900/50'}`;
+                  return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50 hover:bg-yellow-900/50'}`;
                 }
               };
 
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                             <img
                               src={opponentCrestUrl}
                               alt={`${displayTitle || 'Gegner'} Wappen`}
-                              className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-contain bg-white"
+                              className="w-5 h-5 sm:w-6 sm:h-6 crest-badge"
                               loading="lazy"
                             />
                           ) : event.type === 'training' ? (
@@ -518,7 +518,7 @@ export default function DashboardPage() {
                             e.stopPropagation();
                             setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                           }}
-                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)} ${
+                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${getStatusCircleClass(event.my_status)} ${
                             openQuickActionsEventId === event.id
 	                              ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-gray-800'
                               : ''
@@ -577,8 +577,8 @@ export default function DashboardPage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-400">
-            <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-600" />
+          <div className="empty-state">
+            <Calendar className="empty-state-icon" />
             <p>Keine Termine</p>
           </div>
         )}

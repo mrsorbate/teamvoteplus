@@ -150,7 +150,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
   };
 
   if (isLoading) {
-    return <div className="text-center py-4">Lädt...</div>;
+    return <div className="loading-card">Einladungen werden geladen...</div>;
   }
 
   const generatedInviteMessage = (inviteMessageDraft || buildInviteMessage(createdInviteeName, createdInviteUrl)).trim();
@@ -418,8 +418,8 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
           </table>
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-500">
-          <LinkIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+        <div className="empty-state">
+          <LinkIcon className="empty-state-icon" />
           <p>Noch keine Einladungslinks erstellt</p>
           <p className="text-sm mt-1">Erstelle einen Link, um {inviteRoleLabel.toLowerCase()} einzuladen</p>
         </div>

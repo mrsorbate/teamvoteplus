@@ -31,7 +31,7 @@ export default function TeamPage() {
   const isTrainer = members?.find((member) => member.id === user?.id)?.role === 'trainer';
 
   if (teamLoading || membersLoading) {
-    return <div className="text-center py-12">Lädt...</div>;
+    return <div className="loading-card">Team wird geladen...</div>;
   }
 
   const trainers = members?.filter((member) => member.role === 'trainer') || [];

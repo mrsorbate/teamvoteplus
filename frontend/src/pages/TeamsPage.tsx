@@ -140,7 +140,7 @@ export default function TeamsPage() {
                   >
                     <ImageIcon className="w-10 h-10 text-gray-500 mb-2" />
                     <span className="text-sm text-gray-300">
-                      {uploadingTeamId === team.id ? 'Lädt...' : 'Mannschaftsbild hochladen'}
+                      {uploadingTeamId === team.id ? 'Bild wird geladen...' : 'Mannschaftsbild hochladen'}
                     </span>
                   </button>
                 )}
@@ -192,8 +192,8 @@ export default function TeamsPage() {
         ))}
 
         {teams?.length === 0 && (
-          <div className="col-span-full text-center py-12 text-gray-400">
-            <Users className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+          <div className="col-span-full empty-state">
+            <Users className="empty-state-icon" />
             <p className="text-lg font-medium">Noch keine Teams</p>
             <p className="text-sm mt-2">
               Warte darauf, zu einem Team eingeladen zu werden oder kontaktiere einen Administrator.

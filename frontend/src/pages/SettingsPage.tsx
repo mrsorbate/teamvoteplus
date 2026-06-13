@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsAPI, profileAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { User, Lock, Camera, Trash2, Check, AlertCircle, Edit2, Bell } from 'lucide-react';
+import { User, Lock, Camera, Trash2, Check, X, AlertTriangle, AlertCircle, Edit2, Bell } from 'lucide-react';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
@@ -572,10 +572,10 @@ export default function SettingsPage() {
             <div className="mt-1">
               <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
                 authUser?.role === 'admin'
-                  ? 'bg-purple-100 text-purple-800 bg-purple-900/40 text-purple-200'
+                  ? 'bg-purple-900/40 text-purple-200 border border-purple-700/40'
                   : authUser?.role === 'trainer'
-                  ? 'bg-blue-100 text-blue-300 bg-blue-900/40 text-blue-200'
-                  : 'bg-green-900/40 text-green-200'
+                  ? 'bg-blue-900/40 text-blue-200 border border-blue-700/40'
+                  : 'bg-green-900/40 text-green-200 border border-green-700/40'
               }`}>
                 {authUser?.role === 'admin' ? 'Administrator' : authUser?.role === 'trainer' ? 'Trainer' : 'Spieler'}
               </span>
@@ -850,12 +850,27 @@ export default function SettingsPage() {
                 Status: <span className={isPushSubscribed ? 'text-green-400 font-medium' : 'text-red-400 font-medium'}>{isPushSubscribed ? 'Aktiv' : 'Inaktiv'}</span>
               </p>
               <p>
-                Berechtigung: <span className={`font-medium ${
+                Berechtigung: <span className={`inline-flex items-center gap-1 font-medium ${
                   pushPermission === 'granted' ? 'text-green-400' :
                   pushPermission === 'denied' ? 'text-red-400' :
                   'text-amber-400'
                 }`}>
-                  {pushPermission === 'granted' ? '✓ Erlaubt' : pushPermission === 'denied' ? '✗ Blockiert' : '⚠ Noch nicht gefragt'}
+                  {pushPermission === 'granted' ? (
+                    <>
+                      <Check className="w-4 h-4" aria-hidden="true" />
+                      Erlaubt
+                    </>
+                  ) : pushPermission === 'denied' ? (
+                    <>
+                      <X className="w-4 h-4" aria-hidden="true" />
+                      Blockiert
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                      Noch nicht gefragt
+                    </>
+                  )}
                 </span>
               </p>
             </div>

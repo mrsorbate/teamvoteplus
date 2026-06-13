@@ -438,11 +438,11 @@ export default function EventSquadPage() {
   };
 
   if (isEventLoading) {
-    return <div className="text-center py-12 text-gray-300">Lädt...</div>;
+    return <div className="loading-card">Kader wird geladen...</div>;
   }
 
   if (!event) {
-    return <div className="text-center py-12 text-gray-300">Termin nicht gefunden.</div>;
+    return <div className="empty-state">Termin nicht gefunden.</div>;
   }
 
   if (event.type !== 'match') {
@@ -506,7 +506,7 @@ export default function EventSquadPage() {
           <div className={`${isTrainer ? 'xl:col-span-8' : 'xl:col-span-12'} card p-0 overflow-hidden`}>
             <div className="px-4 sm:px-5 py-3 bg-gray-800 border-b border-gray-700">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-wide text-gray-400">Taktik-Board</p>
+                <p className="eyebrow-label">Taktik-Board</p>
                 <span className="text-xs text-gray-300">{boardPlayerCount}/{MAX_BOARD_PLAYERS}</span>
               </div>
             </div>
@@ -582,7 +582,7 @@ export default function EventSquadPage() {
 
             {isTrainer && (
               <div className="px-4 sm:px-5 py-3 border-t border-gray-700 bg-gray-800">
-                <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Bank ({benchPlayerCount}/{MAX_BENCH_PLAYERS})</p>
+                <p className="eyebrow-label mb-2">Bank ({benchPlayerCount}/{MAX_BENCH_PLAYERS})</p>
                 {benchPlayers.length > 0 ? (
                   <div className="-mx-1 px-1 overflow-x-auto">
                     <div className="flex sm:flex-wrap gap-2 min-w-max sm:min-w-0">
@@ -610,7 +610,7 @@ export default function EventSquadPage() {
           {isTrainer && (
             <div className="xl:col-span-4 space-y-4 sm:space-y-6">
               <div className="card">
-                <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Kader festlegen (nur Zusagen)</p>
+                <p className="eyebrow-label mb-2">Kader festlegen (nur Zusagen)</p>
                 <div className="mb-3 flex items-center justify-between text-xs text-gray-300">
                   <span>Board: {boardPlayerCount}/{MAX_BOARD_PLAYERS}</span>
                   <span>Bank: {benchPlayerCount}/{MAX_BENCH_PLAYERS}</span>
@@ -674,7 +674,7 @@ export default function EventSquadPage() {
               </div>
 
               <div className="card">
-                <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-3">Aktionen</p>
+                <p className="eyebrow-label mb-3">Aktionen</p>
                 <div className="flex flex-col gap-2">
                   <button type="button" onClick={() => releaseMatchSquad()} disabled={saveMatchSquadMutation.isPending || releaseMatchSquadMutation.isPending || editableSquadUserIds.length === 0} className="btn btn-primary w-full">
                     {releaseMatchSquadMutation.isPending ? 'Gibt frei...' : 'Kader freigeben'}

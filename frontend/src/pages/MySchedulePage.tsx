@@ -293,11 +293,11 @@ export default function MySchedulePage() {
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-gray-400 py-4">Lädt Spielplan...</div>
+        <div className="loading-card">Spielplan wird geladen...</div>
       ) : error ? (
         <div className="text-sm text-red-400 py-4">Spielplan konnte nicht geladen werden.</div>
       ) : !hasAnyGames ? (
-        <div className="card text-sm text-gray-400">Keine Spiele gefunden.</div>
+        <div className="empty-state">Keine Spiele gefunden.</div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-3 bg-gray-800 p-1 rounded-full w-fit">
@@ -306,7 +306,7 @@ export default function MySchedulePage() {
               className={`px-4 py-2 rounded-full font-medium transition-colors ${
                 view === 'next'
                   ? 'bg-primary-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-200 hover:bg-gray-700'
+                  : 'text-gray-300 hover:bg-gray-700'
               }`}
             >
               Anstehend
@@ -316,7 +316,7 @@ export default function MySchedulePage() {
               className={`px-4 py-2 rounded-full font-medium transition-colors ${
                 view === 'last'
                   ? 'bg-primary-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-200 hover:bg-gray-700'
+                  : 'text-gray-300 hover:bg-gray-700'
               }`}
             >
               Vergangen
@@ -329,7 +329,7 @@ export default function MySchedulePage() {
                 {hasAnyNextGames ? (
                   renderScheduleSections(sections, 'next')
                 ) : (
-                  <div className="card text-sm text-gray-400">Keine nächsten Spiele gefunden.</div>
+                  <div className="empty-state">Keine nächsten Spiele gefunden.</div>
                 )}
               </section>
             )}
@@ -339,7 +339,7 @@ export default function MySchedulePage() {
                 {hasAnyLastGames ? (
                   renderScheduleSections(sections, 'last')
                 ) : (
-                  <div className="card text-sm text-gray-400">Keine letzten Spiele gefunden.</div>
+                  <div className="empty-state">Keine letzten Spiele gefunden.</div>
                 )}
               </section>
             )}

@@ -328,7 +328,7 @@ export default function TeamPostsPage() {
                 <article key={post.id} className="rounded-xl border border-gray-700 bg-gray-800 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-400">
+                      <p className="eyebrow-label">
                         {post.type === 'announcement' ? 'Nachricht' : 'Umfrage'}
                       </p>
                       <h3 className="text-base sm:text-lg font-semibold text-white">{post.title}</h3>

@@ -657,7 +657,7 @@ export default function TeamSettingsPage() {
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
-          className="text-gray-300 hover:text-gray-900 hover:text-white"
+          className="text-gray-300 hover:text-white"
           aria-label="Zurück"
           title="Zurück"
         >
@@ -1282,7 +1282,7 @@ export default function TeamSettingsPage() {
                                     {venue.name.trim() || `Platz ${index + 1}`}
                                   </p>
                                   {venue.name.trim() && venue.name.trim() === defaultHomeVenueName.trim() && (
-                                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 bg-primary-900/40 text-primary-200">
+                                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-900/40 text-primary-200 border border-primary-700/40">
                                       Standard
                                     </span>
                                   )}

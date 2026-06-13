@@ -201,7 +201,7 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-40 sm:left-auto sm:right-6 sm:w-[30rem]">
+    <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-40 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[30rem]">
       <div className="rounded-xl border border-primary-700 bg-gray-800 shadow-lg p-4">
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-primary-900/40 p-2">

@@ -182,7 +182,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
   };
 
   if (isLoading) {
-    return <div className="text-center py-4">Lädt...</div>;
+    return <div className="loading-card">Einladungen werden geladen...</div>;
   }
 
   return (
@@ -362,8 +362,8 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
         </div>
         </>
       ) : (
-        <div className="text-center py-8 text-gray-400">
-          <Plus className="w-12 h-12 mx-auto mb-2 text-gray-500" />
+        <div className="empty-state">
+          <Plus className="empty-state-icon" />
           <p>Noch keine Spieler eingeladen</p>
           <p className="text-sm mt-1">Erstelle eine Einladung, um Spieler hinzuzufügen</p>
         </div>

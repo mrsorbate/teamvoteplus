@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Navigate } from 'react-router-dom';
-import { Plus, Trash2, Users, UserPlus, UserMinus, Shield, Settings, Upload, Copy, Share2, Check, KeyRound, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Users, UserPlus, UserMinus, Shield, Settings, Upload, Copy, Share2, Check, X, KeyRound, Edit2 } from 'lucide-react';
 import { useToast, type ToastType } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
@@ -672,7 +672,7 @@ export default function AdminPage() {
   };
 
   if (teamsLoading || usersLoading || settingsLoading) {
-    return <div className="text-center py-12">Lädt...</div>;
+    return <div className="loading-card">Admin-Daten werden geladen...</div>;
   }
 
   const admins = users?.filter((u: any) => u.role === 'admin') || [];
@@ -1030,8 +1030,9 @@ export default function AdminPage() {
                 </p>
               )}
               {uploadLogoMutation.isSuccess && !uploadLogoMutation.isPending && (
-                <p className="text-sm text-green-400 mt-2">
-                  ✓ Logo erfolgreich hochgeladen!
+                <p className="text-sm text-green-400 mt-2 inline-flex items-center gap-1.5">
+                  <Check className="w-4 h-4" aria-hidden="true" />
+                  Logo erfolgreich hochgeladen!
                 </p>
               )}
             </div>
@@ -1168,8 +1169,8 @@ export default function AdminPage() {
           ))}
 
           {filteredTeams.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
-              <Users className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+            <div className="empty-state">
+              <Users className="empty-state-icon" />
               <p>{teams?.length ? 'Keine Teams gefunden' : 'Noch keine Teams erstellt'}</p>
               <div className="mt-3 flex justify-center gap-2">
                 {teams?.length ? (
@@ -1762,7 +1763,7 @@ export default function AdminPage() {
                       className="text-blue-300 hover:text-blue-100"
                       aria-label={`${chip.label} entfernen`}
                     >
-                      ×
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </span>
                 ))}
@@ -2090,7 +2091,7 @@ export default function AdminPage() {
               )}
 
               {trainerInviteLink && (
-                <div className="p-3 rounded-lg border border-blue-200 bg-blue-900/20 space-y-2">
+                <div className="p-3 rounded-lg border border-blue-800/60 bg-blue-900/20 space-y-2">
                   <p className="text-sm text-blue-300">Einladungstext für <strong>{trainerName}</strong>:</p>
                   <textarea
                     readOnly={!isEditingTrainerInviteMessage}

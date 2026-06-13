@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat, Loader2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat, Loader2, Check } from 'lucide-react';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 import { useToast } from '../lib/useToast';
 import { useSmartBack } from '../hooks/useSmartBack';
+import AccessibleModal from '../components/AccessibleModal';
 
 export default function EventCreatePage() {
   const { id } = useParams<{ id: string }>();
@@ -1196,13 +1197,12 @@ export default function EventCreatePage() {
       </form>
 
       {inviteSelectionModalOpen && membersForCreate?.length ? (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div
-            className="card max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col overscroll-contain rounded-t-2xl sm:rounded-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-invite-selection-title"
-          >
+        <AccessibleModal
+          labelledBy="create-invite-selection-title"
+          onClose={() => setInviteSelectionModalOpen(false)}
+          className="items-end sm:items-center p-0 sm:p-4"
+          panelClassName="card max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-2xl"
+        >
             <h3 id="create-invite-selection-title" className="text-lg font-semibold text-white">Teilnehmer auswählen</h3>
             <p className="text-sm text-gray-300 mt-1 mb-3">
               Wähle aus, welche Spieler eingeladen werden.
@@ -1242,6 +1242,9 @@ export default function EventCreatePage() {
 
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={isChecked}
+                      aria-label={`${member.name} ${isChecked ? 'nicht einladen' : 'einladen'}`}
                       onClick={() => {
                         const nextIds = isChecked
                           ? eventData.invited_user_ids.filter((value) => value !== member.id)
@@ -1249,18 +1252,20 @@ export default function EventCreatePage() {
                         const inviteAll = nextIds.length === allMemberIds.length;
                         setEventData((prev) => ({ ...prev, invited_user_ids: nextIds, invite_all: inviteAll }));
                       }}
-                      className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                      className={`inline-flex min-w-[4.25rem] items-center justify-between gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${
                         isChecked
                           ? 'bg-primary-600 text-white'
                           : 'bg-gray-700 text-gray-200'
                       }`}
                     >
-                      <span>{isChecked ? 'ON' : 'OFF'}</span>
+                      <span>{isChecked ? 'Ein' : 'Aus'}</span>
                       <span
-                        className={`w-3 h-3 rounded-full ${
-                          isChecked ? 'bg-white' : 'bg-gray-300'
+                        className={`inline-flex h-4 w-4 items-center justify-center rounded-full ${
+                          isChecked ? 'bg-gray-900/80 text-primary-200' : 'bg-gray-500'
                         }`}
-                      />
+                      >
+                        {isChecked ? <Check className="w-3 h-3" aria-hidden="true" /> : null}
+                      </span>
                     </button>
                   </div>
                 );
@@ -1284,8 +1289,7 @@ export default function EventCreatePage() {
                 Übernehmen
               </button>
             </div>
-          </div>
-        </div>
+        </AccessibleModal>
       ) : null}
     </div>
   );

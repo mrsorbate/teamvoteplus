@@ -99,7 +99,7 @@ export default function MyTablePage() {
   };
 
   if (teamsLoading || (hasTeams && tableLoading)) {
-    return <div className="text-sm text-gray-400 py-4">Lädt Tabellen...</div>;
+    return <div className="loading-card">Tabellen werden geladen...</div>;
   }
 
   if (teamsError || tableError) {
@@ -116,9 +116,15 @@ export default function MyTablePage() {
       </div>
 
       {!hasTeams ? (
-        <div className="card text-sm text-gray-400">Keine Teams gefunden.</div>
+        <div className="empty-state">
+          <BarChart3 className="empty-state-icon" />
+          <p>Keine Teams gefunden.</p>
+        </div>
       ) : sections.length === 0 ? (
-        <div className="card text-sm text-gray-400">Keine Tabellen-Daten gefunden.</div>
+        <div className="empty-state">
+          <BarChart3 className="empty-state-icon" />
+          <p>Keine Tabellen-Daten gefunden.</p>
+        </div>
       ) : (
         <div className="space-y-4">
           {sections.map((section) => {
@@ -162,7 +168,7 @@ export default function MyTablePage() {
                                 <img
                                   src={normalizeBadgeUrl(row?.img)!}
                                   alt={`${String(row.team || 'Team')} Wappen`}
-                                  className="w-6 h-6 object-contain bg-white rounded"
+                                  className="w-6 h-6 crest-badge rounded"
                                   loading="lazy"
                                 />
                               ) : (
