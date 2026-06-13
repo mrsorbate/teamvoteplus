@@ -294,7 +294,7 @@
 
   /* ── Bottom navigation bar (mobile PWA) ── */
   .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-gray-900/96 border-t border-gray-700/80 backdrop-blur-sm flex items-stretch z-40;
+    @apply fixed bottom-0 left-0 right-0 bg-gray-900/95 border-t border-gray-700/80 backdrop-blur-sm flex items-stretch z-40;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
