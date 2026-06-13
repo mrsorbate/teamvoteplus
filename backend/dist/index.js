@@ -157,10 +157,10 @@ app.use('/api/events', events_1.default);
 app.use('/api/stats', stats_1.default);
 app.use('/api/settings', settings_1.default);
 app.use('/api/notifications', notifications_1.default);
+app.use('/api', invites_1.default);
 app.use('/api', posts_1.default);
 app.use('/api/admin', admin_1.default);
 app.use('/api/profile', profile_1.default);
-app.use('/api', invites_1.default);
 // File upload endpoint (duplicate of admin route — kept for compatibility, auth-guarded)
 app.post('/api/admin/upload/logo', auth_2.authenticate, upload_1.upload.single('logo'), (req, res) => {
     if (req.user?.role !== 'admin') {

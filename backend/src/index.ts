@@ -165,10 +165,10 @@ app.use('/api/events', eventsRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api', invitesRoutes);
 app.use('/api', postsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api', invitesRoutes);
 
 // File upload endpoint (duplicate of admin route — kept for compatibility, auth-guarded)
 app.post('/api/admin/upload/logo', authenticate, upload.single('logo'), (req: AuthRequest, res) => {
