@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Swords, MessageSquare } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
+import RefreshReloadOverlay from '../components/RefreshReloadOverlay';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [pendingDecline, setPendingDecline] = useState<{ eventId: number; title: string } | null>(null);
   const [declineReason, setDeclineReason] = useState('');
   const [declineReasonError, setDeclineReasonError] = useState<string | null>(null);
+  const [manualRefreshActive, setManualRefreshActive] = useState(false);
 
   const quickDeclineReasons = [
     'Krankheit',
@@ -131,6 +133,24 @@ export default function DashboardPage() {
   );
   const isDashboardRefreshing = teamsFetching || eventsFetching || postsFetching;
 
+  const handleDashboardRefresh = async () => {
+    if (manualRefreshActive) return;
+
+    setManualRefreshActive(true);
+    const minimumOverlayDuration = new Promise((resolve) => window.setTimeout(resolve, 900));
+
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['teams'] }),
+        queryClient.refetchQueries({ queryKey: ['upcoming-events'] }),
+        queryClient.refetchQueries({ queryKey: ['open-posts'] }),
+        minimumOverlayDuration,
+      ]);
+    } finally {
+      setManualRefreshActive(false);
+    }
+  };
+
   if (eventsLoading || (user?.role !== 'admin' && teamsLoading)) {
     return (
       <div className="max-w-4xl mx-auto space-y-5">
@@ -149,6 +169,12 @@ export default function DashboardPage() {
   }
 
   return (
+    <>
+    <RefreshReloadOverlay
+      show={manualRefreshActive}
+      title="Dashboard wird aktualisiert"
+      message="Termine, Teams und Beiträge werden neu geladen."
+    />
     <div className="max-w-4xl mx-auto space-y-5 sm:space-y-8">
       {/* Header */}
       <div className="text-center">
@@ -157,29 +183,23 @@ export default function DashboardPage() {
         <div className="mt-3">
           <motion.button
             type="button"
-            onClick={async () => {
-              await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ['teams'] }),
-                queryClient.invalidateQueries({ queryKey: ['upcoming-events'] }),
-                queryClient.invalidateQueries({ queryKey: ['open-posts'] }),
-              ]);
-            }}
-            disabled={isDashboardRefreshing}
+            onClick={handleDashboardRefresh}
+            disabled={manualRefreshActive || isDashboardRefreshing}
             whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
-            animate={isDashboardRefreshing && !prefersReducedMotion ? { boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.18)' } : { boxShadow: '0 0 0 0 rgba(220, 38, 38, 0)' }}
+            animate={(manualRefreshActive || isDashboardRefreshing) && !prefersReducedMotion ? { boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.18)' } : { boxShadow: '0 0 0 0 rgba(220, 38, 38, 0)' }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className="btn btn-secondary w-full sm:w-auto disabled:cursor-wait"
             aria-live="polite"
           >
             <motion.span
               aria-hidden="true"
-              animate={isDashboardRefreshing && !prefersReducedMotion ? { rotate: 360 } : { rotate: 0 }}
-              transition={isDashboardRefreshing && !prefersReducedMotion ? { duration: 0.75, ease: 'linear', repeat: Infinity } : { duration: 0.18 }}
+              animate={(manualRefreshActive || isDashboardRefreshing) && !prefersReducedMotion ? { rotate: 360 } : { rotate: 0 }}
+              transition={(manualRefreshActive || isDashboardRefreshing) && !prefersReducedMotion ? { duration: 0.75, ease: 'linear', repeat: Infinity } : { duration: 0.18 }}
               className="inline-flex"
             >
               <RotateCw className="w-4 h-4" />
             </motion.span>
-            {isDashboardRefreshing ? 'Aktualisiert...' : 'Aktualisieren'}
+            {manualRefreshActive || isDashboardRefreshing ? 'Aktualisiert...' : 'Aktualisieren'}
           </motion.button>
         </div>
       </div>
@@ -687,5 +707,6 @@ export default function DashboardPage() {
 	        </AccessibleModal>
 	      )}
     </div>
+    </>
   );
 }

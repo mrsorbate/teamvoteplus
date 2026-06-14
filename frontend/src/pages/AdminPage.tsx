@@ -8,6 +8,7 @@ import { Plus, Trash2, Users, UserPlus, UserMinus, Shield, Settings, Upload, Cop
 import { useToast, type ToastType } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
+import RefreshReloadOverlay from '../components/RefreshReloadOverlay';
 
 const TIMEZONES = [
   'Europe/Berlin',
@@ -86,6 +87,7 @@ export default function AdminPage() {
   const [auditActorFilter, setAuditActorFilter] = useState('all');
   const [auditPeriodFilter, setAuditPeriodFilter] = useState('all');
   const [expandedAuditLogId, setExpandedAuditLogId] = useState<number | null>(null);
+  const [manualAuditRefreshActive, setManualAuditRefreshActive] = useState(false);
 
   const showToast = (message: string, type: ToastType = 'error') => {
     showGlobalToast(message, type, { position: 'bottom-right' });
@@ -131,6 +133,22 @@ export default function AdminPage() {
     },
     refetchInterval: 60000,
   });
+
+  const handleAuditLogRefresh = async () => {
+    if (manualAuditRefreshActive) return;
+
+    setManualAuditRefreshActive(true);
+    const minimumOverlayDuration = new Promise((resolve) => window.setTimeout(resolve, 900));
+
+    try {
+      await Promise.all([
+        refetchAuditLogs(),
+        minimumOverlayDuration,
+      ]);
+    } finally {
+      setManualAuditRefreshActive(false);
+    }
+  };
 
   const { data: teamTrainers } = useQuery({
     queryKey: ['admin-team-trainers', selectedTeam],
@@ -888,6 +906,12 @@ export default function AdminPage() {
   const resendInviteMessage = resendInviteMessageDraft || resendInviteMessageBase;
 
   return (
+    <>
+    <RefreshReloadOverlay
+      show={manualAuditRefreshActive}
+      title="Audit-Log wird aktualisiert"
+      message="Admin-Aktionen werden neu geladen."
+    />
     <div className="space-y-6">
       <div className="flex items-center">
         <div className="flex items-center space-x-3">
@@ -1688,23 +1712,23 @@ export default function AdminPage() {
             <span className="text-xs text-gray-400">Auto-Refresh: 60s</span>
             <motion.button
               type="button"
-              onClick={() => refetchAuditLogs()}
-              disabled={auditLogsFetching}
+              onClick={handleAuditLogRefresh}
+              disabled={manualAuditRefreshActive || auditLogsFetching}
               whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
-              animate={auditLogsFetching && !prefersReducedMotion ? { boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.18)' } : { boxShadow: '0 0 0 0 rgba(220, 38, 38, 0)' }}
+              animate={(manualAuditRefreshActive || auditLogsFetching) && !prefersReducedMotion ? { boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.18)' } : { boxShadow: '0 0 0 0 rgba(220, 38, 38, 0)' }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
               className="btn btn-secondary text-xs disabled:cursor-wait"
               aria-live="polite"
             >
               <motion.span
                 aria-hidden="true"
-                animate={auditLogsFetching && !prefersReducedMotion ? { rotate: 360 } : { rotate: 0 }}
-                transition={auditLogsFetching && !prefersReducedMotion ? { duration: 0.75, ease: 'linear', repeat: Infinity } : { duration: 0.18 }}
+                animate={(manualAuditRefreshActive || auditLogsFetching) && !prefersReducedMotion ? { rotate: 360 } : { rotate: 0 }}
+                transition={(manualAuditRefreshActive || auditLogsFetching) && !prefersReducedMotion ? { duration: 0.75, ease: 'linear', repeat: Infinity } : { duration: 0.18 }}
                 className="inline-flex"
               >
                 <RotateCw className="w-4 h-4" />
               </motion.span>
-              {auditLogsFetching ? 'Aktualisiert...' : 'Aktualisieren'}
+              {manualAuditRefreshActive || auditLogsFetching ? 'Aktualisiert...' : 'Aktualisieren'}
             </motion.button>
           </div>
         </div>
@@ -2392,5 +2416,6 @@ export default function AdminPage() {
       )}
 
     </div>
+    </>
   );
 }
