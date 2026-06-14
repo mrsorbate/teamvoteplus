@@ -5,6 +5,7 @@ import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2, Loader2, Check } fr
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
+import { normalizeMatchFlag } from '../lib/eventDisplay';
 import { useToast } from '../lib/useToast';
 import AccessibleModal from '../components/AccessibleModal';
 
@@ -257,6 +258,27 @@ export default function EventEditPage() {
     }
     return homeVenues.find((venue: any) => String(venue?.name || '').trim() === defaultHomeVenueName) || homeVenues[0];
   })();
+  const isAwayMatch = event?.type === 'match' && normalizeMatchFlag(event?.is_home_match, false);
+
+  const matchesHomeVenue = (venueName: unknown, street: unknown, zipCity: unknown): boolean => {
+    const normalizedVenueName = String(venueName || '').trim().toLowerCase();
+    const normalizedStreet = String(street || '').trim().toLowerCase();
+    const normalizedZipCity = String(zipCity || '').trim().toLowerCase();
+    if (!normalizedVenueName && !normalizedStreet && !normalizedZipCity) {
+      return false;
+    }
+
+    return homeVenues.some((venue: any) => {
+      const homeVenueName = String(venue?.name || '').trim().toLowerCase();
+      const homeStreet = String(venue?.street || '').trim().toLowerCase();
+      const homeZipCity = String(venue?.zip_city || '').trim().toLowerCase();
+      return Boolean(
+        homeVenueName && normalizedVenueName === homeVenueName
+        && (!homeStreet || normalizedStreet === homeStreet)
+        && (!homeZipCity || normalizedZipCity === homeZipCity)
+      );
+    });
+  };
 
   const applyHomeVenueByIndex = (indexValue: string) => {
     const index = parseInt(indexValue, 10);
@@ -299,14 +321,18 @@ export default function EventEditPage() {
       }
     }
 
+    const shouldClearHomeVenueForAwayMatch = event.type === 'match'
+      && normalizeMatchFlag(event.is_home_match, false)
+      && matchesHomeVenue(event.location_venue || event.location, event.location_street, event.location_zip_city);
+
     setEventData({
       title: event.title || '',
       type: (event.type || 'training') as 'training' | 'match' | 'other',
       description: event.description || '',
-      location_venue: event.location_venue || event.location || '',
-      location_street: event.location_street || '',
-      location_zip_city: event.location_zip_city || '',
-      pitch_type: event.pitch_type || '',
+      location_venue: shouldClearHomeVenueForAwayMatch ? '' : event.location_venue || event.location || '',
+      location_street: shouldClearHomeVenueForAwayMatch ? '' : event.location_street || '',
+      location_zip_city: shouldClearHomeVenueForAwayMatch ? '' : event.location_zip_city || '',
+      pitch_type: shouldClearHomeVenueForAwayMatch ? '' : event.pitch_type || '',
       meeting_point: event.meeting_point || '',
       arrival_minutes: event.arrival_minutes === null || event.arrival_minutes === undefined ? '' : String(event.arrival_minutes),
       start_time: toLocalInputValue(event.start_time),
@@ -353,7 +379,7 @@ export default function EventEditPage() {
     setSeriesRepeatUntil(repeatUntilFromEvent);
     setSaveWholeSeries(false);
     setSeriesValidationMessage('');
-  }, [event]);
+  }, [event, teamSettings?.home_venues]);
 
   useEffect(() => {
     if (!eventData.invite_all || !allMemberIds.length) {
@@ -680,7 +706,7 @@ export default function EventEditPage() {
               Ort & Organisation
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(eventData.type === 'match' || eventData.type === 'training') && homeVenues.length > 0 && (
+            {(eventData.type === 'training' || (eventData.type === 'match' && !isAwayMatch)) && homeVenues.length > 0 && (
               <div className="md:col-span-2">
                 <select
                   defaultValue=""

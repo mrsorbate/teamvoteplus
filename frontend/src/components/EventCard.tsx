@@ -138,7 +138,7 @@ export default function EventCard({
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 pr-12 sm:pr-14">
             {squadIndicator && (
               <span
-                className="inline-flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full bg-yellow-300 text-[11px] sm:text-xs font-heading font-bold text-gray-950"
+                className="inline-flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full border border-gray-600 bg-gray-700 text-[11px] sm:text-xs font-heading font-bold text-gray-100"
                 title={`Mannschaft ${squadIndicator}`}
                 aria-label={`Mannschaft ${squadIndicator}`}
               >
