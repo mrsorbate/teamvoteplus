@@ -472,7 +472,7 @@ router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
           responseStmt.run(event.id, req.user!.id, 'pending');
         }
       })();
-    } catch (innerError: any) {
+    } catch (innerError) {
       // Roll back the used_count increment on failure
       db.prepare('UPDATE team_invites SET used_count = used_count - 1 WHERE id = ?').run(invite.id);
       if (innerError.status === 409) {
@@ -491,7 +491,7 @@ router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
       team_id: invite.team_id,
       invite_type: inviteType,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Accept invite error:', error);
     if (error.message?.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'You are already a member of this team' });
@@ -787,7 +787,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
         birth_date: invite.player_birth_date
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Register with invite error:', error);
     if (error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'Username or email already in use' });

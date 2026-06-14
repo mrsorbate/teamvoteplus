@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { eventsAPI, postsAPI, teamsAPI, badgeProxyUrl } from '../lib/api';
+import { eventsAPI, postsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Swords, MessageSquare } from 'lucide-react';
+import { Calendar, Users, RotateCw, MessageSquare } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
 import RefreshReloadOverlay from '../components/RefreshReloadOverlay';
+import EventCard from '../components/EventCard';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -327,291 +328,32 @@ export default function DashboardPage() {
             {upcomingEvents.map((event: any) => {
               const startDate = new Date(event.start_time);
               const isToday = startDate.toDateString() === new Date().toDateString();
-              
-              const getStatusIcon = (status: string) => {
-                switch (status) {
-                  case 'accepted': return <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />;
-                  case 'declined': return <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />;
-                  case 'tentative': return <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />;
-                  default: return <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />;
-                }
-              };
-
-              const getStatusCircleClass = (status: string) => {
-                switch (status) {
-                  case 'accepted':
-                    return 'bg-green-900/30 text-green-300 border border-green-700/50';
-                  case 'declined':
-                    return 'bg-red-900/30 text-red-300 border border-red-700/50';
-                  case 'tentative':
-                    return 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50';
-                  default:
-                    return 'bg-gray-700 text-gray-300 border border-gray-600/60';
-                }
-              };
-
-              const handleStatusClick = (status: string, e: React.MouseEvent) => {
-                e.stopPropagation();
-                if (status === 'declined' && user?.role !== 'trainer') {
-                  setPendingDecline({
-                    eventId: event.id,
-                    title: String(displayTitle || opponent || event.title || 'Termin'),
-                  });
-                  setDeclineReason('');
-                  setDeclineReasonError(null);
-                  setOpenQuickActionsEventId(null);
-                  return;
-                }
-                updateResponseMutation.mutate({ eventId: event.id, status });
-              };
-
-              const handleCardClick = () => {
+              const handleCardOpen = (selectedEvent: any) => {
                 const from = `${location.pathname}${location.search}${location.hash}`;
-                navigate(`/events/${event.id}`, { state: { from } });
+                navigate(`/events/${selectedEvent.id}`, { state: { from } });
               };
-
-              const getActionButtonClass = (status: string) => {
-                const isSelected = event.my_status === status;
-                const baseClass = 'w-11 h-11 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800';
-                
-                if (status === 'accepted') {
-                  return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-900/30 text-green-300 border border-green-700/50 hover:bg-green-900/50'}`;
-                } else if (status === 'declined') {
-                  return `${baseClass} ${isSelected ? 'bg-red-600 text-white' : 'bg-red-900/30 text-red-300 border border-red-700/50 hover:bg-red-900/50'}`;
-                } else if (status === 'tentative') {
-                  return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50 hover:bg-yellow-900/50'}`;
-                }
-              };
-
-              const locationText = ([event.location_venue, event.location_street, event.location_zip_city]
-                .filter(Boolean)
-                .join(', ') || event.location || '').trim();
-
-              // Extract opponent name from title
-              const getOpponentName = () => {
-                if (!event.title) return '';
-                const parts = event.title.split(' - ');
-                if (parts.length === 2) {
-                  const part1 = parts[0].trim();
-                  const part2 = parts[1].trim();
-                  if (event?.type === 'match') {
-                    const isHomeMatch = event?.is_home_match === true || event?.is_home_match === 1 || event?.is_home_match === '1';
-                    const isAwayMatch = event?.is_home_match === false || event?.is_home_match === 0 || event?.is_home_match === '0';
-                    if (isHomeMatch || isAwayMatch) {
-                      return isHomeMatch ? part2 : part1;
-                    }
-                  }
-                  return part1;
-                }
-                return event.title;
-              };
-
-              const getSquadIndicator = (): 'I' | 'II' | null => {
-                const title = String(event?.title || '').trim();
-                const teamName = String(event?.team_name || '').trim();
-                if (/^\[(?:II|2)\]\s*/i.test(title) || /^\((?:II|2)\)\s*/i.test(title) || /\bII\b/i.test(teamName)) {
-                  return 'II';
-                }
-                if (/^\[(?:I|1)\]\s*/i.test(title) || /^\((?:I|1)\)\s*/i.test(title) || /\bI\b/i.test(teamName)) {
-                  return 'I';
-                }
-                return null;
-              };
-
-              const opponent = getOpponentName();
-              const displayTitle = String(opponent || event.title || '')
-                .replace(/^\[(?:I{1,3}|\d+)\]\s*/i, '')
-                .replace(/^\((?:I{1,3}|\d+)\)\s*/i, '')
-                .replace(/^spiel\s+gegen\s+/i, '')
-                .trim();
-              const squadIndicator = getSquadIndicator();
-              const squadBadgeText = squadIndicator || event.team_name;
-	              const squadBadgeClass = squadIndicator === 'II'
-	                ? 'bg-gray-950 text-white'
-	                : squadIndicator === 'I'
-	                  ? 'bg-yellow-300 text-yellow-900'
-	                  : 'bg-primary-900/40 text-primary-200';
-              const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
-              const dayLabel = String(startDate.getDate()).padStart(2, '0');
-              const monthLabel = String(startDate.getMonth() + 1).padStart(2, '0');
-              const dateLabel = `${dayLabel}.${monthLabel}`;
-              const timeLabel = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-              const opponentCrestUrl = badgeProxyUrl(typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '') || '';
-              
-              // Calculate meeting time if arrival_minutes is set
-              const arrivalMinutes = typeof event?.arrival_minutes === 'number' ? event.arrival_minutes : 0;
-              let meetingTimeLabel = '';
-              if (arrivalMinutes > 0) {
-                const meetingDate = new Date(startDate);
-                meetingDate.setMinutes(meetingDate.getMinutes() - arrivalMinutes);
-                meetingTimeLabel = meetingDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-              }
-              
-              const matchTypeLabel = event?.type === 'match'
-                ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
-                : '';
 
               return (
-	                <div
-	                  key={event.id}
-	                  onClick={handleCardClick}
-	                  onKeyDown={(keyboardEvent) => {
-	                    if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
-	                      keyboardEvent.preventDefault();
-	                      handleCardClick();
-	                    }
-	                  }}
-	                  role="button"
-	                  tabIndex={0}
-	                  aria-label={`${displayTitle || opponent || event.title} öffnen`}
-	                  className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} event-card ${
-	                    isToday ? 'bg-primary-900/30 border-primary-600' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="w-20 sm:w-24 shrink-0 flex items-center justify-center">
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <p className="event-date-label text-gray-300">{weekdayLabel}</p>
-                        <p className="mt-1 text-3xl sm:text-4xl font-semibold tabular-nums text-gray-100 leading-none tracking-tight">{dateLabel}</p>
-                      </div>
-                    </div>
-
-                    <div className="w-px bg-gray-700 shrink-0 self-stretch" />
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          {event.type === 'match' && opponentCrestUrl ? (
-                            <img
-                              src={opponentCrestUrl}
-                              alt={`${displayTitle || 'Gegner'} Wappen`}
-                              className="w-5 h-5 sm:w-6 sm:h-6 crest-badge"
-                              loading="lazy"
-                            />
-                          ) : event.type === 'training' ? (
-                            <Cone className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300 shrink-0" />
-                          ) : event.type === 'match' ? (
-                            <Swords className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300 shrink-0" />
-                          ) : (
-                            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300 shrink-0" />
-                          )}
-                          <h3 className="text-base sm:text-lg font-semibold text-white truncate">{displayTitle || opponent || event.title}</h3>
-                        </div>
-                        {squadBadgeText && (
-                          <span
-                            className={`inline-flex items-center justify-center min-w-7 px-2 h-7 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 ${squadBadgeClass}`}
-                          >
-                            {squadBadgeText}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-200">
-                        <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal">Uhr</span></span>
-                      </div>
-
-                      {meetingTimeLabel && (
-                        <div className="mt-0.5 text-xs sm:text-sm text-gray-400">
-                          Treffpunkt: {meetingTimeLabel} Uhr
-                        </div>
-                      )}
-
-                      {matchTypeLabel && (
-                        <div className="mt-0.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-400">
-                          {event.is_home_match ? (
-                            <Home className="w-3.5 h-3.5" />
-                          ) : (
-                            <Plane className="w-3.5 h-3.5" />
-                          )}
-                          <span>{matchTypeLabel}</span>
-                        </div>
-                      )}
-
-                      <div className="mt-1.5 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm tabular-nums whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 text-green-300 font-medium">
-                          <Check className="w-3.5 h-3.5" />
-                          {event.accepted_count}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-yellow-300 font-medium">
-                          <HelpCircle className="w-3.5 h-3.5" />
-                          {event.tentative_count}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-red-300 font-medium">
-                          <X className="w-3.5 h-3.5" />
-                          {event.declined_count}
-                        </span>
-                      </div>
-
-                      {locationText && (
-                        <div className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-300">
-                          <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span className="truncate">{locationText}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-0.5 flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="relative">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
-                          }}
-                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 ${getStatusCircleClass(event.my_status)} ${
-                            openQuickActionsEventId === event.id
-	                              ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-gray-800'
-                              : ''
-                          }`}
-                          title="Status anzeigen und ändern"
-                          aria-label="Status anzeigen und ändern"
-                        >
-                          {getStatusIcon(event.my_status)}
-                        </button>
-
-                        {openQuickActionsEventId === event.id && (
-                          <div className="absolute right-0 top-12 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-gray-800 border border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                handleStatusClick('accepted', e);
-                                setOpenQuickActionsEventId(null);
-                              }}
-                              disabled={updateResponseMutation.isPending}
-                              className={getActionButtonClass('accepted')}
-                              title="Zugesagt"
-                              aria-label="Zugesagt"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                handleStatusClick('tentative', e);
-                                setOpenQuickActionsEventId(null);
-                              }}
-                              disabled={updateResponseMutation.isPending}
-                              className={getActionButtonClass('tentative')}
-                              title="Unsicher"
-                              aria-label="Unsicher"
-                            >
-                              <HelpCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                handleStatusClick('declined', e);
-                                setOpenQuickActionsEventId(null);
-                              }}
-                              disabled={updateResponseMutation.isPending}
-                              className={getActionButtonClass('declined')}
-                              title="Absagen"
-                              aria-label="Absagen"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  activeQuickActionsEventId={openQuickActionsEventId}
+                  isToday={isToday}
+                  isStatusPending={updateResponseMutation.isPending}
+                  showTeamNameFallback
+                  requiresDeclineReason={user?.role !== 'trainer'}
+                  onOpen={handleCardOpen}
+                  onStatusChange={(selectedEvent, status) => {
+                    updateResponseMutation.mutate({ eventId: selectedEvent.id, status });
+                  }}
+                  onDeclineWithReason={(selectedEvent, title) => {
+                    setPendingDecline({ eventId: selectedEvent.id, title });
+                    setDeclineReason('');
+                    setDeclineReasonError(null);
+                    setOpenQuickActionsEventId(null);
+                  }}
+                  setActiveQuickActionsEventId={setOpenQuickActionsEventId}
+                />
               );
             })}
           </div>

@@ -68,7 +68,7 @@ export async function sendPushToSubscriptions(subscriptions: StoredPushSubscript
       await webpush.sendNotification(toWebPushSubscription(subscription), serializedPayload);
       sent += 1;
       console.log(`Push sent to ${subscription.endpoint.substring(0, 50)}...`);
-    } catch (error: any) {
+    } catch (error) {
       const statusCode = Number(error?.statusCode || 0);
       const errorMessage = error?.message || String(error);
       

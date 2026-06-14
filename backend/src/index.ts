@@ -109,7 +109,7 @@ app.get('/api/health', (req, res) => {
       db: 'ok',
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Health DB check failed:', error);
     return res.status(503).json({
       status: 'degraded',

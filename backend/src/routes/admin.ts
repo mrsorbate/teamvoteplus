@@ -837,7 +837,7 @@ router.post('/teams/:teamId/members', (req: AuthRequest, res) => {
       jersey_number: null,
       position: null
     });
-  } catch (error: any) {
+  } catch (error) {
     if (error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'User is already a team member' });
     }
