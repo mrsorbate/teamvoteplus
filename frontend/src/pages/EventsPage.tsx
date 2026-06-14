@@ -216,6 +216,13 @@ export default function EventsPage() {
       meetingDate.setMinutes(meetingDate.getMinutes() - arrivalMinutes);
       meetingTimeLabel = meetingDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
     }
+    const meetingPointText = String(event?.meeting_point || locationText || '').trim();
+    const meetingLabel = meetingPointText
+      ? `Treffpunkt: ${meetingTimeLabel ? `${meetingTimeLabel} Uhr ` : ''}${meetingPointText}`
+      : 'Treffpunkt offen';
+    const isHomeMatch = event?.is_home_match === true || event?.is_home_match === 1 || event?.is_home_match === '1';
+    const isAwayMatch = event?.is_home_match === false || event?.is_home_match === 0 || event?.is_home_match === '0';
+    const hasMatchVenueIcon = event.type === 'match' && (isHomeMatch || isAwayMatch);
 
     const handleEventClick = () => {
       const from = `${location.pathname}${location.search}${location.hash}`;
@@ -248,8 +255,8 @@ export default function EventsPage() {
           <div className="w-px bg-gray-700/60 shrink-0 self-stretch" />
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-start gap-2 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
                 {event.type === 'match' && opponentCrestUrl ? (
                   <img
                     src={opponentCrestUrl}
@@ -266,6 +273,15 @@ export default function EventsPage() {
                 )}
                 <h3 className="text-base sm:text-lg font-heading font-semibold text-white truncate">{displayTitle || opponent || event.title}</h3>
               </div>
+              {hasMatchVenueIcon && (
+                <span
+                  className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-700/70 bg-gray-800/70 text-gray-300"
+                  title={isHomeMatch ? 'Heimspiel' : 'Auswärtsspiel'}
+                  aria-label={isHomeMatch ? 'Heimspiel' : 'Auswärtsspiel'}
+                >
+                  {isHomeMatch ? <Home className="w-3.5 h-3.5" /> : <Plane className="w-3.5 h-3.5" />}
+                </span>
+              )}
               {!teamId && (squadIndicator || event.team_name) && (
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${
@@ -285,43 +301,43 @@ export default function EventsPage() {
               <span className="text-xl sm:text-2xl font-heading font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal text-gray-400">Uhr</span></span>
             </div>
 
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs sm:text-sm text-gray-300">
+              <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500 shrink-0" />
+              <span className="truncate">{meetingLabel}</span>
+            </div>
+
+            <div className="mt-2 grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2 tabular-nums">
+              <span className="min-w-0 inline-flex items-center justify-center gap-1 rounded-lg border border-green-700/40 bg-green-900/25 px-2 py-1 text-[11px] sm:text-xs font-semibold text-green-300">
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                <span className="font-bold">{event.accepted_count ?? 0}</span>
+                <span className="truncate">Zusagen</span>
+              </span>
+              <span className="min-w-0 inline-flex items-center justify-center gap-1 rounded-lg border border-yellow-700/40 bg-yellow-900/25 px-2 py-1 text-[11px] sm:text-xs font-semibold text-yellow-300">
+                <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="font-bold">{event.tentative_count ?? 0}</span>
+                <span className="truncate">Unsicher</span>
+              </span>
+              <span className="min-w-0 inline-flex items-center justify-center gap-1 rounded-lg border border-red-700/40 bg-red-900/25 px-2 py-1 text-[11px] sm:text-xs font-semibold text-red-300">
+                <X className="w-3.5 h-3.5 shrink-0" />
+                <span className="font-bold">{event.declined_count ?? 0}</span>
+                <span className="truncate">Absagen</span>
+              </span>
+            </div>
+
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {event.type === 'training' ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-heading font-semibold bg-blue-900/40 text-blue-300 border border-blue-700/40">
                   <Cone className="w-2.5 h-2.5" />
                   Training
                 </span>
-              ) : event.type === 'match' ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-heading font-semibold bg-primary-900/50 text-primary-300 border border-primary-700/40">
-                  {event.is_home_match ? <Home className="w-2.5 h-2.5" /> : <Plane className="w-2.5 h-2.5" />}
-                  {event.is_home_match ? 'Heim' : 'Auswärts'}
-                </span>
-              ) : (
+              ) : event.type !== 'match' ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-heading font-semibold bg-gray-700/60 text-gray-400 border border-gray-600/40">
                   <Calendar className="w-2.5 h-2.5" />
                   Termin
                 </span>
+              ) : (
+                null
               )}
-              {meetingTimeLabel && (
-                <span className="text-[11px] text-gray-400">
-                  Treffpunkt {meetingTimeLabel} Uhr
-                </span>
-              )}
-            </div>
-
-            <div className="mt-1.5 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm tabular-nums whitespace-nowrap">
-              <span className="inline-flex items-center gap-1 text-green-400 font-medium">
-                <Check className="w-3.5 h-3.5" />
-                {event.accepted_count}
-              </span>
-              <span className="inline-flex items-center gap-1 text-yellow-400 font-medium">
-                <HelpCircle className="w-3.5 h-3.5" />
-                {event.tentative_count}
-              </span>
-              <span className="inline-flex items-center gap-1 text-red-400 font-medium">
-                <X className="w-3.5 h-3.5" />
-                {event.declined_count}
-              </span>
             </div>
 
             {locationText && (
