@@ -80,7 +80,7 @@ export default function Layout({ organization }: LayoutProps) {
       </a>
 
       {/* ── Top navigation bar ── */}
-      <nav className="sticky top-0 z-30 border-b border-gray-700/70 bg-gray-950/90 pt-safe shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-gray-950/78">
+      <nav className="relative z-30 border-b border-gray-700/70 bg-gray-950/90 pt-safe shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-gray-950/78">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
           <div className="flex justify-between min-h-[3.5rem] sm:h-14">
 
@@ -88,10 +88,10 @@ export default function Layout({ organization }: LayoutProps) {
             <div className="flex items-center min-w-0 flex-1">
               <Link
                 to={user?.role === 'admin' ? '/admin' : '/'}
-                className="group flex min-h-11 w-full min-w-0 flex-col items-start justify-center gap-1 rounded-xl px-1 py-1 transition-colors hover:bg-gray-800/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5 sm:px-1.5 sm:py-0 sm:-ml-1.5"
+                className="group flex min-h-11 w-full min-w-0 flex-col rounded-xl border border-gray-800/80 bg-gray-900/45 px-2.5 py-2 transition-colors hover:bg-gray-800/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5 sm:border-0 sm:bg-transparent sm:px-1.5 sm:py-0 sm:-ml-1.5"
                 aria-label="Zur Startseite"
               >
-                <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-none">
+                <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:flex-none sm:justify-start">
                   <TeamVoteLogo
                     className="shrink-0"
                     iconClassName="h-8 w-8 rounded-lg sm:h-9 sm:w-9 sm:rounded-xl"
@@ -107,16 +107,16 @@ export default function Layout({ organization }: LayoutProps) {
                     </span>
                   )}
                 </div>
-                <div className="flex w-full min-w-0 flex-1 items-center gap-1.5 sm:w-auto sm:flex-none">
+                <div className="mt-2 flex w-full min-w-0 flex-1 items-center justify-center border-t border-gray-800/80 pt-2 sm:mt-0 sm:w-auto sm:flex-none sm:justify-start sm:border-t-0 sm:pt-0">
                   {(organizationLogo || organizationName !== 'Dein Verein') && (
                     <>
                       {organizationName !== 'Dein Verein' && (
-                        <span className="flex min-w-0 flex-1 flex-col justify-center leading-tight sm:flex-none">
-                          <span className="block whitespace-normal break-words text-sm font-semibold text-gray-100 sm:hidden">
+                        <span className="flex min-w-0 flex-1 flex-col items-center justify-center leading-tight sm:flex-none sm:items-start">
+                          <span className="block w-full whitespace-normal break-words text-center text-base font-semibold text-gray-100 sm:hidden">
                             {organizationName}
                           </span>
                           {headerTeamName && (
-                            <span className="block whitespace-normal break-words text-xs font-medium text-gray-300 sm:hidden">
+                            <span className="mt-0.5 block w-full whitespace-normal break-words text-center text-sm font-medium text-gray-300 sm:hidden">
                               {headerTeamName}
                             </span>
                           )}
