@@ -196,7 +196,7 @@ export default function Layout({ organization }: LayoutProps) {
                 )}
               </div>
 
-              {/* Desktop: Profile + Logout */}
+              {/* Desktop: Profile */}
               <div className="flex items-center gap-2 pl-2">
                 <Link to="/settings" aria-label="Zu den Einstellungen" className="icon-button rounded-full">
                   {menuProfilePicture ? (
@@ -211,14 +211,6 @@ export default function Layout({ organization }: LayoutProps) {
                     </div>
                   )}
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="icon-button"
-                  aria-label="Logout"
-                  title="Logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
               </div>
 
             </div>
