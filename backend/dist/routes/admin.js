@@ -479,7 +479,7 @@ router.post('/trainer-invites', (req, res) => {
     }
     catch (error) {
         logger_1.logger.error('Create trainer invite error:', error);
-        res.status(500).json({ error: error?.message || 'Failed to create trainer invite' });
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create trainer invite' });
     }
 });
 // Regenerate trainer setup invite link for existing trainer (admin only)
@@ -526,7 +526,7 @@ router.post('/users/:id/trainer-invite-resend', (req, res) => {
     }
     catch (error) {
         logger_1.logger.error('Resend trainer invite error:', error);
-        res.status(500).json({ error: error?.message || 'Failed to resend trainer invite' });
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to resend trainer invite' });
     }
 });
 // Create trainer user (admin only)
@@ -636,7 +636,6 @@ router.post('/teams/:teamId/members', (req, res) => {
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
         }
-        // Check if user exists
         const user = init_1.default.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(user_id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -670,7 +669,7 @@ router.post('/teams/:teamId/members', (req, res) => {
         });
     }
     catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'User is already a team member' });
         }
         logger_1.logger.error('Add team member error:', error);

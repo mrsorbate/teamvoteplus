@@ -37,7 +37,9 @@ async function sendPushToSubscriptions(subscriptions, payload) {
             sent += 1;
         }
         catch (error) {
-            const statusCode = Number(error?.statusCode || 0);
+            const statusCode = error != null && typeof error.statusCode === 'number'
+                ? error.statusCode
+                : 0;
             if (statusCode === 404 || statusCode === 410) {
                 removeSubscriptionByEndpoint.run(subscription.endpoint);
             }

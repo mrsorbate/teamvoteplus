@@ -866,7 +866,10 @@ router.put('/:id/settings', (req, res) => {
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
               home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`).get(teamId);
-        const calendarUrls = getCalendarUrls(req, teamId, updatedSettings?.calendar_token);
+        if (!updatedSettings) {
+            return res.status(500).json({ error: 'Failed to retrieve updated settings' });
+        }
+        const calendarUrls = getCalendarUrls(req, teamId, updatedSettings.calendar_token);
         return res.json({
             ...updatedSettings,
             fussballde_ids: parseFussballDeSources(updatedSettings.fussballde_id),
@@ -928,8 +931,7 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
         }
     }));
     const seenMatchKeys = new Set();
-    const matches = matchesBySource
-        .flat()
+    const matches = matchesBySource.flat()
         .filter((match) => {
         const key = [
             String(match?.date || ''),
@@ -1846,7 +1848,7 @@ router.post('/:id/members', (req, res) => {
         });
     }
     catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'User is already a team member' });
         }
         logger_1.logger.error('Add team member error:', error);

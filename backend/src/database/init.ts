@@ -222,6 +222,7 @@ db.exec(`
     content TEXT,
     poll_options TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
+    is_pinned INTEGER NOT NULL DEFAULT 0,
     created_by INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -242,6 +243,18 @@ db.exec(`
     FOREIGN KEY (post_id) REFERENCES team_posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE(post_id, user_id)
+  );
+
+  -- Lightweight reactions for the team feed
+  CREATE TABLE IF NOT EXISTS team_post_reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    reaction TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES team_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(post_id, user_id, reaction)
   );
 
   -- Create indexes for better performance
@@ -267,6 +280,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_team_posts_active ON team_posts(is_active);
   CREATE INDEX IF NOT EXISTS idx_team_post_reads_post_user ON team_post_reads(post_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_team_post_reads_user ON team_post_reads(user_id);
+  CREATE INDEX IF NOT EXISTS idx_team_post_reactions_post ON team_post_reactions(post_id);
+  CREATE INDEX IF NOT EXISTS idx_team_post_reactions_user ON team_post_reactions(user_id);
   -- Expression indexes for case-insensitive user lookups (login, registration, duplicate checks).
   -- LOWER() lookups cannot use a plain index — SQLite expression indexes require SQLite >= 3.9.0 (2015).
   -- PostgreSQL equivalent: CREATE INDEX ON users (lower(username)); or use citext column type.
@@ -387,6 +402,13 @@ try {
   addInviteColumn('player_name', 'TEXT');
   addInviteColumn('player_birth_date', 'DATE');
   addInviteColumn('player_jersey_number', 'INTEGER');
+
+  const postColumns = db.pragma('table_info(team_posts)') as Array<{ name: string }>;
+  const hasPostPinned = postColumns.some((col) => col.name === 'is_pinned');
+  if (!hasPostPinned) {
+    db.exec('ALTER TABLE team_posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0');
+    logger.info('Added is_pinned column to team_posts table');
+  }
   
   // Add series_id to events for recurring events
   const eventColumns = db.pragma('table_info(events)') as Array<{ name: string }>;

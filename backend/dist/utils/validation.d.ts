@@ -44,18 +44,18 @@ export declare const createEventSchema: z.ZodObject<{
     end_time: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     type: "training" | "match" | "other";
-    team_id: number;
     title: string;
-    start_time: string;
     end_time: string;
+    team_id: number;
+    start_time: string;
     description?: string | undefined;
     location?: string | undefined;
 }, {
     type: "training" | "match" | "other";
-    team_id: number;
     title: string;
-    start_time: string;
     end_time: string;
+    team_id: number;
+    start_time: string;
     description?: string | undefined;
     location?: string | undefined;
 }>;

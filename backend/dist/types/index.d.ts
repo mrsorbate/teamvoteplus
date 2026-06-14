@@ -132,4 +132,72 @@ export interface CreatePlayerStatsDTO {
     rating?: number;
     notes?: string;
 }
+export interface TeamInvite {
+    id: number;
+    team_id: number;
+    token: string;
+    role: 'trainer' | 'player' | 'staff';
+    created_by: number;
+    expires_at: string | null;
+    max_uses: number | null;
+    used_count: number;
+    player_name: string | null;
+    player_birth_date: string | null;
+    player_jersey_number: number | null;
+    created_at: string;
+}
+export interface TrainerInvite {
+    id: number;
+    token: string;
+    invited_name: string;
+    invited_user_id: number | null;
+    team_ids: string;
+    created_by: number;
+    expires_at: string | null;
+    used_count: number;
+    created_at: string;
+}
+export interface TeamPost {
+    id: number;
+    team_id: number;
+    type: 'announcement' | 'poll';
+    title: string;
+    content: string | null;
+    poll_options: string | null;
+    is_active: number;
+    created_by: number;
+    created_at: string;
+    updated_at: string;
+}
+export interface TeamPostRead {
+    id: number;
+    post_id: number;
+    user_id: number;
+    seen_at: string | null;
+    answer_option: number | null;
+    answered_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+export interface AdminAuditLog {
+    id: number;
+    actor_id: number;
+    actor_username: string | null;
+    actor_role: string | null;
+    action: string;
+    target_type: string | null;
+    target_id: number | null;
+    details_json: string | null;
+    created_at: string;
+}
+export interface PushSubscription {
+    id: number;
+    user_id: number;
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+    expiration_time: number | null;
+    created_at: string;
+    updated_at: string;
+}
 //# sourceMappingURL=index.d.ts.map

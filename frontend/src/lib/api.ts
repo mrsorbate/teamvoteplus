@@ -363,7 +363,7 @@ export const notificationsAPI = {
 export const postsAPI = {
   getOpen: () => api.get('/posts/open'),
 
-  getTeamPosts: (teamId: number, scope: 'open' | 'all' = 'open') =>
+  getTeamPosts: (teamId: number, scope: 'open' | 'all' = 'all') =>
     api.get(`/teams/${teamId}/posts?scope=${scope}`),
 
   createTeamPost: (
@@ -381,6 +381,12 @@ export const postsAPI = {
 
   answerPoll: (teamId: number, postId: number, optionIndex: number) =>
     api.post(`/teams/${teamId}/posts/${postId}/answer`, { optionIndex }),
+
+  updateTeamPost: (teamId: number, postId: number, data: { is_pinned?: boolean }) =>
+    api.patch(`/teams/${teamId}/posts/${postId}`, data),
+
+  toggleReaction: (teamId: number, postId: number, reaction: string) =>
+    api.post(`/teams/${teamId}/posts/${postId}/reactions`, { reaction }),
 };
 
 export default api;

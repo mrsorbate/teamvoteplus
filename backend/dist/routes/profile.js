@@ -229,8 +229,7 @@ router.put('/password', async (req, res) => {
         if (newPassword.length < 6) {
             return res.status(400).json({ error: 'New password must be at least 6 characters' });
         }
-        // Get current user with password
-        const user = init_1.default.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+        const user = init_1.default.prepare('SELECT password FROM users WHERE id = ?').get(req.user.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -256,7 +255,6 @@ router.post('/picture', upload.single('picture'), (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        // Get old profile picture
         const dbUser = init_1.default.prepare('SELECT profile_picture FROM users WHERE id = ?').get(req.user.id);
         // Delete old profile picture if it exists
         if (dbUser?.profile_picture) {

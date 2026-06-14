@@ -110,7 +110,7 @@ router.post('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
             id: result.lastInsertRowid,
             token,
             team_id: teamId,
-            team_name: team.name,
+            team_name: team?.name,
             role: inviteRole,
             invitee_name: normalizedInviteeName,
             expires_at: expiresAt,
@@ -362,12 +362,10 @@ router.post('/invites/:token/accept', auth_1.authenticate, (req, res) => {
         if (!invite) {
             return res.status(404).json({ error: 'Invite not found' });
         }
-        // Check if expired
         if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
             return res.status(410).json({ error: 'Invite has expired' });
         }
         const effectiveMaxUses = invite.max_uses ?? 1;
-        // Check if max uses reached
         if (invite.used_count >= effectiveMaxUses) {
             return res.status(410).json({ error: 'Invite has reached maximum uses' });
         }
@@ -392,9 +390,8 @@ router.post('/invites/:token/accept', auth_1.authenticate, (req, res) => {
             })();
         }
         catch (innerError) {
-            // Roll back the used_count increment on failure
             init_1.default.prepare('UPDATE team_invites SET used_count = used_count - 1 WHERE id = ?').run(invite.id);
-            if (innerError.status === 409) {
+            if (innerError instanceof Error && innerError.status === 409) {
                 return res.status(409).json({ error: 'You are already a member of this team' });
             }
             throw innerError;
@@ -411,7 +408,7 @@ router.post('/invites/:token/accept', auth_1.authenticate, (req, res) => {
     }
     catch (error) {
         logger_1.logger.error('Accept invite error:', error);
-        if (error.message?.includes('UNIQUE constraint failed')) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'You are already a member of this team' });
         }
         res.status(500).json({ error: 'Failed to accept invite' });
@@ -426,7 +423,6 @@ router.delete('/invites/:id', auth_1.authenticate, (req, res) => {
         if (!invite) {
             return res.status(404).json({ error: 'Invite not found' });
         }
-        // Check if user is trainer of this team
         const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(invite.team_id, req.user.id);
         if (req.user.role !== 'admin' && (!membership || membership.role !== 'trainer')) {
             return res.status(403).json({ error: 'Only admins or trainers can delete invites' });
@@ -561,7 +557,6 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
         if (!invite) {
             return res.status(404).json({ error: 'Invite not found' });
         }
-        // Check if expired
         if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
             return res.status(410).json({ error: 'Invite has expired' });
         }
@@ -620,7 +615,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
     }
     catch (error) {
         logger_1.logger.error('Register with invite error:', error);
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'Username or email already in use' });
         }
         res.status(500).json({ error: 'Failed to register' });

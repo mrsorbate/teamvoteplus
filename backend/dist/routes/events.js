@@ -161,14 +161,14 @@ router.get('/', (req, res) => {
       ) rc ON rc.event_id = e.id
       WHERE 1 = 1
     `;
-        const params = [team_id, req.user.id];
+        const params = [String(team_id), req.user.id];
         if (from) {
             query += ' AND e.start_time >= ?';
-            params.push(from);
+            params.push(String(from));
         }
         if (to) {
             query += ' AND e.start_time <= ?';
-            params.push(to);
+            params.push(String(to));
         }
         if (!from && !to) {
             query += isPastView ? ' AND e.start_time <= ?' : ' AND e.start_time >= ?';
@@ -212,7 +212,7 @@ router.get('/:id', (req, res) => {
       WHERE er.event_id = ?
       ORDER BY er.responded_at DESC
     `).all(eventId);
-        const canViewResponses = isTrainer || event.visibility_all === 1 || event.visibility_all === true;
+        const canViewResponses = isTrainer || event.visibility_all === 1;
         if (!canViewResponses) {
             responses = responses.filter((r) => r.user_id === req.user.id);
         }
@@ -378,8 +378,9 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: `Für die Platzart "${String(pitch_type || '').trim()}" ist kein Heimspiel-Platz hinterlegt` });
         }
         const validDefaultStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
-        const defaultResponseStatus = validDefaultStatuses.has(teamSettings?.default_response)
-            ? teamSettings.default_response
+        const rawDefaultResponse = teamSettings?.default_response ?? '';
+        const defaultResponseStatus = validDefaultStatuses.has(rawDefaultResponse)
+            ? rawDefaultResponse
             : 'pending';
         const resolvedMeetingPoint = meeting_point || null;
         const eventType = type || 'other';
