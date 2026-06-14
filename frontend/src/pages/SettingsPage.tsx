@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsAPI, profileAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { User, Lock, Camera, Trash2, Check, X, AlertTriangle, AlertCircle, Edit2, Bell, LogOut } from 'lucide-react';
+import { User, Lock, Camera, Trash2, Check, X, AlertTriangle, AlertCircle, Edit2, Bell, LogOut, BarChart3 } from 'lucide-react';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [jerseyNumber, setJerseyNumber] = useState('');
   const [footedness, setFootedness] = useState('');
   const [position, setPosition] = useState('');
+  const [statsVisibleToTeam, setStatsVisibleToTeam] = useState(true);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showDeletePictureConfirmModal, setShowDeletePictureConfirmModal] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
@@ -115,6 +116,7 @@ export default function SettingsPage() {
       jersey_number?: number | null;
       footedness?: string | null;
       position?: string | null;
+      stats_visible_to_team?: boolean;
     }) => profileAPI.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -395,6 +397,10 @@ export default function SettingsPage() {
     }
   }, [profile?.position]);
 
+  useEffect(() => {
+    setStatsVisibleToTeam(Number(profile?.stats_visible_to_team ?? 1) === 1);
+  }, [profile?.stats_visible_to_team]);
+
   const handlePhoneNumberSave = () => {
     updateProfileMutation.mutate({ phone_number: phoneNumber });
   };
@@ -420,6 +426,18 @@ export default function SettingsPage() {
       footedness: footedness.trim() ? footedness.trim().toLowerCase() : null,
       position: position.trim() ? position.trim() : null,
     });
+  };
+
+  const handleStatsVisibilityToggle = (nextVisible: boolean) => {
+    setStatsVisibleToTeam(nextVisible);
+    updateProfileMutation.mutate(
+      { stats_visible_to_team: nextVisible },
+      {
+        onError: () => {
+          setStatsVisibleToTeam((current) => !current);
+        },
+      }
+    );
   };
 
   const handleEnablePush = () => {
@@ -751,6 +769,43 @@ export default function SettingsPage() {
                       placeholder="z. B. Zentrales Mittelfeld"
                       maxLength={40}
                     />
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-gray-700 bg-gray-900/70 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-700/50 bg-primary-900/30">
+                      <BarChart3 className="h-5 w-5 text-primary-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">Statistik für Teammitglieder freigeben</h4>
+                          <p className="mt-1 text-xs leading-relaxed text-gray-300">
+                            Trainer sehen deine Statistik immer. Andere Spieler sehen sie nur, wenn diese Freigabe aktiv ist.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={statsVisibleToTeam}
+                          onClick={() => handleStatsVisibilityToggle(!statsVisibleToTeam)}
+                          disabled={updateProfileMutation.isPending}
+                          className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-colors ${
+                            statsVisibleToTeam
+                              ? 'border-green-500 bg-green-600'
+                              : 'border-gray-600 bg-gray-800'
+                          }`}
+                          title="Statistik-Freigabe umschalten"
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 rounded-full bg-white transition-transform ${
+                              statsVisibleToTeam ? 'translate-x-7' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

@@ -22,33 +22,10 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
     }
 
     // Get attendance statistics
-    const isPlayer = membership.role === 'player';
+    const isTrainer = membership.role === 'trainer';
 
-    const attendanceStats = isPlayer
+    const attendanceStats = isTrainer
       ? db.prepare(`
-          SELECT 
-            u.id,
-            u.name,
-            COUNT(CASE WHEN er.status = 'accepted' THEN 1 END) as accepted,
-            COUNT(CASE WHEN er.status = 'declined' THEN 1 END) as declined,
-            COUNT(CASE WHEN er.status = 'tentative' THEN 1 END) as tentative,
-            COUNT(CASE WHEN er.status = 'pending' OR er.status IS NULL THEN 1 END) as pending,
-            COUNT(e.id) as total_events,
-            COUNT(CASE WHEN e.type = 'training' THEN 1 END) as total_training,
-            COUNT(CASE WHEN e.type = 'match' THEN 1 END) as total_match,
-            COUNT(CASE WHEN e.type = 'other' THEN 1 END) as total_other,
-            COUNT(CASE WHEN e.type = 'training' AND er.status = 'accepted' THEN 1 END) as accepted_training,
-            COUNT(CASE WHEN e.type = 'match' AND er.status = 'accepted' THEN 1 END) as accepted_match,
-            COUNT(CASE WHEN e.type = 'other' AND er.status = 'accepted' THEN 1 END) as accepted_other,
-            COALESCE(ROUND(COUNT(CASE WHEN er.status = 'accepted' THEN 1 END) * 100.0 / NULLIF(COUNT(e.id), 0), 2), 0) as attendance_rate
-          FROM team_members tm
-          INNER JOIN users u ON tm.user_id = u.id
-          LEFT JOIN events e ON e.team_id = tm.team_id AND e.start_time < datetime('now')
-          LEFT JOIN event_responses er ON er.user_id = u.id AND er.event_id = e.id
-          WHERE tm.team_id = ? AND tm.user_id = ?
-          GROUP BY u.id, u.name
-        `).all(teamId, req.user!.id)
-      : db.prepare(`
           SELECT 
             u.id,
             u.name,
@@ -71,7 +48,32 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
           WHERE tm.team_id = ?
           GROUP BY u.id, u.name
           ORDER BY attendance_rate DESC
-        `).all(teamId);
+        `).all(teamId)
+      : db.prepare(`
+          SELECT 
+            u.id,
+            u.name,
+            COUNT(CASE WHEN er.status = 'accepted' THEN 1 END) as accepted,
+            COUNT(CASE WHEN er.status = 'declined' THEN 1 END) as declined,
+            COUNT(CASE WHEN er.status = 'tentative' THEN 1 END) as tentative,
+            COUNT(CASE WHEN er.status = 'pending' OR er.status IS NULL THEN 1 END) as pending,
+            COUNT(e.id) as total_events,
+            COUNT(CASE WHEN e.type = 'training' THEN 1 END) as total_training,
+            COUNT(CASE WHEN e.type = 'match' THEN 1 END) as total_match,
+            COUNT(CASE WHEN e.type = 'other' THEN 1 END) as total_other,
+            COUNT(CASE WHEN e.type = 'training' AND er.status = 'accepted' THEN 1 END) as accepted_training,
+            COUNT(CASE WHEN e.type = 'match' AND er.status = 'accepted' THEN 1 END) as accepted_match,
+            COUNT(CASE WHEN e.type = 'other' AND er.status = 'accepted' THEN 1 END) as accepted_other,
+            COALESCE(ROUND(COUNT(CASE WHEN er.status = 'accepted' THEN 1 END) * 100.0 / NULLIF(COUNT(e.id), 0), 2), 0) as attendance_rate
+          FROM team_members tm
+          INNER JOIN users u ON tm.user_id = u.id
+          LEFT JOIN events e ON e.team_id = tm.team_id AND e.start_time < datetime('now')
+          LEFT JOIN event_responses er ON er.user_id = u.id AND er.event_id = e.id
+          WHERE tm.team_id = ?
+            AND (tm.user_id = ? OR COALESCE(u.stats_visible_to_team, 1) = 1)
+          GROUP BY u.id, u.name
+          ORDER BY attendance_rate DESC
+        `).all(teamId, req.user!.id);
 
     // Get past events count
     const pastEvents = db.prepare(`
@@ -131,8 +133,14 @@ router.get('/player/:userId', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
-    if (membership.role === 'player' && userId !== req.user!.id) {
-      return res.status(403).json({ error: 'Players can only view their own statistics' });
+    if (membership.role !== 'trainer' && userId !== req.user!.id) {
+      const targetUser = db.prepare(
+        'SELECT stats_visible_to_team FROM users WHERE id = ?'
+      ).get(userId) as { stats_visible_to_team: number | null } | undefined;
+
+      if (!targetUser || Number(targetUser.stats_visible_to_team ?? 1) !== 1) {
+        return res.status(403).json({ error: 'Statistics are not shared by this player' });
+      }
     }
 
     // Get attendance

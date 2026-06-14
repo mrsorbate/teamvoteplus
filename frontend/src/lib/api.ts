@@ -316,6 +316,7 @@ export const profileAPI = {
     jersey_number?: number | null;
     footedness?: string | null;
     position?: string | null;
+    stats_visible_to_team?: boolean;
   }) =>
     api.put('/profile/me', data),
   
