@@ -4,6 +4,8 @@ import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
 import { settingsAPI } from './lib/api';
 import { useDarkMode } from './hooks/useDarkMode';
+import { useServiceWorker } from './hooks/useServiceWorker';
+import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 import { useQuery } from '@tanstack/react-query';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -110,6 +112,7 @@ function NetworkStatusBanner() {
 function App() {
   const { token } = useAuthStore();
   useDarkMode(); // Initialize dark mode
+  const { needsUpdate, updateServiceWorker } = useServiceWorker();
   const [showLoadWarning, setShowLoadWarning] = useState(false);
 
   // Fetch organization using React Query
@@ -166,6 +169,7 @@ function App() {
   return (
     <>
       <NetworkStatusBanner />
+      {needsUpdate && <PWAUpdateBanner onUpdate={updateServiceWorker} />}
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-900"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>}>
       <Routes>
       {/* First-time setup (no login required) */}

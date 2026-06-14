@@ -1,3 +1,11 @@
+// Allow the waiting SW to activate when the user confirms the update
+// in PWAUpdateBanner. The app sends { type: 'SKIP_WAITING' } via postMessage.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('push', (event) => {
   let payload = {
     title: 'teamvote+',

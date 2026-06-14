@@ -6,6 +6,74 @@ import App from './App'
 import { ToastProvider } from './lib/useToast'
 import './index.css'
 
+// ─── Chunk-Load-Error guard ───────────────────────────────────────────────────
+// After a deployment the old app may try to lazy-load JS/CSS chunks that no
+// longer exist (different content hash). Catch those errors here and do a
+// single controlled reload. sessionStorage prevents an infinite reload loop.
+const CHUNK_RELOAD_KEY = 'pwa_chunk_error_reload'
+
+function handleChunkError() {
+  if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+    // A reload was already attempted. Show a visible message instead of a
+    // blank page so the user knows to close and reopen the app.
+    const root = document.getElementById('root')
+    if (root) {
+      root.innerHTML = `
+        <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;
+                    background:#030712;color:#e5e7eb;font-family:system-ui,sans-serif;
+                    padding:1.5rem;text-align:center;">
+          <div>
+            <p style="font-size:1.125rem;font-weight:600;margin-bottom:0.75rem;">
+              App konnte nicht geladen werden
+            </p>
+            <p style="font-size:0.875rem;color:#9ca3af;margin-bottom:1.25rem;">
+              Bitte schließe die App vollständig und öffne sie erneut.
+            </p>
+            <button onclick="sessionStorage.clear();window.location.reload()"
+                    style="background:#dc2626;color:#fff;border:none;border-radius:0.5rem;
+                           padding:0.5rem 1.25rem;font-size:0.875rem;font-weight:500;cursor:pointer;">
+              Erneut versuchen
+            </button>
+          </div>
+        </div>`
+    }
+    return
+  }
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
+  window.location.reload()
+}
+
+function isChunkError(msg: string, name: string) {
+  return (
+    name === 'ChunkLoadError' ||
+    msg.includes('Loading chunk') ||
+    msg.includes('Loading CSS chunk') ||
+    msg.includes('Failed to fetch dynamically') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('error loading dynamically imported module')
+  )
+}
+
+window.addEventListener('error', (event) => {
+  const msg = event.message || String(event.error?.message ?? '')
+  const name = String(event.error?.name ?? '')
+  if (isChunkError(msg, name)) {
+    event.preventDefault()
+    handleChunkError()
+  }
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason as { message?: string; name?: string } | string | undefined
+  const msg = (typeof reason === 'object' && reason !== null ? reason?.message : String(reason ?? '')) ?? ''
+  const name = (typeof reason === 'object' && reason !== null ? reason?.name : '') ?? ''
+  if (isChunkError(msg, name)) {
+    event.preventDefault()
+    handleChunkError()
+  }
+})
+// ─────────────────────────────────────────────────────────────────────────────
+
 type OrientationLockType = 'portrait' | 'portrait-primary'
 
 interface ScreenOrientationWithLock {

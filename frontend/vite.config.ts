@@ -11,7 +11,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' instead of 'autoUpdate': the generated SW does NOT call
+      // skipWaiting() automatically. A new SW waits in 'waiting' state until
+      // the user explicitly confirms the update via the PWAUpdateBanner.
+      // This prevents the blank-page race where the old app tries to load
+      // lazy chunks that no longer exist after a deployment.
+      registerType: 'prompt',
       includeAssets: ['teamvoteplus-icon.svg', 'teamvoteplus-logo.svg', 'masked-icon.svg', 'apple-touch-icon-v2.png'],
       workbox: {
         // Embed push event handlers inside the generated sw.js so there is
@@ -20,6 +25,7 @@ export default defineConfig({
         // with the VitePWA sw.js after each deployment — whichever registered
         // last became active, so after a VitePWA auto-update the active SW had
         // no push listener and notifications stopped until the user re-toggled.
+        // push-sw.js also handles the SKIP_WAITING message sent by the app.
         importScripts: ['/push-sw.js'],
       },
       manifest: {

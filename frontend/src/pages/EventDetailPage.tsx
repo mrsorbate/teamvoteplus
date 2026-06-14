@@ -451,10 +451,10 @@ export default function EventDetailPage() {
   if (isError || !event) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => handleBackNavigation()}
-            className="text-gray-300 hover:text-white"
+            className="shrink-0 text-gray-300 hover:text-white"
             aria-label="Zurück"
             title="Zurück"
           >
@@ -474,18 +474,18 @@ export default function EventDetailPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => handleBackNavigation()}
-          className="text-gray-300 hover:text-white"
+          className="shrink-0 text-gray-300 hover:text-white"
           aria-label="Zurück"
           title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {event?.type === 'match' && opponentCrestUrl ? (
               <img
                 src={opponentCrestUrl}
