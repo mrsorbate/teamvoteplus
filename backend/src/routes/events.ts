@@ -493,8 +493,9 @@ router.post('/', async (req: AuthRequest, res) => {
     }
 
     const validDefaultStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
-    const defaultResponseStatus = validDefaultStatuses.has(teamSettings?.default_response)
-      ? teamSettings.default_response
+    const rawDefaultResponse = teamSettings?.default_response ?? '';
+    const defaultResponseStatus = validDefaultStatuses.has(rawDefaultResponse)
+      ? rawDefaultResponse
       : 'pending';
 
     const resolvedMeetingPoint = meeting_point || null;

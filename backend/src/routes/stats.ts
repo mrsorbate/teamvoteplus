@@ -102,7 +102,7 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
     res.json({
       attendance: attendanceStats,
       events: {
-        past: pastEvents.count,
+        past: pastEvents?.count ?? 0,
         pastByCategory: pastEventsByCategory,
       }
     });

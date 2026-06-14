@@ -1103,7 +1103,11 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
        FROM teams WHERE id = ?`
     ).get(teamId) as TeamSettingsRow | undefined;
 
-    const calendarUrls = getCalendarUrls(req, teamId, updatedSettings?.calendar_token);
+    if (!updatedSettings) {
+      return res.status(500).json({ error: 'Failed to retrieve updated settings' });
+    }
+
+    const calendarUrls = getCalendarUrls(req, teamId, updatedSettings.calendar_token);
 
     return res.json({
       ...updatedSettings,
@@ -1175,10 +1179,10 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     })
   );
 
+  type MatchWithSource = TeamMatch & { __sourceId: string };
   const seenMatchKeys = new Set<string>();
-  const matches = matchesBySource
-    .flat()
-    .filter((match: any) => {
+  const matches = (matchesBySource.flat() as MatchWithSource[])
+    .filter((match) => {
       const key = [
         String(match?.date || ''),
         String(match?.homeTeam || ''),
@@ -1352,7 +1356,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     const homeNorm = normalizeTeamName(match.homeTeam);
     const awayNorm = normalizeTeamName(match.awayTeam);
     // Use source-specific norms when available for accurate crest assignment.
-    const sourceId = String((match as any).__sourceId || '');
+    const sourceId = String(match.__sourceId || '');
     const activeOwnTeamNorms = sourceOwnTeamNormsMap.get(sourceId) || ownTeamNorms;
     const isHome = activeOwnTeamNorms.some((ownTeamNorm) => (
       ownTeamNorm.length >= 4
@@ -1387,7 +1391,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
        WHERE team_id = ? AND type = 'match'
          AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 86400
          AND (title LIKE ? OR title LIKE ?)`
-    ).get(teamId, startTime, `%${match.homeTeam}%`, `%${match.awayTeam}%`) as any;
+    ).get(teamId, startTime, `%${match.homeTeam}%`, `%${match.awayTeam}%`) as { id: number; title: string; start_time: string; end_time: string | null; home_goals: number | null; away_goals: number | null } | undefined;
 
     const titleCandidates = db.prepare(
       `SELECT id, title, start_time, end_time, ${eventScoreSelectExpression} FROM events
@@ -1591,13 +1595,13 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can import games' });
     }
 
-    const team = db.prepare('SELECT id, fussballde_id FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, fussballde_id FROM teams WHERE id = ?').get(teamId) as { id: number; fussballde_id: string | null } | undefined;
 
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
@@ -1619,7 +1623,7 @@ router.put('/:id/fussballde-id', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can update fussball.de ID' });
@@ -1663,7 +1667,7 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
-    const team = db.prepare('SELECT id, name, fussballde_id, fussballde_team_name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name, fussballde_id, fussballde_team_name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string; fussballde_id: string | null; fussballde_team_name: string | null } | undefined;
 
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
@@ -1710,7 +1714,7 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
         )
       : null;
 
-    const resolveResultFromInternalEvents = (match: any, parsedDate: Date | null): { home: number; away: number } | null => {
+    const resolveResultFromInternalEvents = (match: Pick<TeamMatch, 'homeTeam' | 'awayTeam'>, parsedDate: Date | null): { home: number; away: number } | null => {
       if (!eventResultLookupStmt) {
         return null;
       }
@@ -1825,7 +1829,8 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
           }
         );
 
-        const dedupeMatches = (matches: any[]) => {
+        type MatchWithOrigin = TeamMatch & { __origin: 'next' | 'last' | 'season' };
+        const dedupeMatches = (matches: MatchWithOrigin[]) => {
           const seen = new Set<string>();
           return matches.filter((match) => {
             const key = [
@@ -1847,7 +1852,7 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
         ];
 
         const mergedRaw = dedupeMatches(withOrigin);
-        const seasonMatches = mergedRaw.filter((match: any) => {
+        const seasonMatches = mergedRaw.filter((match) => {
           const parsedDate = parseScheduleDate(match?.date);
           if (!parsedDate) {
             // Nicht geparste Saison-Print-Zeilen nicht blind einsortieren.
@@ -1856,14 +1861,14 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
           return parsedDate >= seasonStartDate && parsedDate <= seasonEndDate;
         });
 
-        const nextGames = seasonMatches.filter((match: any) => {
+        const nextGames = seasonMatches.filter((match) => {
           const parsedDate = parseScheduleDate(match?.date);
           if (!parsedDate) {
             return match?.__origin === 'next';
           }
           return parsedDate.getTime() > now.getTime();
         });
-        const lastGames = seasonMatches.filter((match: any) => {
+        const lastGames = seasonMatches.filter((match) => {
           const parsedDate = parseScheduleDate(match?.date);
           if (!parsedDate) {
             return match?.__origin === 'last';
@@ -1875,7 +1880,7 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
         const leagueName = parseExternalLeagueNameFromMatches(combinedGames) || 'fussball.de Spielplan';
 
         const rowMatches = combinedGames
-          .flatMap((match: any) => [String(match?.homeTeam || ''), String(match?.awayTeam || '')])
+          .flatMap((match) => [String(match?.homeTeam || ''), String(match?.awayTeam || '')])
           .map((rowName) => {
             const bestScore = configuredTeamNames.reduce((score, configuredName) => {
               return Math.max(score, calculateRowMatchScore(rowName, configuredName));
@@ -1887,7 +1892,7 @@ router.get('/:id/external-schedule', async (req: AuthRequest, res) => {
 
         const matchedTeamName = rowMatches[0]?.rowName || null;
 
-        const toPayloadMatches = (matches: any[], mode: 'next' | 'last') => matches.map((match) => {
+        const toPayloadMatches = (matches: MatchWithOrigin[], mode: 'next' | 'last') => matches.map((match) => {
           const parsedDate = parseScheduleDate(match?.date);
           const isPastMatch = Boolean(parsedDate && parsedDate.getTime() <= Date.now());
           const fallbackResult = mode === 'last' && isPastMatch
@@ -1984,7 +1989,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
-    const team = db.prepare('SELECT id, name, fussballde_id, fussballde_team_name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name, fussballde_id, fussballde_team_name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string; fussballde_id: string | null; fussballde_team_name: string | null } | undefined;
 
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
@@ -2073,7 +2078,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
           // Fallback to recently imported internal matches if available.
           const recentMatches = db.prepare(
             `SELECT description FROM events WHERE team_id = ? AND type = 'match' LIMIT 10`
-          ).all(teamId) as any[];
+          ).all(teamId) as Array<{ description: string | null }>;
           const leagueName = externalLeagueName || parseInternalLeagueName(recentMatches) || 'fussball.de Tabelle';
 
           const rowMatches = table
@@ -2165,7 +2170,7 @@ router.get('/:id/external-table', async (req: AuthRequest, res) => {
          AND type = 'match'
          AND end_time IS NOT NULL
          AND datetime(end_time) <= datetime('now')`
-    ).all(teamId) as any[];
+    ).all(teamId) as Array<{ title: string | null; description: string | null; end_time: string | null; is_home_match: number | null; home_goals: number | null; away_goals: number | null }>;
 
     const table = buildInternalTableRows(team, internalMatches);
     const internalLeagueName = parseInternalLeagueName(internalMatches) || 'Interne Tabelle';
@@ -2301,7 +2306,7 @@ router.post('/:id/members', (req: AuthRequest, res) => {
     // Check if user is trainer
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can add members' });
@@ -2328,7 +2333,7 @@ router.post('/:id/members', (req: AuthRequest, res) => {
       position
     });
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'User is already a team member' });
     }
     logger.error('Add team member error:', error);
@@ -2344,7 +2349,7 @@ router.delete('/:id/members/:userId', (req: AuthRequest, res) => {
 
     const trainerMembership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!trainerMembership || trainerMembership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can remove players' });
@@ -2352,7 +2357,7 @@ router.delete('/:id/members/:userId', (req: AuthRequest, res) => {
 
     const targetMembership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, userId) as any;
+    ).get(teamId, userId) as { role: string } | undefined;
 
     if (!targetMembership) {
       return res.status(404).json({ error: 'Membership not found' });
@@ -2388,7 +2393,7 @@ router.post('/:id/players', async (req: AuthRequest, res) => {
     // Check if user is trainer of this team
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can create players' });
@@ -2421,14 +2426,14 @@ router.post('/:id/players', async (req: AuthRequest, res) => {
 });
 
 // Upload team picture (trainers only)
-router.post('/:id/picture', upload.single('picture') as any, (req: AuthRequest, res) => {
+router.post('/:id/picture', upload.single('picture') as RequestHandler, (req: AuthRequest, res) => {
   try {
     const teamId = parseInt(req.params.id);
 
     // Check if user is trainer of this team
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can upload team pictures' });
@@ -2439,7 +2444,7 @@ router.post('/:id/picture', upload.single('picture') as any, (req: AuthRequest, 
     }
 
     // Delete old picture if exists
-    const oldTeam = db.prepare('SELECT team_picture FROM teams WHERE id = ?').get(teamId) as any;
+    const oldTeam = db.prepare('SELECT team_picture FROM teams WHERE id = ?').get(teamId) as { team_picture: string | null } | undefined;
     if (oldTeam?.team_picture) {
       const oldPath = path.join(uploadsDir, path.basename(oldTeam.team_picture));
       if (fs.existsSync(oldPath)) {
@@ -2466,7 +2471,7 @@ router.delete('/:id/picture', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can delete team pictures' });
@@ -2495,13 +2500,13 @@ router.delete('/:id/picture', (req: AuthRequest, res) => {
 });
 
 // Upload team crest (trainers only)
-router.post('/:id/crest', upload.single('crest') as any, (req: AuthRequest, res) => {
+router.post('/:id/crest', upload.single('crest') as RequestHandler, (req: AuthRequest, res) => {
   try {
     const teamId = parseInt(req.params.id);
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can upload team crests' });
@@ -2511,7 +2516,7 @@ router.post('/:id/crest', upload.single('crest') as any, (req: AuthRequest, res)
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const oldTeam = db.prepare('SELECT team_crest FROM teams WHERE id = ?').get(teamId) as any;
+    const oldTeam = db.prepare('SELECT team_crest FROM teams WHERE id = ?').get(teamId) as { team_crest: string | null } | undefined;
     if (oldTeam?.team_crest) {
       const oldPath = path.join(uploadsDir, path.basename(oldTeam.team_crest));
       if (fs.existsSync(oldPath)) {
@@ -2537,13 +2542,13 @@ router.delete('/:id/crest', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can delete team crests' });
     }
 
-    const team = db.prepare('SELECT team_crest FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT team_crest FROM teams WHERE id = ?').get(teamId) as { team_crest: string | null } | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
@@ -2572,7 +2577,7 @@ router.delete('/:id/imported-games', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can delete imported games' });
@@ -2600,13 +2605,13 @@ router.delete('/:id', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can delete teams' });
     }
 
-    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string } | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }

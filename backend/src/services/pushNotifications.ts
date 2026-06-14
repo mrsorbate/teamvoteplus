@@ -69,13 +69,13 @@ export async function sendPushToSubscriptions(subscriptions: StoredPushSubscript
       sent += 1;
       console.log(`Push sent to ${subscription.endpoint.substring(0, 50)}...`);
     } catch (error) {
-      const statusCode = Number(error?.statusCode || 0);
-      const errorMessage = error?.message || String(error);
-      
+      const statusCode = error != null && typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? (error as { statusCode: number }).statusCode
+        : 0;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       if (statusCode === 404 || statusCode === 410) {
-        // Subscription expired or invalid
         removeSubscriptionByEndpoint.run(subscription.endpoint);
-        console.warn(`Push: subscription removed (${statusCode}) for endpoint ${subscription.endpoint.substring(0, 50)}...`);
       } else {
         console.error(`Push send error (status ${statusCode}): ${errorMessage}`, { endpoint: subscription.endpoint.substring(0, 50) });
       }

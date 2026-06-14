@@ -125,7 +125,7 @@ router.post('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
       id: result.lastInsertRowid,
       token,
       team_id: teamId,
-      team_name: team.name,
+      team_name: team?.name,
       role: inviteRole,
       invitee_name: normalizedInviteeName,
       expires_at: expiresAt,
