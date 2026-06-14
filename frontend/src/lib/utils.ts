@@ -71,6 +71,19 @@ export function normalizeNumberFieldValue(value: unknown, config: NumberFieldCon
   return clampNumber(stepped, config.min, config.max);
 }
 
+export function getApiErrorMessage(error: unknown, fallback = 'Ein Fehler ist aufgetreten'): string {
+  if (typeof error === 'object' && error !== null) {
+    const e = error as Record<string, unknown>;
+    const responseData = (e.response as Record<string, unknown> | undefined)?.data;
+    if (typeof responseData === 'object' && responseData !== null) {
+      const msg = (responseData as Record<string, unknown>).error;
+      if (typeof msg === 'string' && msg) return msg;
+    }
+    if (typeof e.message === 'string' && e.message) return e.message;
+  }
+  return fallback;
+}
+
 export function stepNumberFieldValue(currentValue: unknown, delta: number, config: NumberFieldConfig): number {
   const normalizedCurrent = normalizeNumberFieldValue(currentValue, config);
   const fallback = config.min;

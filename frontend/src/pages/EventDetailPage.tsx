@@ -5,6 +5,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
+import type { EventResponseEntry } from '../lib/types';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
@@ -12,13 +13,6 @@ import AccessibleModal from '../components/AccessibleModal';
 
 const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-interface EventResponse {
-  id: number;
-  user_id: number;
-  user_name: string;
-  user_profile_picture?: string | null;
-  comment?: string | null;
-}
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,11 +86,12 @@ export default function EventDetailPage() {
     setDeleteNote('');
   };
 
-  const myResponse = event?.responses?.find((r: any) => r.user_id === user?.id);
-  const acceptedResponses = event?.responses?.filter((r: any) => r.status === 'accepted') || [];
-  const declinedResponses = event?.responses?.filter((r: any) => r.status === 'declined') || [];
-  const tentativeResponses = event?.responses?.filter((r: any) => r.status === 'tentative') || [];
-  const pendingResponses = event?.responses?.filter((r: any) => r.status === 'pending') || [];
+  const responses: EventResponseEntry[] = Array.isArray(event?.responses) ? event.responses : [];
+  const myResponse = responses.find((r) => r.user_id === user?.id);
+  const acceptedResponses = responses.filter((r) => r.status === 'accepted');
+  const declinedResponses = responses.filter((r) => r.status === 'declined');
+  const tentativeResponses = responses.filter((r) => r.status === 'tentative');
+  const pendingResponses = responses.filter((r) => r.status === 'pending');
   
   const isMatchEvent = event?.type === 'match';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
@@ -111,7 +106,7 @@ export default function EventDetailPage() {
 
   const isMatchSquadReleased = matchSquad?.is_released === 1;
   const isPlayerInMatchSquad = Array.isArray(matchSquad?.squad_user_ids)
-    ? matchSquad.squad_user_ids.map((entry: any) => Number(entry)).includes(Number(user?.id))
+    ? matchSquad.squad_user_ids.map((entry: number | string) => Number(entry)).includes(Number(user?.id))
     : false;
 
   const playerMatchSquadStatusText = (() => {
@@ -359,7 +354,7 @@ export default function EventDetailPage() {
     count: number,
     toneClass: string,
     icon: string,
-    responses: EventResponse[],
+    responses: EventResponseEntry[],
     currentStatus: 'accepted' | 'declined' | 'tentative' | 'pending'
   ) => {
     if (count === 0) return null;
