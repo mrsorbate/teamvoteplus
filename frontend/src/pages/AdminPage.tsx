@@ -171,7 +171,6 @@ export default function AdminPage() {
     mutationFn: (data: { name: string; description?: string }) => adminAPI.createTeam(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       setShowCreateTeam(false);
       setTeamName('');
@@ -184,7 +183,6 @@ export default function AdminPage() {
     mutationFn: (teamId: number) => adminAPI.deleteTeam(teamId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
   });
@@ -197,7 +195,6 @@ export default function AdminPage() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
   });
@@ -206,9 +203,7 @@ export default function AdminPage() {
     mutationFn: (userId: number) => adminAPI.deleteUser(userId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-users'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
   });
@@ -229,12 +224,9 @@ export default function AdminPage() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-users'] });
       if (selectedTeam) {
         await queryClient.invalidateQueries({ queryKey: ['admin-team-trainers', selectedTeam] });
-        await queryClient.refetchQueries({ queryKey: ['admin-team-trainers', selectedTeam] });
       }
       setShowAssignTrainer(false);
       setSelectedTrainer('');
@@ -247,12 +239,9 @@ export default function AdminPage() {
       adminAPI.removeUserFromTeam(data.teamId, data.userId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-users'] });
       if (selectedTeam) {
         await queryClient.invalidateQueries({ queryKey: ['admin-team-trainers', selectedTeam] });
-        await queryClient.refetchQueries({ queryKey: ['admin-team-trainers', selectedTeam] });
       }
       setShowRemoveTrainer(false);
       setSelectedTrainerToRemove('');
@@ -273,9 +262,7 @@ export default function AdminPage() {
       adminAPI.createTrainerInvite(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-teams'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-users'] });
     },
   });
 
@@ -284,7 +271,6 @@ export default function AdminPage() {
       adminAPI.createAdmin(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      await queryClient.refetchQueries({ queryKey: ['admin-users'] });
       closeCreateAdminModal();
       showToast('Admin erfolgreich erstellt', 'success');
     },

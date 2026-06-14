@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
@@ -8,6 +9,8 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
+
+const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 interface EventResponse {
   id: number;
@@ -31,6 +34,7 @@ export default function EventDetailPage() {
   const [inlinePanel, setInlinePanel] = useState<'declined' | 'tentative' | null>(null);
   const [inlineComment, setInlineComment] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteNote, setDeleteNote] = useState('');
@@ -722,8 +726,17 @@ export default function EventDetailPage() {
               </button>
 
               {/* Inline panel — Unsicher */}
+              <AnimatePresence>
               {inlinePanel === 'tentative' && (
-                <div className="rounded-xl border border-yellow-700/40 bg-yellow-900/10 p-3 animate-slide-down">
+                <motion.div
+                  key="panel-tentative"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: EASE_EXPO }}
+                  style={{ overflow: 'hidden' }}
+                >
+                <div className="rounded-xl border border-yellow-700/40 bg-yellow-900/10 p-3">
                   <label htmlFor="rsvp-tentative-comment" className="block text-xs font-heading font-semibold text-yellow-400 mb-2 uppercase tracking-wide">
                     Kommentar <span className="text-gray-500 font-normal normal-case tracking-normal">(optional)</span>
                   </label>
@@ -758,7 +771,9 @@ export default function EventDetailPage() {
                     </button>
                   </div>
                 </div>
+                </motion.div>
               )}
+              </AnimatePresence>
 
               {/* Absagen */}
               <button
@@ -780,8 +795,17 @@ export default function EventDetailPage() {
               </button>
 
               {/* Inline panel — Absagen */}
+              <AnimatePresence>
               {inlinePanel === 'declined' && (
-                <div className="rounded-xl border border-red-700/40 bg-red-900/10 p-3 animate-slide-down">
+                <motion.div
+                  key="panel-declined"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: EASE_EXPO }}
+                  style={{ overflow: 'hidden' }}
+                >
+                <div className="rounded-xl border border-red-700/40 bg-red-900/10 p-3">
                   <label htmlFor="rsvp-decline-reason" className="block text-xs font-heading font-semibold text-red-400 mb-2 uppercase tracking-wide">
                     Grund <span className="text-gray-500 font-normal normal-case tracking-normal">(Pflichtfeld)</span>
                   </label>
@@ -831,7 +855,9 @@ export default function EventDetailPage() {
                     </button>
                   </div>
                 </div>
+                </motion.div>
               )}
+              </AnimatePresence>
 
               {!canChooseTentative && !inlinePanel && (
                 <p className="text-xs text-gray-400 flex items-center gap-1.5 pt-1">

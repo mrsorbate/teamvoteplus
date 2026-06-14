@@ -84,7 +84,6 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
       return response.data as { configured: boolean; subscribed: boolean };
     },
     enabled: Boolean(userId && isPushSupported()),
-    refetchOnWindowFocus: true,
   });
 
   const enablePushMutation = useMutation({

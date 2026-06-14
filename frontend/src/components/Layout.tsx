@@ -48,6 +48,7 @@ export default function Layout({ organization }: LayoutProps) {
       return response.data;
     },
     enabled: user?.role !== 'admin',
+    staleTime: Infinity,
   });
 
   const { data: profile } = useQuery({
@@ -57,6 +58,7 @@ export default function Layout({ organization }: LayoutProps) {
       return response.data;
     },
     enabled: !!user,
+    staleTime: Infinity,
   });
 
   const teamsMenuLabel = teams?.length === 1 ? 'Mein Team' : 'Meine Teams';

@@ -759,7 +759,9 @@ export default function SettingsPage() {
           </p>
 
           {isTrainerTeamsLoading && (
-            <p className="text-sm text-gray-300">Teams werden geladen...</p>
+            <div className="space-y-2">
+              {[1, 2].map((i) => <div key={i} className="skeleton h-10 rounded-xl" />)}
+            </div>
           )}
 
           {isTrainerTeamsError && (
@@ -853,7 +855,12 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-300">
             Dieser Browser unterstützt keine Web-Push-Benachrichtigungen.
           </p>
-        ) : !isPushConfigured && !isPushStatusLoading ? (
+        ) : isPushStatusLoading ? (
+          <div className="space-y-2">
+            <div className="skeleton h-4 w-48 rounded" />
+            <div className="skeleton h-4 w-36 rounded" />
+          </div>
+        ) : !isPushConfigured ? (
           <p className="text-sm text-gray-300">
             Push ist auf dem Server noch nicht konfiguriert. Bitte VAPID-Keys in der Backend-Umgebung setzen.
           </p>

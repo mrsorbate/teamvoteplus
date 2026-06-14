@@ -120,6 +120,7 @@ function App() {
       return response.data;
     },
     retry: 1,
+    staleTime: Infinity,
   });
 
   useEffect(() => {
