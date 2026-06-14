@@ -159,10 +159,10 @@ export default function DashboardPage() {
           <div className="skeleton h-8 w-40 mx-auto" />
           <div className="skeleton h-4 w-56 mx-auto" />
         </div>
-        <div className="card space-y-3">
-          <div className="skeleton h-6 w-36" />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton h-[88px] w-full" />
+        <div className="skeleton h-9 w-48" />
+        <div className="space-y-3 sm:space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="skeleton h-[88px] rounded-xl" />
           ))}
         </div>
       </div>
@@ -313,65 +313,58 @@ export default function DashboardPage() {
       )}
 
       {/* Upcoming Events Section */}
-      <div className="card">
-        <div className="mb-4 flex items-center justify-center">
-          <h2 className="section-heading">
-            <Calendar className="w-5 h-5 text-primary-400" />
-            Terminübersicht
-          </h2>
-        </div>
-        
-        {eventsLoading ? (
-          <div className="loading-card">Termine werden geladen...</div>
-        ) : upcomingEvents && upcomingEvents.length > 0 ? (
-          <div className="space-y-3">
-            {upcomingEvents.map((event: any) => {
-              const startDate = new Date(event.start_time);
-              const isToday = startDate.toDateString() === new Date().toDateString();
-              const handleCardOpen = (selectedEvent: any) => {
-                const from = `${location.pathname}${location.search}${location.hash}`;
-                navigate(`/events/${selectedEvent.id}`, { state: { from } });
-              };
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 min-w-0">
+          <Calendar className="w-8 h-8 text-primary-400 shrink-0" />
+          <span className="truncate">Terminübersicht</span>
+        </h2>
+      </div>
 
-              return (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  activeQuickActionsEventId={openQuickActionsEventId}
-                  isToday={isToday}
-                  isStatusPending={updateResponseMutation.isPending}
-                  showTeamNameFallback
-                  requiresDeclineReason={user?.role !== 'trainer'}
-                  onOpen={handleCardOpen}
-                  onStatusChange={(selectedEvent, status) => {
-                    updateResponseMutation.mutate({ eventId: selectedEvent.id, status });
-                  }}
-                  onDeclineWithReason={(selectedEvent, title) => {
-                    setPendingDecline({ eventId: selectedEvent.id, title });
-                    setDeclineReason('');
-                    setDeclineReasonError(null);
-                    setOpenQuickActionsEventId(null);
-                  }}
-                  setActiveQuickActionsEventId={setOpenQuickActionsEventId}
-                />
-              );
-            })}
-          </div>
+      <div className="space-y-3 sm:space-y-4">
+        {upcomingEvents && upcomingEvents.length > 0 ? (
+          upcomingEvents.slice(0, 5).map((event: any) => {
+            const startDate = new Date(event.start_time);
+            const isToday = startDate.toDateString() === new Date().toDateString();
+            return (
+              <EventCard
+                key={event.id}
+                event={event}
+                activeQuickActionsEventId={openQuickActionsEventId}
+                isToday={isToday}
+                isStatusPending={updateResponseMutation.isPending}
+                showTeamNameFallback
+                requiresDeclineReason={user?.role !== 'trainer'}
+                onOpen={(selectedEvent) => {
+                  const from = `${location.pathname}${location.search}${location.hash}`;
+                  navigate(`/events/${selectedEvent.id}`, { state: { from } });
+                }}
+                onStatusChange={(selectedEvent, status) => {
+                  updateResponseMutation.mutate({ eventId: selectedEvent.id, status });
+                }}
+                onDeclineWithReason={(selectedEvent, title) => {
+                  setPendingDecline({ eventId: selectedEvent.id, title });
+                  setDeclineReason('');
+                  setDeclineReasonError(null);
+                  setOpenQuickActionsEventId(null);
+                }}
+                setActiveQuickActionsEventId={setOpenQuickActionsEventId}
+              />
+            );
+          })
         ) : (
           <div className="empty-state">
             <Calendar className="empty-state-icon" />
             <p>Keine Termine</p>
           </div>
         )}
-        <div className="mt-6 flex justify-center">
-          <Link
-            to="/events"
-            className="btn btn-primary w-full text-center py-3 text-base"
-          >
-            Alle Termine
-          </Link>
-        </div>
       </div>
+
+      <Link
+        to="/events"
+        className="btn btn-primary w-full text-center py-3 text-base"
+      >
+        Alle Termine
+      </Link>
 
 	      {pendingDecline && (
 	        <AccessibleModal
