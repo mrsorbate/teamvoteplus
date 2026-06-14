@@ -88,26 +88,28 @@ export default function Layout({ organization }: LayoutProps) {
             <div className="flex items-center min-w-0 flex-1">
               <Link
                 to={user?.role === 'admin' ? '/admin' : '/'}
-                className="group flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl px-1 transition-colors hover:bg-gray-800/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:gap-2.5 sm:px-1.5 sm:-ml-1.5"
+                className="group flex min-h-11 w-full min-w-0 flex-col items-start justify-center gap-1 rounded-xl px-1 py-1 transition-colors hover:bg-gray-800/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5 sm:px-1.5 sm:py-0 sm:-ml-1.5"
                 aria-label="Zur Startseite"
               >
-                <TeamVoteLogo
-                  className="hidden shrink-0 sm:inline-flex"
-                  iconClassName="h-9 w-9 rounded-xl"
-                  textClassName="text-2xl"
-                />
-                <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
+                <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-none">
+                  <TeamVoteLogo
+                    className="shrink-0"
+                    iconClassName="h-8 w-8 rounded-lg sm:h-9 sm:w-9 sm:rounded-xl"
+                    textClassName="text-xl sm:text-2xl"
+                  />
+                  {organizationLogo && (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
+                      <img
+                        src={resolveAssetUrl(organizationLogo)}
+                        alt="Vereinslogo"
+                        className="max-h-6 w-auto object-contain"
+                      />
+                    </span>
+                  )}
+                </div>
+                <div className="flex w-full min-w-0 flex-1 items-center gap-1.5 sm:w-auto sm:flex-none">
                   {(organizationLogo || organizationName !== 'Dein Verein') && (
                     <>
-                      {organizationLogo && (
-                        <span className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
-                          <img
-                            src={resolveAssetUrl(organizationLogo)}
-                            alt="Vereinslogo"
-                            className="max-h-6 w-auto object-contain"
-                          />
-                        </span>
-                      )}
                       {organizationName !== 'Dein Verein' && (
                         <span className="flex min-w-0 flex-1 flex-col justify-center leading-tight sm:flex-none">
                           <span className="block whitespace-normal break-words text-sm font-semibold text-gray-100 sm:hidden">
