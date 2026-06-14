@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, Plus, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
+import { Calendar, Plus, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords, CalendarCheck, History } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
 
 export default function EventsPage() {
@@ -466,8 +466,8 @@ export default function EventsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex items-start sm:items-center gap-3 sm:gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 min-w-0">
             <Calendar className="w-8 h-8 text-primary-400 shrink-0" />
             <span className="truncate">Terminübersicht</span>
@@ -477,13 +477,14 @@ export default function EventsPage() {
         {isTrainer && (
           <Link
             to={teamId ? `/teams/${teamId}/events/new` : '/events/new'}
-            className="btn btn-primary w-full sm:w-auto flex items-center justify-center space-x-2"
+            className="btn btn-primary min-h-11 w-11 shrink-0 px-0 sm:w-auto sm:px-3 flex items-center justify-center gap-2"
+            aria-label="Termin hinzufügen"
+            title="Termin hinzufügen"
           >
             <Plus className="w-5 h-5" />
-            <span>Termin erstellen</span>
+            <span className="hidden sm:inline">Termin hinzufügen</span>
           </Link>
         )}
-
       </div>
 
       {createdSuccess && (
@@ -503,7 +504,10 @@ export default function EventsPage() {
                 : 'text-gray-400 hover:bg-gray-700'
             }`}
           >
-            Anstehend
+            <span className="flex items-center justify-center gap-2">
+              <CalendarCheck className="w-4 h-4 shrink-0" />
+              <span>Anstehend</span>
+            </span>
           </button>
           <button
             type="button"
@@ -514,7 +518,10 @@ export default function EventsPage() {
                 : 'text-gray-400 hover:bg-gray-700'
             }`}
           >
-            Vergangen
+            <span className="flex items-center justify-center gap-2">
+              <History className="w-4 h-4 shrink-0" />
+              <span>Vergangen</span>
+            </span>
           </button>
         </div>
       </div>
