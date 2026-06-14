@@ -1,6 +1,3 @@
-const PUSH_SW_URL = '/push-sw.js';
-const PUSH_SW_SCOPE = '/';
-
 const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -30,14 +27,14 @@ export const getNotificationPermission = (): NotificationPermission => {
   return Notification.permission;
 };
 
+// Returns the active service worker registration managed by VitePWA.
+// push-sw.js is embedded into VitePWA's sw.js via workbox importScripts, so
+// there is only ONE registration for scope '/' and it always has push handlers.
 export const registerPushServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
   if (!isPushSupported()) {
     throw new Error('Push wird von diesem Browser nicht unterstützt.');
   }
-
-  const registration = await navigator.serviceWorker.register(PUSH_SW_URL, { scope: PUSH_SW_SCOPE });
-  await navigator.serviceWorker.ready;
-  return registration;
+  return navigator.serviceWorker.ready;
 };
 
 export const subscribeBrowserPush = async (publicKey: string): Promise<PushSubscription> => {
@@ -65,7 +62,7 @@ export const subscribeBrowserPush = async (publicKey: string): Promise<PushSubsc
 
 export const getBrowserPushSubscription = async (): Promise<PushSubscription | null> => {
   if (!isPushSupported()) return null;
-  const registration = await registerPushServiceWorker();
+  const registration = await navigator.serviceWorker.ready;
   return registration.pushManager.getSubscription();
 };
 

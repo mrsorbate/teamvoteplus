@@ -58,6 +58,19 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
     setHasTriedAutoSync(false);
   }, [userId]);
 
+  // After a SW update (VitePWA auto-update after deployment), re-sync so the
+  // new sw.js registration is associated with the backend subscription.
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    const handleControllerChange = () => {
+      setHasTriedAutoSync(false);
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+    };
+  }, []);
+
   useEffect(() => {
     const refreshInstallState = () => {
       setIsStandalone(isStandalonePwa());
@@ -158,7 +171,7 @@ export default function PushInstallPrompt({ userId }: PushInstallPromptProps) {
       return;
     }
 
-    if (!pushStatus?.configured || pushStatus?.subscribed) {
+    if (!pushStatus?.configured) {
       return;
     }
 

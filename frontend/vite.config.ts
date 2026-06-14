@@ -13,6 +13,15 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['teamvoteplus-icon.svg', 'teamvoteplus-logo.svg', 'masked-icon.svg', 'apple-touch-icon-v2.png'],
+      workbox: {
+        // Embed push event handlers inside the generated sw.js so there is
+        // exactly ONE service worker registration for scope '/'. Previously
+        // push-sw.js was registered separately at the same scope and competed
+        // with the VitePWA sw.js after each deployment — whichever registered
+        // last became active, so after a VitePWA auto-update the active SW had
+        // no push listener and notifications stopped until the user re-toggled.
+        importScripts: ['/push-sw.js'],
+      },
       manifest: {
         name: 'teamvote+',
         short_name: 'teamvote+',
