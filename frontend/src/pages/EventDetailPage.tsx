@@ -148,7 +148,7 @@ export default function EventDetailPage() {
       return;
     }
 
-    if (status === 'declined' && !isTrainer && !nextComment.trim()) {
+    if (status === 'declined' && !nextComment.trim()) {
       setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
       return;
     }
@@ -161,12 +161,6 @@ export default function EventDetailPage() {
   };
 
   const openInlinePanel = (status: 'declined' | 'tentative') => {
-    if (status === 'declined' && isTrainer) {
-      setSelectedStatus('declined');
-      saveOwnResponse('declined', '');
-      return;
-    }
-
     if (status === 'tentative' && !canChooseTentative) {
       setResponseValidationMessage('Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.');
       return;

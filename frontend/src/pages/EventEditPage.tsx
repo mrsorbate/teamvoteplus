@@ -5,7 +5,7 @@ import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2, Loader2, Check } fr
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
-import { normalizeMatchFlag } from '../lib/eventDisplay';
+import { getEventDisplayTitle, normalizeMatchFlag } from '../lib/eventDisplay';
 import { useToast } from '../lib/useToast';
 import AccessibleModal from '../components/AccessibleModal';
 
@@ -326,7 +326,7 @@ export default function EventEditPage() {
       && matchesHomeVenue(event.location_venue || event.location, event.location_street, event.location_zip_city);
 
     setEventData({
-      title: event.title || '',
+      title: getEventDisplayTitle(event) || event.title || '',
       type: (event.type || 'training') as 'training' | 'match' | 'other',
       description: event.description || '',
       location_venue: shouldClearHomeVenueForAwayMatch ? '' : event.location_venue || event.location || '',
