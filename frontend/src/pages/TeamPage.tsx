@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { teamsAPI } from '../lib/api';
+import { settingsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, Users, BarChart, Settings, MessageSquare } from 'lucide-react';
+import { Users, BarChart, Settings, MessageSquare } from 'lucide-react';
 import type { Team, TeamMember } from '../types/domain';
+import { resolveAssetUrl } from '../lib/utils';
 
 export default function TeamPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,15 @@ export default function TeamPage() {
     },
   });
 
+  const { data: organization } = useQuery({
+    queryKey: ['organization'],
+    queryFn: async () => {
+      const response = await settingsAPI.getOrganization();
+      return response.data;
+    },
+    staleTime: Infinity,
+  });
+
   const isTrainer = members?.find((member) => member.id === user?.id)?.role === 'trainer';
 
   if (teamLoading || membersLoading) {
@@ -34,11 +44,19 @@ export default function TeamPage() {
 
   const trainers = members?.filter((member) => member.role === 'trainer') || [];
   const players = members?.filter((member) => member.role !== 'trainer') || [];
+  const teamCrestUrl = resolveAssetUrl(team?.team_crest || organization?.logo);
 
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="card">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+          {teamCrestUrl && (
+            <img
+              src={teamCrestUrl}
+              alt=""
+              className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl border border-gray-700/80 bg-gray-900/70 object-contain p-1.5"
+            />
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-white break-words">{team?.name}</h1>
             {team?.description && (
@@ -50,19 +68,6 @@ export default function TeamPage() {
 
       {/* Quick Actions */}
       <div className="space-y-3 sm:space-y-4">
-        <Link
-          to={`/teams/${teamId}/events`}
-          className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4"
-        >
-          <div className="bg-primary-900/30 border border-primary-700/50 p-2.5 sm:p-3 rounded-lg">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary-300" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-semibold text-white text-sm sm:text-base">Termine</h3>
-            <p className="text-xs sm:text-sm text-gray-300 break-words">Trainings & Spiele</p>
-          </div>
-        </Link>
-
         <Link
           to={`/teams/${teamId}/kader`}
           className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4 text-left"

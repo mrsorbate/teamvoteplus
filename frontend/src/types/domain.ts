@@ -3,6 +3,7 @@ export interface Team {
   name: string;
   description?: string | null;
   team_picture?: string | null;
+  team_crest?: string | null;
 }
 
 export type TeamRole = 'admin' | 'trainer' | 'player' | string;

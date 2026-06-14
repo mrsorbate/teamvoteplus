@@ -54,6 +54,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
+    team_crest TEXT,
     calendar_token TEXT UNIQUE,
     fussballde_id TEXT,
     default_response TEXT DEFAULT 'pending',
@@ -443,6 +444,11 @@ try {
   if (!hasTeamPicture) {
     db.exec('ALTER TABLE teams ADD COLUMN team_picture TEXT');
     logger.info('✅ Added team_picture column to teams table');
+  }
+  const hasTeamCrest = teamColumns.some((col) => col.name === 'team_crest');
+  if (!hasTeamCrest) {
+    db.exec('ALTER TABLE teams ADD COLUMN team_crest TEXT');
+    logger.info('✅ Added team_crest column to teams table');
   }
 
   const hasCalendarToken = teamColumns.some((col) => col.name === 'calendar_token');

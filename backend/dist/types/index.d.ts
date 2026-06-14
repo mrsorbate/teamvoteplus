@@ -23,6 +23,7 @@ export interface Team {
     name: string;
     description?: string;
     team_picture?: string;
+    team_crest?: string;
     created_by: number;
     created_at: string;
     updated_at: string;

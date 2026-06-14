@@ -1972,6 +1972,61 @@ router.delete('/:id/picture', (req, res) => {
         return res.status(500).json({ error: 'Failed to delete team picture' });
     }
 });
+// Upload team crest (trainers only)
+router.post('/:id/crest', upload.single('crest'), (req, res) => {
+    try {
+        const teamId = parseInt(req.params.id);
+        const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
+        if (!membership || membership.role !== 'trainer') {
+            return res.status(403).json({ error: 'Only trainers can upload team crests' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        const oldTeam = init_1.default.prepare('SELECT team_crest FROM teams WHERE id = ?').get(teamId);
+        if (oldTeam?.team_crest) {
+            const oldPath = path_1.default.join(uploadsDir, path_1.default.basename(oldTeam.team_crest));
+            if (fs_1.default.existsSync(oldPath)) {
+                fs_1.default.unlinkSync(oldPath);
+            }
+        }
+        const crestPath = `/uploads/${req.file.filename}`;
+        init_1.default.prepare('UPDATE teams SET team_crest = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run(crestPath, teamId);
+        res.json({ team_crest: crestPath });
+    }
+    catch (error) {
+        logger_1.logger.error('Upload team crest error:', error);
+        res.status(500).json({ error: 'Failed to upload team crest' });
+    }
+});
+// Delete team crest (trainers only)
+router.delete('/:id/crest', (req, res) => {
+    try {
+        const teamId = parseInt(req.params.id);
+        const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
+        if (!membership || membership.role !== 'trainer') {
+            return res.status(403).json({ error: 'Only trainers can delete team crests' });
+        }
+        const team = init_1.default.prepare('SELECT team_crest FROM teams WHERE id = ?').get(teamId);
+        if (!team) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+        if (team.team_crest) {
+            const crestPath = path_1.default.join(uploadsDir, path_1.default.basename(team.team_crest));
+            if (fs_1.default.existsSync(crestPath)) {
+                fs_1.default.unlinkSync(crestPath);
+            }
+        }
+        init_1.default.prepare('UPDATE teams SET team_crest = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run(teamId);
+        return res.json({ success: true });
+    }
+    catch (error) {
+        logger_1.logger.error('Delete team crest error:', error);
+        return res.status(500).json({ error: 'Failed to delete team crest' });
+    }
+});
 // Delete imported games (from API)
 router.delete('/:id/imported-games', (req, res) => {
     try {

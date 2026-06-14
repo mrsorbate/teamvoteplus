@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Settings, SlidersHorizontal, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
+import { ArrowLeft, Camera, Settings, SlidersHorizontal, ChevronDown, ChevronUp, Edit2, Shield } from 'lucide-react';
 import { teamsAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -18,6 +18,7 @@ export default function TeamSettingsPage() {
   const goBack = useSmartBack();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const crestFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [fussballDeId, setFussballDeId] = useState('');
   const [fussballDeTeamName, setFussballDeTeamName] = useState('');
@@ -298,6 +299,35 @@ export default function TeamSettingsPage() {
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Fehler beim Löschen des Mannschaftsbilds', 'error');
+    },
+  });
+
+  const uploadTeamCrestMutation = useMutation({
+    mutationFn: (file: File) => teamsAPI.uploadTeamCrest(teamId, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      showToast('Teamwappen erfolgreich gespeichert', 'success');
+    },
+    onError: (mutationError: any) => {
+      const status = mutationError?.response?.status;
+      if (status === 413) {
+        showToast('Wappen ist zu groß. Bitte maximal 5MB verwenden.', 'warning');
+        return;
+      }
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern des Teamwappens', 'error');
+    },
+  });
+
+  const deleteTeamCrestMutation = useMutation({
+    mutationFn: () => teamsAPI.deleteTeamCrest(teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      showToast('Teamwappen erfolgreich gelöscht', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Löschen des Teamwappens', 'error');
     },
   });
 
@@ -629,7 +659,31 @@ export default function TeamSettingsPage() {
     event.target.value = '';
   };
 
+  const handleTeamCrestSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      event.target.value = '';
+      return;
+    }
+
+    if (!file.type.match(/^image\/(jpeg|jpg|png|webp)$/)) {
+      showToast('Nur Bilddateien (JPEG, PNG, WEBP) sind erlaubt', 'warning');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Die Datei ist zu groß. Maximale Größe: 5MB', 'warning');
+      event.target.value = '';
+      return;
+    }
+
+    uploadTeamCrestMutation.mutate(file);
+    event.target.value = '';
+  };
+
   const teamPictureUrl = resolveAssetUrl(team?.team_picture);
+  const teamCrestUrl = resolveAssetUrl(team?.team_crest);
   const calendarFeedUrl = String((settings as any)?.calendar_feed_url || '');
   const calendarWebcalUrl = String((settings as any)?.calendar_webcal_url || '');
 
@@ -678,6 +732,67 @@ export default function TeamSettingsPage() {
         <div role="alert" aria-live="assertive" className="text-sm text-red-400 py-2">{(error as any)?.response?.data?.error || 'Einstellungen konnten nicht geladen werden'}</div>
       ) : (
         <>
+          <div className="card space-y-4">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary-400" />
+                Teamwappen
+              </h2>
+              <p className="text-sm text-gray-300 mt-1">
+                Wird vor dem Teamnamen angezeigt. Ohne eigenes Teamwappen wird automatisch das Vereinswappen genutzt.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="h-24 w-24 shrink-0 rounded-xl border border-gray-700 bg-gray-900/70 p-2 flex items-center justify-center">
+                {teamCrestUrl ? (
+                  <img
+                    src={teamCrestUrl}
+                    alt={`${team?.name || 'Team'} Wappen`}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <Shield className="h-10 w-10 text-gray-500" aria-hidden="true" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1 space-y-3">
+                <p className="text-sm text-gray-300">
+                  {teamCrestUrl ? 'Eigenes Teamwappen ist aktiv.' : 'Noch kein eigenes Teamwappen hinterlegt.'}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <input
+                    ref={crestFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleTeamCrestSelect}
+                    title="Teamwappen auswählen"
+                    aria-label="Teamwappen auswählen"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => crestFileInputRef.current?.click()}
+                    disabled={uploadTeamCrestMutation.isPending || deleteTeamCrestMutation.isPending}
+                    className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
+                  >
+                    {uploadTeamCrestMutation.isPending ? 'Speichert...' : teamCrestUrl ? 'Teamwappen ändern' : 'Teamwappen hochladen'}
+                  </button>
+                  {teamCrestUrl && (
+                    <button
+                      type="button"
+                      onClick={() => deleteTeamCrestMutation.mutate()}
+                      disabled={uploadTeamCrestMutation.isPending || deleteTeamCrestMutation.isPending}
+                      className="btn btn-secondary w-full sm:w-auto disabled:opacity-50"
+                    >
+                      {deleteTeamCrestMutation.isPending ? 'Löscht...' : 'Teamwappen löschen'}
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-400">JPEG, PNG oder WEBP (max. 5MB)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="card space-y-4">
             <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
               <Camera className="w-5 h-5 text-primary-400" />

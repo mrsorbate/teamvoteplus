@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
-import { teamsAPI } from '../lib/api';
+import { settingsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Users, Calendar, BarChart, Upload, Image as ImageIcon, GraduationCap, Shirt } from 'lucide-react';
 import { useState, useRef } from 'react';
@@ -20,6 +20,15 @@ export default function TeamsPage() {
       const response = await teamsAPI.getAll();
       return response.data;
     },
+  });
+
+  const { data: organization } = useQuery({
+    queryKey: ['organization'],
+    queryFn: async () => {
+      const response = await settingsAPI.getOrganization();
+      return response.data;
+    },
+    staleTime: Infinity,
   });
 
   // Mutation for team photo upload
@@ -62,6 +71,10 @@ export default function TeamsPage() {
     return resolveAssetUrl(team.team_picture);
   };
 
+  const getTeamCrestUrl = (team: any): string | undefined => {
+    return resolveAssetUrl(team.team_crest || organization?.logo);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4 sm:space-y-6">
@@ -98,15 +111,18 @@ export default function TeamsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {teams?.map((team: any) => (
-          <div 
-            key={team.id} 
-            className={`card transition-all ${
-              team.created_by === user?.id 
-                ? 'hover:shadow-md bg-blue-900/25 border-blue-700 border-2 ring-1 ring-blue-800'
-                : 'hover:shadow-md'
-            }`}
-          >
+        {teams?.map((team: any) => {
+          const teamCrestUrl = getTeamCrestUrl(team);
+
+          return (
+            <div 
+              key={team.id} 
+              className={`card transition-all ${
+                team.created_by === user?.id 
+                  ? 'hover:shadow-md bg-blue-900/25 border-blue-700 border-2 ring-1 ring-blue-800'
+                  : 'hover:shadow-md'
+              }`}
+            >
             {/* Team Photo Section (Trainer only) */}
             {team.my_role === 'trainer' && (
               <div className="mb-4">
@@ -160,13 +176,22 @@ export default function TeamsPage() {
             <Link to={`/teams/${team.id}`} className="block">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base sm:text-lg font-semibold text-white break-words">{team.name}</h3>
+                  <div className="flex items-center gap-2">
+                    {teamCrestUrl && (
+                      <img
+                        src={teamCrestUrl}
+                        alt=""
+                        className="h-8 w-8 shrink-0 rounded-lg border border-gray-700/80 bg-gray-900/70 object-contain p-1"
+                      />
+                    )}
+                    <div className="min-w-0 flex flex-wrap items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-white break-words">{team.name}</h3>
                     {team.created_by === user?.id && (
                       <span className="inline-block px-2 py-0.5 bg-blue-900/40 text-blue-300 text-xs font-medium rounded whitespace-nowrap">
                         Meine Mannschaft
                       </span>
                     )}
+                    </div>
                   </div>
                   <p className="text-xs sm:text-sm text-gray-300 mt-1">
                     {team.my_role === 'trainer' ? <><GraduationCap className="w-3.5 h-3.5 inline mr-1" />Trainer</> : <><Shirt className="w-3.5 h-3.5 inline mr-1" />Spieler</>}
@@ -189,8 +214,9 @@ export default function TeamsPage() {
                 </div>
               </div>
             </Link>
-          </div>
-        ))}
+            </div>
+          );
+        })}
 
         {teams?.length === 0 && (
           <div className="col-span-full empty-state">

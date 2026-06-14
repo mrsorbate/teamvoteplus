@@ -113,6 +113,14 @@ export const teamsAPI = {
 
   deleteTeamPicture: (id: number) => api.delete(`/teams/${id}/picture`),
 
+  uploadTeamCrest: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append('crest', file);
+    return api.post(`/teams/${id}/crest`, formData);
+  },
+
+  deleteTeamCrest: (id: number) => api.delete(`/teams/${id}/crest`),
+
   deleteTeam: (id: number) => api.delete(`/teams/${id}`),
 };
 
