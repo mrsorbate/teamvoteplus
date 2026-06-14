@@ -8,7 +8,7 @@ const router = Router();
 // Public endpoint to get organization settings
 router.get('/organization', (req, res) => {
   try {
-    const org = db.prepare('SELECT name, short_name, logo, timezone FROM organizations LIMIT 1').get();
+    const org = db.prepare('SELECT name, short_name, logo, timezone, setup_completed FROM organizations LIMIT 1').get();
     if (!org) {
       return res.status(404).json({ error: 'Organization not found' });
     }

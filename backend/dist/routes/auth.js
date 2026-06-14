@@ -9,6 +9,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const init_1 = __importDefault(require("../database/init"));
 const rateLimit_1 = require("../middleware/rateLimit");
 const config_1 = require("../config");
+const auth_1 = require("../middleware/auth");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 const loginRateLimitWindowMs = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
 const loginRateLimitMax = Number(process.env.LOGIN_RATE_LIMIT_MAX || 8);
@@ -48,7 +50,6 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
         // Verify password
         const validPassword = await bcryptjs_1.default.compare(password, user.password);
         if (!validPassword) {
-            console.error(`Invalid password for user: ${normalizedUsername}`);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         // Generate token
@@ -75,30 +76,19 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Login error:', error);
+        logger_1.logger.error('Login error:', error);
         res.status(500).json({ error: 'Login failed' });
     }
 });
-// Get current user
-router.get('/me', async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ error: 'Authentication required' });
-        }
-        const token = authHeader.substring(7);
-        const decoded = jsonwebtoken_1.default.verify(token, config_1.JWT_SECRET);
-        const user = init_1.default.prepare(`SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
-              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
-       FROM users WHERE id = ?`).get(decoded.id);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        res.json(user);
+// Get current user — authenticate middleware handles token verification (#6)
+router.get('/me', auth_1.authenticate, (req, res) => {
+    const user = init_1.default.prepare(`SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
+            height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
+     FROM users WHERE id = ?`).get(req.user.id);
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
     }
-    catch (error) {
-        res.status(401).json({ error: 'Invalid token' });
-    }
+    res.json(user);
 });
 exports.default = router;
 //# sourceMappingURL=auth.js.map

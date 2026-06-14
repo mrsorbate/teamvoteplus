@@ -7,6 +7,7 @@ const express_1 = require("express");
 const web_push_1 = __importDefault(require("web-push"));
 const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 const VAPID_PUBLIC_KEY = String(process.env.VAPID_PUBLIC_KEY || '').trim();
 const VAPID_PRIVATE_KEY = String(process.env.VAPID_PRIVATE_KEY || '').trim();
@@ -41,7 +42,7 @@ async function sendPushToSubscriptions(subscriptions, payload) {
                 removeSubscriptionByEndpoint.run(subscription.endpoint);
             }
             else {
-                console.error('Web push send error:', error);
+                logger_1.logger.error('Web push send error:', error);
             }
         }
     }
@@ -114,7 +115,7 @@ router.post('/unsubscribe', (req, res) => {
 });
 router.post('/test', async (req, res) => {
     if (!isPushConfigured) {
-        console.error('Push test failed: VAPID not configured');
+        logger_1.logger.error('Push test failed: VAPID not configured');
         return res.status(503).json({ error: 'Push is not configured on server', vapidConfigured: false });
     }
     const userId = req.user?.id;
@@ -128,16 +129,16 @@ router.post('/test', async (req, res) => {
         .prepare('SELECT id, user_id, endpoint, p256dh, auth, expiration_time FROM push_subscriptions WHERE user_id = ?')
         .all(userId);
     if (subscriptions.length === 0) {
-        console.warn(`Push test: no subscriptions found for user ${userId}`);
+        logger_1.logger.warn(`Push test: no subscriptions found for user ${userId}`);
         return res.json({ success: false, sent: 0, subscriptions: 0, error: 'No push subscriptions found' });
     }
-    console.log(`Push test: sending to ${subscriptions.length} subscriptions for user ${userId}`);
+    logger_1.logger.info(`Push test: sending to ${subscriptions.length} subscriptions for user ${userId}`);
     const sent = await sendPushToSubscriptions(subscriptions, {
         title: title || 'teamvote+',
         body: body || 'Dies ist eine Test-Benachrichtigung.',
         url: url || '/',
     });
-    console.log(`Push test: ${sent}/${subscriptions.length} notifications sent`);
+    logger_1.logger.info(`Push test: ${sent}/${subscriptions.length} notifications sent`);
     return res.json({ success: sent > 0, sent, subscriptions: subscriptions.length, vapidConfigured: isPushConfigured });
 });
 exports.default = router;

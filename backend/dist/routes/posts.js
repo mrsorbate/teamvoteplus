@@ -7,6 +7,7 @@ const express_1 = require("express");
 const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
 const pushNotifications_1 = require("../services/pushNotifications");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 const parseOptions = (value) => {
@@ -64,7 +65,7 @@ router.get('/posts/open', (req, res) => {
         return res.json(payload);
     }
     catch (error) {
-        console.error('Get open posts error:', error);
+        logger_1.logger.error('Get open posts error:', error);
         return res.status(500).json({ error: 'Failed to fetch open posts' });
     }
 });
@@ -117,7 +118,7 @@ router.get('/teams/:id/posts', (req, res) => {
         return res.json(payload);
     }
     catch (error) {
-        console.error('Get team posts error:', error);
+        logger_1.logger.error('Get team posts error:', error);
         return res.status(500).json({ error: 'Failed to fetch team posts' });
     }
 });
@@ -166,7 +167,7 @@ router.post('/teams/:id/posts', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Create team post error:', error);
+        logger_1.logger.error('Create team post error:', error);
         return res.status(500).json({ error: 'Failed to create post' });
     }
 });
@@ -192,7 +193,7 @@ router.post('/teams/:teamId/posts/:postId/seen', (req, res) => {
         return res.json({ success: true });
     }
     catch (error) {
-        console.error('Mark post seen error:', error);
+        logger_1.logger.error('Mark post seen error:', error);
         return res.status(500).json({ error: 'Failed to mark post as seen' });
     }
 });
@@ -229,7 +230,7 @@ router.post('/teams/:teamId/posts/:postId/answer', (req, res) => {
         return res.json({ success: true });
     }
     catch (error) {
-        console.error('Answer poll error:', error);
+        logger_1.logger.error('Answer poll error:', error);
         return res.status(500).json({ error: 'Failed to answer poll' });
     }
 });

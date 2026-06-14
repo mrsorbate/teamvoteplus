@@ -10,20 +10,12 @@ const axios_1 = __importDefault(require("axios"));
 const helmet_1 = __importDefault(require("helmet"));
 const init_1 = __importDefault(require("./database/init"));
 const rateLimit_1 = require("./middleware/rateLimit");
-const auth_1 = __importDefault(require("./routes/auth"));
-const teams_1 = __importDefault(require("./routes/teams"));
-const events_1 = __importDefault(require("./routes/events"));
-const stats_1 = __importDefault(require("./routes/stats"));
-const invites_1 = __importDefault(require("./routes/invites"));
-const admin_1 = __importDefault(require("./routes/admin"));
-const profile_1 = __importDefault(require("./routes/profile"));
-const settings_1 = __importDefault(require("./routes/settings"));
-const notifications_1 = __importDefault(require("./routes/notifications"));
-const posts_1 = __importDefault(require("./routes/posts"));
+const routes_1 = require("./routes");
 const autoGameImport_1 = require("./services/autoGameImport");
 const scheduler_1 = require("./services/scheduler");
-const auth_2 = require("./middleware/auth");
+const auth_1 = require("./middleware/auth");
 const upload_1 = require("./middleware/upload");
+const logger_1 = require("./utils/logger");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
@@ -48,7 +40,9 @@ const authLimiter = (0, rateLimit_1.createRateLimiter)({
     max: Number.isFinite(authRateLimitMax) && authRateLimitMax > 0 ? authRateLimitMax : 20,
     message: { error: 'Too many auth attempts, please try again later.' },
 });
-// Middleware
+// trust proxy: 1 trusts X-Forwarded-For from the first hop (MEDIUM-3).
+// Only safe when the server is exclusively reachable through a single reverse proxy.
+// Set to false if the server is directly Internet-accessible.
 app.set('trust proxy', 1);
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: false,
@@ -56,13 +50,17 @@ app.use((0, helmet_1.default)({
 if (corsOrigins.length > 0) {
     app.use((0, cors_1.default)({ origin: corsOrigins }));
 }
+else if (process.env.NODE_ENV === 'production') {
+    // Production with no CORS_ORIGIN set: reject all cross-origin requests (#3)
+    app.use((0, cors_1.default)({ origin: false }));
+}
 else {
     app.use((0, cors_1.default)());
 }
 app.use(express_1.default.json());
 app.use('/api', apiLimiter);
-// Serve uploaded files
-app.use('/uploads', express_1.default.static('uploads'));
+// Serve uploaded files — timestamp-suffixed filenames make these immutable (#11)
+app.use('/uploads', express_1.default.static('uploads', { maxAge: '7d', immutable: true }));
 // Root route
 app.get('/', (req, res) => {
     res.json({
@@ -116,9 +114,15 @@ app.get('/api/health', (req, res) => {
         });
     }
 });
+// Badge proxy rate limiter — unauthenticated endpoint (HIGH-5)
+const badgeProxyLimiter = (0, rateLimit_1.createRateLimiter)({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: { error: 'Too many badge proxy requests.' },
+});
 // Image proxy for fussball.de team badges (CORS workaround)
 // Must be registered before generic authenticated /api routers.
-app.get('/api/badge-proxy', async (req, res) => {
+app.get('/api/badge-proxy', badgeProxyLimiter, async (req, res) => {
     const url = String(req.query.url || '');
     let parsedUrl;
     try {
@@ -150,19 +154,10 @@ app.get('/api/badge-proxy', async (req, res) => {
         res.status(502).end();
     }
 });
-// Routes
-app.use('/api/auth', authLimiter, auth_1.default);
-app.use('/api/teams', teams_1.default);
-app.use('/api/events', events_1.default);
-app.use('/api/stats', stats_1.default);
-app.use('/api/settings', settings_1.default);
-app.use('/api/notifications', notifications_1.default);
-app.use('/api', invites_1.default);
-app.use('/api', posts_1.default);
-app.use('/api/admin', admin_1.default);
-app.use('/api/profile', profile_1.default);
+// Routes (#17)
+(0, routes_1.registerRoutes)(app, authLimiter);
 // File upload endpoint (duplicate of admin route — kept for compatibility, auth-guarded)
-app.post('/api/admin/upload/logo', auth_2.authenticate, upload_1.upload.single('logo'), (req, res) => {
+app.post('/api/admin/upload/logo', auth_1.authenticate, upload_1.upload.single('logo'), (req, res) => {
     if (req.user?.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
     }
@@ -184,12 +179,16 @@ app.post('/api/admin/upload/logo', auth_2.authenticate, upload_1.upload.single('
         res.status(500).json({ error: 'Failed to upload logo' });
     }
 });
-// Error handler
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(err.status || 500).json({
-        error: err.message || 'Internal server error'
-    });
+// Error handler — never leak internal details for 5xx errors (#5)
+app.use((err, _req, res, _next) => {
+    const status = err.status ?? err.statusCode ?? 500;
+    logger_1.logger.error(err.stack ?? err.message);
+    if (status >= 500) {
+        res.status(status).json({ error: 'Internal server error' });
+    }
+    else {
+        res.status(status).json({ error: err.message || 'Request error' });
+    }
 });
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);

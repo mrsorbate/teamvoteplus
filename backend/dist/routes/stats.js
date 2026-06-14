@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 // Get team statistics
@@ -98,7 +99,7 @@ router.get('/team/:teamId', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get team stats error:', error);
+        logger_1.logger.error('Get team stats error:', error);
         res.status(500).json({ error: 'Failed to fetch statistics' });
     }
 });
@@ -136,7 +137,7 @@ router.get('/player/:userId', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get player stats error:', error);
+        logger_1.logger.error('Get player stats error:', error);
         res.status(500).json({ error: 'Failed to fetch player statistics' });
     }
 });

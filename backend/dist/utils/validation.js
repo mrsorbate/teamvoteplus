@@ -1,11 +1,29 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateEventResponseSchema = exports.createEventSchema = exports.createTeamSchema = exports.createUserSchema = void 0;
+exports.validateBody = validateBody;
 const zod_1 = require("zod");
+/**
+ * Express middleware: validates req.body against a Zod schema.
+ * Returns 400 with field errors on failure. (#2)
+ */
+function validateBody(schema) {
+    return (req, res, next) => {
+        const result = schema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({
+                error: 'Validation failed',
+                details: result.error.flatten().fieldErrors,
+            });
+        }
+        req.body = result.data;
+        next();
+    };
+}
 exports.createUserSchema = zod_1.z.object({
     username: zod_1.z.string().min(3, 'Benutzername muss mindestens 3 Zeichen lang sein').max(30, 'Benutzername darf maximal 30 Zeichen haben'),
     email: zod_1.z.string().email('Ungültige E-Mail-Adresse'),
-    password: zod_1.z.string().min(6, 'Passwort muss mindestens 6 Zeichen lang sein'),
+    password: zod_1.z.string().min(8, 'Passwort muss mindestens 8 Zeichen lang sein'),
     name: zod_1.z.string().min(2, 'Name muss mindestens 2 Zeichen lang sein'),
     role: zod_1.z.enum(['admin', 'trainer', 'player']).default('player'),
 });

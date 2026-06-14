@@ -10,6 +10,7 @@ const fs_1 = __importDefault(require("fs"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 const ensureProfileUserColumns = () => {
     const columns = init_1.default.pragma('table_info(users)');
@@ -78,7 +79,7 @@ router.get('/me', (req, res) => {
         res.json(user);
     }
     catch (error) {
-        console.error('Get profile error:', error);
+        logger_1.logger.error('Get profile error:', error);
         res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
@@ -211,10 +212,10 @@ router.put('/me', (req, res) => {
         const updatedUser = init_1.default.prepare(`SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
               height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
        FROM users WHERE id = ?`).get(req.user.id);
-        res.json({ message: 'Profile updated successfully', user: updatedUser });
+        res.json(updatedUser);
     }
     catch (error) {
-        console.error('Update profile error:', error);
+        logger_1.logger.error('Update profile error:', error);
         res.status(500).json({ error: 'Failed to update profile' });
     }
 });
@@ -245,7 +246,7 @@ router.put('/password', async (req, res) => {
         res.json({ message: 'Password updated successfully' });
     }
     catch (error) {
-        console.error('Update password error:', error);
+        logger_1.logger.error('Update password error:', error);
         res.status(500).json({ error: 'Failed to update password' });
     }
 });
@@ -273,7 +274,7 @@ router.post('/picture', upload.single('picture'), (req, res) => {
         });
     }
     catch (error) {
-        console.error('Upload profile picture error:', error);
+        logger_1.logger.error('Upload profile picture error:', error);
         res.status(500).json({ error: 'Failed to upload profile picture' });
     }
 });
@@ -296,7 +297,7 @@ router.delete('/picture', (req, res) => {
         }
     }
     catch (error) {
-        console.error('Delete profile picture error:', error);
+        logger_1.logger.error('Delete profile picture error:', error);
         res.status(500).json({ error: 'Failed to delete profile picture' });
     }
 });

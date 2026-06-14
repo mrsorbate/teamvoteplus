@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import type { Request, Response, NextFunction } from 'express';
+/**
+ * Express middleware: validates req.body against a Zod schema.
+ * Returns 400 with field errors on failure. (#2)
+ */
+export declare function validateBody<T extends z.ZodTypeAny>(schema: T): (req: Request, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;
 export declare const createUserSchema: z.ZodObject<{
     username: z.ZodString;
     email: z.ZodString;

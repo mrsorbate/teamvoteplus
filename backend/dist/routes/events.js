@@ -9,6 +9,7 @@ const auth_1 = require("../middleware/auth");
 const crypto_1 = require("crypto");
 const pushNotifications_1 = require("../services/pushNotifications");
 const validation_1 = require("../utils/validation");
+const logger_1 = require("../utils/logger");
 const eventHelpers_1 = require("../services/eventHelpers");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
@@ -21,13 +22,21 @@ router.get('/my-upcoming', (req, res) => {
              u.name as created_by_name,
              er.status as my_status,
              er.comment as my_comment,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'accepted') as accepted_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'declined') as declined_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'tentative') as tentative_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'pending') as pending_count
+             COALESCE(rc.accepted_count, 0) as accepted_count,
+             COALESCE(rc.declined_count, 0) as declined_count,
+             COALESCE(rc.tentative_count, 0) as tentative_count,
+             COALESCE(rc.pending_count, 0) as pending_count
       FROM events e
       INNER JOIN users u ON e.created_by = u.id
       LEFT JOIN event_responses er ON er.event_id = e.id AND er.user_id = ?
+      LEFT JOIN (
+        SELECT event_id,
+          SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) as accepted_count,
+          SUM(CASE WHEN status='declined' THEN 1 ELSE 0 END) as declined_count,
+          SUM(CASE WHEN status='tentative' THEN 1 ELSE 0 END) as tentative_count,
+          SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_count
+        FROM event_responses GROUP BY event_id
+      ) rc ON rc.event_id = e.id
       WHERE e.start_time >= ?
         AND EXISTS (
           SELECT 1
@@ -41,7 +50,7 @@ router.get('/my-upcoming', (req, res) => {
         res.json((0, eventHelpers_1.attachTeamMetaToEvents)(events));
     }
     catch (error) {
-        console.error('Get my upcoming events error:', error);
+        logger_1.logger.error('Get my upcoming events error:', error);
         res.status(500).json({ error: 'Failed to fetch upcoming events' });
     }
 });
@@ -51,33 +60,66 @@ router.get('/my-all', (req, res) => {
         const { view } = req.query;
         const now = new Date().toISOString();
         const isPastView = view === 'past';
-        const comparator = isPastView ? '<=' : '>=';
-        const orderDirection = isPastView ? 'DESC' : 'ASC';
-        const events = init_1.default.prepare(`
-      SELECT e.*,
+        const myAllSql = isPastView
+            ? `SELECT e.*,
              u.name as created_by_name,
              er.status as my_status,
              er.comment as my_comment,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'accepted') as accepted_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'declined') as declined_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'tentative') as tentative_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'pending') as pending_count
+             COALESCE(rc.accepted_count, 0) as accepted_count,
+             COALESCE(rc.declined_count, 0) as declined_count,
+             COALESCE(rc.tentative_count, 0) as tentative_count,
+             COALESCE(rc.pending_count, 0) as pending_count
       FROM events e
       INNER JOIN users u ON e.created_by = u.id
       LEFT JOIN event_responses er ON er.event_id = e.id AND er.user_id = ?
-      WHERE e.start_time ${comparator} ?
+      LEFT JOIN (
+        SELECT event_id,
+          SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) as accepted_count,
+          SUM(CASE WHEN status='declined' THEN 1 ELSE 0 END) as declined_count,
+          SUM(CASE WHEN status='tentative' THEN 1 ELSE 0 END) as tentative_count,
+          SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_count
+        FROM event_responses GROUP BY event_id
+      ) rc ON rc.event_id = e.id
+      WHERE e.start_time <= ?
         AND EXISTS (
           SELECT 1
           FROM event_teams et
           INNER JOIN team_members tm ON tm.team_id = et.team_id
           WHERE et.event_id = e.id AND tm.user_id = ?
         )
-      ORDER BY e.start_time ${orderDirection}
-    `).all(req.user.id, now, req.user.id);
+      ORDER BY e.start_time DESC`
+            : `SELECT e.*,
+             u.name as created_by_name,
+             er.status as my_status,
+             er.comment as my_comment,
+             COALESCE(rc.accepted_count, 0) as accepted_count,
+             COALESCE(rc.declined_count, 0) as declined_count,
+             COALESCE(rc.tentative_count, 0) as tentative_count,
+             COALESCE(rc.pending_count, 0) as pending_count
+      FROM events e
+      INNER JOIN users u ON e.created_by = u.id
+      LEFT JOIN event_responses er ON er.event_id = e.id AND er.user_id = ?
+      LEFT JOIN (
+        SELECT event_id,
+          SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) as accepted_count,
+          SUM(CASE WHEN status='declined' THEN 1 ELSE 0 END) as declined_count,
+          SUM(CASE WHEN status='tentative' THEN 1 ELSE 0 END) as tentative_count,
+          SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_count
+        FROM event_responses GROUP BY event_id
+      ) rc ON rc.event_id = e.id
+      WHERE e.start_time >= ?
+        AND EXISTS (
+          SELECT 1
+          FROM event_teams et
+          INNER JOIN team_members tm ON tm.team_id = et.team_id
+          WHERE et.event_id = e.id AND tm.user_id = ?
+        )
+      ORDER BY e.start_time ASC`;
+        const events = init_1.default.prepare(myAllSql).all(req.user.id, now, req.user.id);
         res.json((0, eventHelpers_1.attachTeamMetaToEvents)(events));
     }
     catch (error) {
-        console.error('Get my all events error:', error);
+        logger_1.logger.error('Get my all events error:', error);
         res.status(500).json({ error: 'Failed to fetch all events' });
     }
 });
@@ -100,15 +142,23 @@ router.get('/', (req, res) => {
              u.name as created_by_name,
              er.status as my_status,
              er.comment as my_comment,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'accepted') as accepted_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'declined') as declined_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'tentative') as tentative_count,
-             (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'pending') as pending_count
+             COALESCE(rc.accepted_count, 0) as accepted_count,
+             COALESCE(rc.declined_count, 0) as declined_count,
+             COALESCE(rc.tentative_count, 0) as tentative_count,
+             COALESCE(rc.pending_count, 0) as pending_count
       FROM events e
       INNER JOIN event_teams et_filter ON et_filter.event_id = e.id AND et_filter.team_id = ?
       INNER JOIN teams t ON et_filter.team_id = t.id
       INNER JOIN users u ON e.created_by = u.id
       LEFT JOIN event_responses er ON er.event_id = e.id AND er.user_id = ?
+      LEFT JOIN (
+        SELECT event_id,
+          SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) as accepted_count,
+          SUM(CASE WHEN status='declined' THEN 1 ELSE 0 END) as declined_count,
+          SUM(CASE WHEN status='tentative' THEN 1 ELSE 0 END) as tentative_count,
+          SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_count
+        FROM event_responses GROUP BY event_id
+      ) rc ON rc.event_id = e.id
       WHERE 1 = 1
     `;
         const params = [team_id, req.user.id];
@@ -124,12 +174,12 @@ router.get('/', (req, res) => {
             query += isPastView ? ' AND e.start_time <= ?' : ' AND e.start_time >= ?';
             params.push(now);
         }
-        query += ` ORDER BY e.start_time ${isPastView ? 'DESC' : 'ASC'}`;
+        query += isPastView ? ' ORDER BY e.start_time DESC' : ' ORDER BY e.start_time ASC';
         const events = init_1.default.prepare(query).all(...params);
         res.json((0, eventHelpers_1.attachTeamMetaToEvents)(events));
     }
     catch (error) {
-        console.error('Get events error:', error);
+        logger_1.logger.error('Get events error:', error);
         res.status(500).json({ error: 'Failed to fetch events' });
     }
 });
@@ -186,7 +236,7 @@ router.get('/:id', (req, res) => {
         res.json({ ...eventWithSeriesMeta, responses });
     }
     catch (error) {
-        console.error('Get event error:', error);
+        logger_1.logger.error('Get event error:', error);
         res.status(500).json({ error: 'Failed to fetch event' });
     }
 });
@@ -226,7 +276,7 @@ router.get('/:id/squad', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get match squad error:', error);
+        logger_1.logger.error('Get match squad error:', error);
         return res.status(500).json({ error: 'Failed to fetch match squad' });
     }
 });
@@ -263,7 +313,7 @@ router.put('/:id/squad', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Update match squad error:', error);
+        logger_1.logger.error('Update match squad error:', error);
         return res.status(500).json({ error: 'Failed to update match squad' });
     }
 });
@@ -299,7 +349,7 @@ router.post('/:id/squad/release', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Release match squad error:', error);
+        logger_1.logger.error('Release match squad error:', error);
         return res.status(500).json({ error: 'Failed to release match squad' });
     }
 });
@@ -457,7 +507,7 @@ router.post('/', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Create event error:', error);
+        logger_1.logger.error('Create event error:', error);
         res.status(500).json({ error: 'Failed to create event' });
     }
 });
@@ -616,7 +666,7 @@ router.put('/:id', (req, res) => {
         return res.json({ success: true });
     }
     catch (error) {
-        console.error('Update event error:', error);
+        logger_1.logger.error('Update event error:', error);
         return res.status(500).json({ error: 'Failed to update event' });
     }
 });
@@ -660,7 +710,7 @@ router.post('/:id/response', (req, res) => {
         res.json({ success: true, status, comment: normalizedComment || null });
     }
     catch (error) {
-        console.error('Update response error:', error);
+        logger_1.logger.error('Update response error:', error);
         res.status(500).json({ error: 'Failed to update response' });
     }
 });
@@ -703,7 +753,7 @@ router.post('/:id/response/:userId', (req, res) => {
         res.json({ success: true, status, comment: normalizedComment || null, user_id: userId });
     }
     catch (error) {
-        console.error('Update response for user error:', error);
+        logger_1.logger.error('Update response for user error:', error);
         res.status(500).json({ error: 'Failed to update response' });
     }
 });
@@ -712,7 +762,7 @@ router.delete('/:id', async (req, res) => {
     try {
         const eventId = parseInt(req.params.id, 10);
         const deleteSeries = req.query.delete_series === 'true';
-        const deleteNote = typeof req.body?.delete_note === 'string' ? req.body.delete_note.trim() : '';
+        const deleteNote = typeof req.body?.delete_note === 'string' ? req.body.delete_note.trim().slice(0, 200) : '';
         const event = init_1.default.prepare('SELECT id, team_id, series_id, title, start_time, created_by FROM events WHERE id = ?').get(eventId);
         if (!event)
             return res.status(404).json({ error: 'Event not found' });
@@ -771,7 +821,7 @@ router.delete('/:id', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Delete event error:', error);
+        logger_1.logger.error('Delete event error:', error);
         res.status(500).json({ error: 'Failed to delete event' });
     }
 });

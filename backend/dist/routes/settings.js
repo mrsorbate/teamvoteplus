@@ -6,18 +6,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 // Public endpoint to get organization settings
 router.get('/organization', (req, res) => {
     try {
-        const org = init_1.default.prepare('SELECT * FROM organizations LIMIT 1').get();
+        const org = init_1.default.prepare('SELECT name, short_name, logo, timezone, setup_completed FROM organizations LIMIT 1').get();
         if (!org) {
             return res.status(404).json({ error: 'Organization not found' });
         }
         res.json(org);
     }
     catch (error) {
-        console.error('Get organization error:', error);
+        logger_1.logger.error('Get organization error:', error);
         res.status(500).json({ error: 'Failed to fetch organization' });
     }
 });
@@ -41,7 +42,7 @@ router.get('/trainer-team-names', auth_1.authenticate, (req, res) => {
         res.json(teams);
     }
     catch (error) {
-        console.error('Get trainer team names error:', error);
+        logger_1.logger.error('Get trainer team names error:', error);
         res.status(500).json({ error: 'Failed to fetch trainer team names' });
     }
 });
@@ -71,14 +72,10 @@ router.put('/trainer-team-names/:teamId', auth_1.authenticate, (req, res) => {
       SET trainer_custom_team_name = ? 
       WHERE team_id = ? AND user_id = ?
       `).run(trimmedName, teamId, userId);
-        res.json({
-            id: teamId,
-            trainer_custom_team_name: trimmedName,
-            message: 'Team name updated successfully',
-        });
+        res.json({ id: teamId, trainer_custom_team_name: trimmedName });
     }
     catch (error) {
-        console.error('Update trainer team name error:', error);
+        logger_1.logger.error('Update trainer team name error:', error);
         res.status(500).json({ error: 'Failed to update team name' });
     }
 });

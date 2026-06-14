@@ -14,6 +14,7 @@ const auth_1 = require("../middleware/auth");
 const client_1 = require("../services/fussballDe/client");
 const pushNotifications_1 = require("../services/pushNotifications");
 const publicUrl_1 = require("../utils/publicUrl");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 const hasTeamsCalendarTokenColumn = (() => {
     try {
@@ -434,22 +435,20 @@ const storage = multer_1.default.diskStorage({
         cb(null, 'team-' + uniqueSuffix + path_1.default.extname(file.originalname));
     }
 });
+const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const upload = (0, multer_1.default)({
     storage,
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit
+        fileSize: 5 * 1024 * 1024,
     },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|webp/;
-        const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-        if (mimetype && extname) {
+    fileFilter: (_req, file, cb) => {
+        const ext = path_1.default.extname(file.originalname).toLowerCase();
+        if (ALLOWED_IMAGE_MIMES.has(file.mimetype) && ALLOWED_IMAGE_EXTS.has(ext)) {
             return cb(null, true);
         }
-        else {
-            cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
-        }
-    }
+        cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+    },
 });
 router.get('/:id/calendar.ics', (req, res) => {
     try {
@@ -535,7 +534,7 @@ router.get('/:id/calendar.ics', (req, res) => {
         return res.status(200).send(lines.join('\r\n'));
     }
     catch (error) {
-        console.error('Calendar export error:', error);
+        logger_1.logger.error('Calendar export error:', error);
         return res.status(500).json({ error: 'Failed to generate calendar feed' });
     }
 });
@@ -559,7 +558,7 @@ router.get('/', (req, res) => {
         res.json(teams);
     }
     catch (error) {
-        console.error('Get teams error:', error);
+        logger_1.logger.error('Get teams error:', error);
         res.status(500).json({ error: 'Failed to fetch teams' });
     }
 });
@@ -589,7 +588,7 @@ router.get('/:id', (req, res) => {
         res.json(team);
     }
     catch (error) {
-        console.error('Get team error:', error);
+        logger_1.logger.error('Get team error:', error);
         res.status(500).json({ error: 'Failed to fetch team' });
     }
 });
@@ -622,7 +621,7 @@ router.get('/:id/settings', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get team settings error:', error);
+        logger_1.logger.error('Get team settings error:', error);
         return res.status(500).json({ error: 'Failed to fetch team settings' });
     }
 });
@@ -879,7 +878,7 @@ router.put('/:id/settings', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Update team settings error:', error);
+        logger_1.logger.error('Update team settings error:', error);
         return res.status(500).json({ error: 'Failed to update team settings' });
     }
 });
@@ -919,12 +918,12 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
             const printableMatches = printableMatchesResult.status === 'fulfilled' ? printableMatchesResult.value : [];
             const sourceMatches = [...nextMatches, ...printableMatches];
             if (sourceMatches.length === 0) {
-                console.warn(`fussball.de Import: keine Spiele für Quelle ${sourceEntry} gefunden`);
+                logger_1.logger.warn(`fussball.de Import: keine Spiele für Quelle ${sourceEntry} gefunden`);
             }
             return sourceMatches.map((match) => ({ ...match, __sourceId: sourceEntry }));
         }
         catch (error) {
-            console.warn(`fussball.de Import fehlgeschlagen für Quelle ${sourceEntry}:`, error);
+            logger_1.logger.warn(`fussball.de Import fehlgeschlagen für Quelle ${sourceEntry}:`, error);
             return [];
         }
     }));
@@ -1271,7 +1270,7 @@ router.post('/:id/import-next-games', async (req, res) => {
         return res.json(result);
     }
     catch (error) {
-        console.error('Import next games error:', error);
+        logger_1.logger.error('Import next games error:', error);
         return res.status(500).json({ error: 'Failed to import next games' });
     }
 });
@@ -1301,7 +1300,7 @@ router.put('/:id/fussballde-id', (req, res) => {
         return res.json({ id: teamId, fussballde_id: normalizedSources.join(',') });
     }
     catch (error) {
-        console.error('Update fussball.de id error:', error);
+        logger_1.logger.error('Update fussball.de id error:', error);
         return res.status(500).json({ error: 'Failed to update fussball.de ID' });
     }
 });
@@ -1564,7 +1563,7 @@ router.get('/:id/external-schedule', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get external team schedule error:', error);
+        logger_1.logger.error('Get external team schedule error:', error);
         return res.status(500).json({ error: 'Failed to fetch external schedule' });
     }
 });
@@ -1661,7 +1660,7 @@ router.get('/:id/external-table', async (req, res) => {
                         row_count: 0,
                         error: errorMessage,
                     });
-                    console.warn(`fussball.de table fetch failed for source ${sourceEntry}:`, externalError);
+                    logger_1.logger.warn(`fussball.de table fetch failed for source ${sourceEntry}:`, externalError);
                 }
             }
             if (candidateTables.length > 0) {
@@ -1736,7 +1735,7 @@ router.get('/:id/external-table', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Get external team table error:', error);
+        logger_1.logger.error('Get external team table error:', error);
         return res.status(500).json({ error: 'Failed to fetch external team table' });
     }
 });
@@ -1767,7 +1766,7 @@ router.post('/', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Create team error:', error);
+        logger_1.logger.error('Create team error:', error);
         res.status(500).json({ error: 'Failed to create team' });
     }
 });
@@ -1814,7 +1813,7 @@ router.get('/:id/members', (req, res) => {
         res.json(members);
     }
     catch (error) {
-        console.error('Get team members error:', error);
+        logger_1.logger.error('Get team members error:', error);
         res.status(500).json({ error: 'Failed to fetch team members' });
     }
 });
@@ -1822,7 +1821,8 @@ router.get('/:id/members', (req, res) => {
 router.post('/:id/members', (req, res) => {
     try {
         const teamId = parseInt(req.params.id);
-        const { user_id, role = 'player', jersey_number, position } = req.body;
+        const { user_id, jersey_number, position } = req.body;
+        const role = 'player';
         // Check if user is trainer
         const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
         if (!membership || membership.role !== 'trainer') {
@@ -1849,7 +1849,7 @@ router.post('/:id/members', (req, res) => {
         if (error.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'User is already a team member' });
         }
-        console.error('Add team member error:', error);
+        logger_1.logger.error('Add team member error:', error);
         res.status(500).json({ error: 'Failed to add team member' });
     }
 });
@@ -1876,7 +1876,7 @@ router.delete('/:id/members/:userId', (req, res) => {
         return res.json({ success: true });
     }
     catch (error) {
-        console.error('Remove player from team error:', error);
+        logger_1.logger.error('Remove player from team error:', error);
         return res.status(500).json({ error: 'Failed to remove player from team' });
     }
 });
@@ -1894,8 +1894,7 @@ router.post('/:id/players', async (req, res) => {
             return res.status(403).json({ error: 'Only trainers can create players' });
         }
         // Generate unique token
-        const crypto = require('crypto');
-        const token = crypto.randomBytes(16).toString('hex');
+        const token = (0, crypto_1.randomBytes)(16).toString('hex');
         // Create invite with player info
         const stmt = init_1.default.prepare('INSERT INTO team_invites (team_id, token, role, created_by, player_name, player_birth_date, player_jersey_number, max_uses) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
         const result = stmt.run(teamId, token, 'player', req.user.id, name, birth_date || null, jersey_number || null, 1);
@@ -1911,7 +1910,7 @@ router.post('/:id/players', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Create player error:', error);
+        logger_1.logger.error('Create player error:', error);
         res.status(500).json({ error: 'Failed to create player' });
     }
 });
@@ -1942,7 +1941,7 @@ router.post('/:id/picture', upload.single('picture'), (req, res) => {
         res.json({ team_picture: picturePath });
     }
     catch (error) {
-        console.error('Upload team picture error:', error);
+        logger_1.logger.error('Upload team picture error:', error);
         res.status(500).json({ error: 'Failed to upload team picture' });
     }
 });
@@ -1969,7 +1968,7 @@ router.delete('/:id/picture', (req, res) => {
         return res.json({ success: true });
     }
     catch (error) {
-        console.error('Delete team picture error:', error);
+        logger_1.logger.error('Delete team picture error:', error);
         return res.status(500).json({ error: 'Failed to delete team picture' });
     }
 });
@@ -1989,7 +1988,7 @@ router.delete('/:id/imported-games', (req, res) => {
         return res.json({ success: true, deleted: result.changes });
     }
     catch (error) {
-        console.error('Delete imported games error:', error);
+        logger_1.logger.error('Delete imported games error:', error);
         return res.status(500).json({ error: 'Failed to delete imported games' });
     }
 });
@@ -2012,7 +2011,7 @@ router.delete('/:id', (req, res) => {
         return res.json({ success: true, id: teamId, name: team.name });
     }
     catch (error) {
-        console.error('Delete team by trainer error:', error);
+        logger_1.logger.error('Delete team by trainer error:', error);
         return res.status(500).json({ error: 'Failed to delete team' });
     }
 });
