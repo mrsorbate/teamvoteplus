@@ -313,12 +313,14 @@ export default function DashboardPage() {
       )}
 
       {/* Upcoming Events Section */}
-      <div className="flex flex-col items-center justify-center gap-2 text-center">
+      <div className="flex flex-col items-center justify-center gap-3 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-white inline-flex items-center justify-center gap-3 min-w-0">
           <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400 shrink-0" />
           <span className="truncate">Terminübersicht</span>
         </h2>
-        <div className="h-0.5 w-14 rounded-full bg-primary-500/80" aria-hidden="true" />
+        <div className="relative h-px w-full overflow-hidden rounded-full bg-gray-700/70" aria-hidden="true">
+          <div className="absolute inset-y-0 left-1/2 w-24 -translate-x-1/2 rounded-full bg-primary-500/80" />
+        </div>
       </div>
 
       <div className="space-y-3 sm:space-y-4">
