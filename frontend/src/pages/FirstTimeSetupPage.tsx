@@ -169,7 +169,7 @@ export default function FirstTimeSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 from-gray-900 to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
@@ -181,10 +181,10 @@ export default function FirstTimeSetupPage() {
 
         {/* Progress indicator */}
         <div className="flex justify-center space-x-2">
-          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 1 ? 'bg-primary-600' : 'bg-gray-300'}`} />
-          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 2 ? 'bg-primary-600' : 'bg-gray-300'}`} />
-          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 3 ? 'bg-primary-600' : 'bg-gray-300'}`} />
-          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 4 ? 'bg-primary-600' : 'bg-gray-300'}`} />
+          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 1 ? 'bg-primary-600' : 'bg-gray-600'}`} />
+          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 2 ? 'bg-primary-600' : 'bg-gray-600'}`} />
+          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 3 ? 'bg-primary-600' : 'bg-gray-600'}`} />
+          <div className={`h-2 w-8 rounded-full transition-colors ${step >= 4 ? 'bg-primary-600' : 'bg-gray-600'}`} />
         </div>
 
         <div className="setup-stepper">

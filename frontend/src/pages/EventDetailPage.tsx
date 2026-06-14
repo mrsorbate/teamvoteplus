@@ -695,8 +695,8 @@ export default function EventDetailPage() {
                   selectedStatus === 'accepted'
                     ? 'bg-green-600 text-white shadow-glow-green ring-2 ring-green-500/40'
                     : 'bg-green-900/30 text-green-300 border border-green-700/50 hover:bg-green-800/50'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                style={{ minHeight: '52px' }}
+                } disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]`}
+                
               >
                 {updateResponseMutation.isPending && selectedStatus === 'accepted'
                   ? <Loader2 className="w-5 h-5 animate-spin" />
@@ -715,8 +715,7 @@ export default function EventDetailPage() {
                     : inlinePanel === 'tentative'
                     ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-600/60'
                     : 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50 hover:bg-yellow-900/40'
-                } disabled:opacity-40 disabled:cursor-not-allowed`}
-                style={{ minHeight: '52px' }}
+                } disabled:opacity-40 disabled:cursor-not-allowed min-h-[52px]`}
               >
                 <HelpCircle className="w-5 h-5" />
                 Unsicher
@@ -745,8 +744,7 @@ export default function EventDetailPage() {
                         setInlinePanel(null);
                       }}
                       disabled={updateResponseMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-yellow-600 text-white hover:bg-yellow-500 transition-colors disabled:opacity-50"
-                      style={{ minHeight: '44px' }}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-yellow-600 text-white hover:bg-yellow-500 transition-colors disabled:opacity-50 min-h-[44px]"
                     >
                       {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       Bestätigen
@@ -773,8 +771,7 @@ export default function EventDetailPage() {
                     : inlinePanel === 'declined'
                     ? 'bg-red-900/40 text-red-300 border border-red-600/60'
                     : 'bg-red-900/30 text-red-300 border border-red-700/50 hover:bg-red-900/40'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                style={{ minHeight: '52px' }}
+                } disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]`}
               >
                 {updateResponseMutation.isPending && selectedStatus === 'declined'
                   ? <Loader2 className="w-5 h-5 animate-spin" />
@@ -820,8 +817,7 @@ export default function EventDetailPage() {
                         setInlinePanel(null);
                       }}
                       disabled={updateResponseMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-                      style={{ minHeight: '44px' }}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 min-h-[44px]"
                     >
                       {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       Absage bestätigen

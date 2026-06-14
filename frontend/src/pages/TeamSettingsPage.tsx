@@ -856,7 +856,7 @@ export default function TeamSettingsPage() {
               <AccessibleModal
                 labelledBy="delete-imported-games-title"
                 onClose={() => setShowDeleteImportedGamesConfirm(false)}
-                className="items-end sm:items-center p-0 sm:p-4"
+                bottomSheet
                 panelClassName="bg-gray-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-modal"
               >
                   <h3 id="delete-imported-games-title" className="text-lg font-bold text-white mb-2">Importierte Spiele wirklich löschen?</h3>
@@ -1465,7 +1465,7 @@ export default function TeamSettingsPage() {
             <AccessibleModal
               labelledBy="delete-team-settings-title"
               onClose={() => setShowDeleteTeamConfirm(false)}
-              className="items-end sm:items-center p-0 sm:p-4"
+              bottomSheet
               panelClassName="bg-gray-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-modal"
             >
                 <h3 id="delete-team-settings-title" className="text-lg font-bold text-white mb-2">Team wirklich löschen?</h3>

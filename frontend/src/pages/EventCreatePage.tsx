@@ -760,6 +760,7 @@ export default function EventCreatePage() {
                   onChange={(e) => setEventData({ ...eventData, duration_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'duration_minutes')}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   className="input text-center flex-1 min-w-0"
                   placeholder="z.B. 90"
                 />
@@ -915,6 +916,7 @@ export default function EventCreatePage() {
                   onChange={(e) => setEventData({ ...eventData, arrival_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'arrival_minutes')}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   className="input text-center flex-1 min-w-0"
                   placeholder="z.B. 15"
                 />
@@ -1044,6 +1046,7 @@ export default function EventCreatePage() {
                       title="Stunden vor Termin"
                       aria-label="Rückmeldefrist in Stunden vor Termin"
                       inputMode="numeric"
+                  pattern="[0-9]*"
                       className="input text-center flex-1 min-w-0"
                       placeholder="z.B. 24"
                     />
@@ -1212,7 +1215,7 @@ export default function EventCreatePage() {
         <AccessibleModal
           labelledBy="create-invite-selection-title"
           onClose={() => setInviteSelectionModalOpen(false)}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="create-invite-selection-title" className="text-lg font-semibold text-white">Teilnehmer auswählen</h3>

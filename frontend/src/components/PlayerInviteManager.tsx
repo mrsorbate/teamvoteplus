@@ -207,7 +207,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
         <AccessibleModal
           labelledBy="create-player-title"
           onClose={closeCreateModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="create-player-title" className="font-semibold text-white mb-4">Spieler einladen</h3>
@@ -378,7 +378,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
         <AccessibleModal
           labelledBy="delete-invite-title"
           onClose={closeDeleteModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="delete-invite-title" className="font-semibold text-white mb-4">
@@ -410,7 +410,7 @@ export default function PlayerInviteManager({ teamId }: PlayerInviteManagerProps
         <AccessibleModal
           labelledBy="share-invite-title"
           onClose={closeShareModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="share-invite-title" className="font-semibold text-white mb-4">

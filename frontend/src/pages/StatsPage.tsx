@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { statsAPI } from '../lib/api';
 import { ArrowLeft, TrendingUp, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
+
+const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 interface AttendanceEntry {
   id: number;
@@ -119,6 +122,7 @@ export default function StatsPage() {
   const { user } = useAuthStore();
   const goBack = useSmartBack();
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['team-stats', teamId],
@@ -259,9 +263,12 @@ export default function StatsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{player.name}</p>
                       <div className="mt-1.5 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                        <div
+                        <motion.div
                           className={`h-full rounded-full ${barColor}`}
-                          style={{ width: `${rate}%` }}
+                          initial={prefersReducedMotion ? false : { scaleX: 0 }}
+                          animate={{ scaleX: rate / 100 }}
+                          transition={{ duration: 0.55, ease: EASE_EXPO, delay: prefersReducedMotion ? 0 : idx * 0.04 }}
+                          style={{ transformOrigin: 'left', width: '100%' }}
                           role="progressbar"
                           aria-valuenow={rate}
                           aria-valuemin={0}
@@ -276,11 +283,18 @@ export default function StatsPage() {
                     </div>
                   </button>
 
+                  <AnimatePresence>
                   {isExpanded && (
-                    <div
+                    <motion.div
                       id={`player-detail-${player.id}`}
-                      className="px-4 pb-3 pt-1 bg-gray-900/40 animate-slide-down"
+                      key={`detail-${player.id}`}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: EASE_EXPO }}
+                      style={{ overflow: 'hidden' }}
                     >
+                    <div className="px-4 pb-3 pt-1 bg-gray-900/40">
                       <div className="grid grid-cols-3 gap-2 mb-3">
                         {[
                           { label: 'Training', rate: trainingRate, accepted: player.accepted_training ?? 0, total: player.total_training ?? 0, textColor: 'text-blue-400' },
@@ -300,7 +314,9 @@ export default function StatsPage() {
                         <span className="text-gray-400 tabular-nums">{player.pending} offen</span>
                       </div>
                     </div>
+                    </motion.div>
                   )}
+                  </AnimatePresence>
                 </li>
               );
             })}

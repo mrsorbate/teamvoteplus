@@ -352,7 +352,7 @@ export default function TeamRosterPage() {
 	        <AccessibleModal
 	          labelledBy="member-profile-title"
 	          onClose={closeMemberModal}
-	          className="backdrop-blur-sm items-end sm:items-center p-0 sm:p-4"
+	          bottomSheet
 	          panelClassName="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal"
 	        >
 	            {/* Hero header */}

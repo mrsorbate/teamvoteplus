@@ -438,7 +438,7 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
         <AccessibleModal
           labelledBy="delete-invite-link-title"
           onClose={closeDeleteInviteModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl"
         >
           <h3 id="delete-invite-link-title" className="text-lg font-semibold text-white mb-3">

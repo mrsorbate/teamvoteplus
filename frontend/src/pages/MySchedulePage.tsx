@@ -126,7 +126,7 @@ const renderMatchCard = (match: any, section: any, cardKey: string) => {
                 <img
                   src={opponentBadge}
                   alt={`${opponent} Wappen`}
-                  className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-contain bg-gray-100 flex-shrink-0"
+                  className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-contain bg-gray-700 flex-shrink-0"
                   loading="lazy"
                 />
               ) : (

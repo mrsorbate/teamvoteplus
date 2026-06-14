@@ -1204,7 +1204,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="assign-trainer-title"
           onClose={closeAssignTrainerModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="assign-trainer-title" className="text-lg font-semibold mb-4 flex items-center">
@@ -1259,7 +1259,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="delete-team-title"
           onClose={closeDeleteTeamModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="delete-team-title" className="text-lg font-semibold mb-4">Team löschen</h3>
@@ -1292,7 +1292,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="edit-team-title"
           onClose={closeEditTeamModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="edit-team-title" className="text-lg font-semibold mb-4">Team bearbeiten</h3>
@@ -1349,7 +1349,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="remove-trainer-title"
           onClose={closeRemoveTrainerModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="remove-trainer-title" className="text-lg font-semibold mb-4 flex items-center">
@@ -1956,7 +1956,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="create-team-title"
           onClose={closeCreateTeamModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="create-team-title" className="text-lg font-semibold mb-4">Neues Team erstellen</h3>
@@ -2007,7 +2007,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="create-admin-title"
           onClose={closeCreateAdminModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="create-admin-title" className="text-lg font-semibold mb-4">Neuen Admin erstellen</h3>
@@ -2095,7 +2095,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="create-trainer-title"
           onClose={closeCreateTrainerModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="create-trainer-title" className="font-semibold text-white mb-4">Trainer anlegen & Registrierungslink erstellen</h3>
@@ -2218,7 +2218,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="reset-password-title"
           onClose={closeResetPasswordModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="reset-password-title" className="text-lg font-semibold mb-4">Passwort zurücksetzen</h3>
@@ -2251,7 +2251,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="delete-user-title"
           onClose={closeDeleteUserModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="delete-user-title" className="text-lg font-semibold mb-4">Benutzer löschen</h3>
@@ -2284,7 +2284,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="resend-link-title"
           onClose={closeResendTrainerLinkModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="resend-link-title" className="text-lg font-semibold mb-4">Registrierungslink</h3>
@@ -2339,7 +2339,7 @@ export default function AdminPage() {
         <AccessibleModal
           labelledBy="generated-password-title"
           onClose={closeGeneratedPasswordModal}
-          className="items-end sm:items-center p-0 sm:p-4"
+          bottomSheet
           panelClassName="card max-w-md w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
         >
             <h3 id="generated-password-title" className="text-lg font-semibold mb-4">Neues Passwort</h3>

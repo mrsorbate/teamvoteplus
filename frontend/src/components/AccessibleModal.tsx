@@ -7,6 +7,7 @@ interface AccessibleModalProps {
   onClose: () => void;
   className?: string;
   panelClassName?: string;
+  bottomSheet?: boolean;
 }
 
 const focusableSelector = [
@@ -26,6 +27,7 @@ export default function AccessibleModal({
   onClose,
   className = '',
   panelClassName = '',
+  bottomSheet = false,
 }: AccessibleModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -78,7 +80,11 @@ export default function AccessibleModal({
 
   return (
     <motion.div
-      className={`fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overscroll-contain ${className}`}
+      className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex overscroll-contain ${
+        bottomSheet
+          ? 'items-end sm:items-center justify-center p-0 sm:p-4'
+          : 'items-center justify-center p-4'
+      } ${className}`}
       onMouseDown={onClose}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

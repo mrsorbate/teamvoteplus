@@ -653,7 +653,7 @@ export default function EventSquadPage() {
                                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${isEnabled ? 'bg-primary-600' : 'bg-gray-600'}`}
                               >
                                 <span
-                                  className={`inline-block h-5 w-5 transform rounded-full bg-gray-100 transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
                                 />
                               </button>
                             </div>
