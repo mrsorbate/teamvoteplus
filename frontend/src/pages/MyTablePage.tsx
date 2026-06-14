@@ -169,15 +169,15 @@ export default function MyTablePage() {
               </div>
 
               {Array.isArray(section.rows) && section.rows.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-700">
+                <div className="table-shell">
+                  <table className="min-w-[360px] w-full divide-y divide-gray-700 text-sm">
                     <thead className="bg-gray-800">
                       <tr>
-                        <th className="eyebrow-label px-3 py-2 text-left">#</th>
-                        <th className="eyebrow-label px-3 py-2 text-left">Team</th>
-                        <th className="eyebrow-label px-3 py-2 text-left">Sp</th>
-                        <th className="eyebrow-label px-3 py-2 text-left">Tore</th>
-                        <th className="eyebrow-label px-3 py-2 text-left">Pkt</th>
+                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">#</th>
+                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Team</th>
+                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Sp</th>
+                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Tore</th>
+                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Pkt</th>
                       </tr>
                     </thead>
                     <tbody className="bg-gray-900 divide-y divide-gray-700">
@@ -188,25 +188,25 @@ export default function MyTablePage() {
                             ? 'bg-primary-900/40'
                             : ''}
                         >
-                          <td className="px-3 py-2 text-sm text-white">{row.place ?? index + 1}</td>
-                          <td className="px-3 py-2 text-sm text-white">
-                            <div className="flex items-center gap-2">
+                          <td className="whitespace-nowrap px-2 py-2 text-white sm:px-3">{row.place ?? index + 1}</td>
+                          <td className="whitespace-nowrap px-2 py-2 text-white sm:px-3">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
                               {normalizeBadgeUrl(row?.img) ? (
                                 <img
                                   src={normalizeBadgeUrl(row?.img)!}
                                   alt={`${String(row.team || 'Team')} Wappen`}
-                                  className="w-6 h-6 crest-badge rounded"
+                                  className="w-6 h-6 shrink-0 crest-badge rounded"
                                   loading="lazy"
                                 />
                               ) : (
-                                <div className="w-6 h-6 rounded-full bg-gray-700" />
+                                <div className="w-6 h-6 shrink-0 rounded-full bg-gray-700" />
                               )}
-                              <span className={isOwnTeamRow(section, row) ? 'font-semibold text-primary-100' : ''}>{String(row.team || '-')}</span>
+                              <span className={`whitespace-nowrap ${isOwnTeamRow(section, row) ? 'font-semibold text-primary-100' : ''}`}>{String(row.team || '-')}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-sm text-gray-300">{row.games ?? '-'}</td>
-                          <td className="px-3 py-2 text-sm text-gray-300">{String(row.goal || '-')}</td>
-                          <td className="px-3 py-2 text-sm font-semibold text-white">{row.points ?? '-'}</td>
+                          <td className="whitespace-nowrap px-2 py-2 text-gray-300 sm:px-3">{row.games ?? '-'}</td>
+                          <td className="whitespace-nowrap px-2 py-2 text-gray-300 sm:px-3">{String(row.goal || '-')}</td>
+                          <td className="whitespace-nowrap px-2 py-2 font-semibold text-white sm:px-3">{row.points ?? '-'}</td>
                         </tr>
                       ))}
                     </tbody>

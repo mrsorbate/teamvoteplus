@@ -148,6 +148,9 @@ export default function AdminPage() {
       await queryClient.invalidateQueries({ queryKey: ['organization'] });
       setShowOrganizationSettings(false);
     },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Einstellungen konnten nicht gespeichert werden', 'error');
+    },
   });
 
   const uploadLogoMutation = useMutation({
@@ -176,6 +179,9 @@ export default function AdminPage() {
       setTeamName('');
       setTeamDescription('');
       showToast('Team erfolgreich erstellt', 'success');
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Team konnte nicht erstellt werden', 'error');
     },
   });
 
@@ -232,6 +238,9 @@ export default function AdminPage() {
       setSelectedTrainer('');
       showToast('Trainer erfolgreich zugewiesen', 'success');
     },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Trainer konnte nicht zugewiesen werden', 'error');
+    },
   });
 
   const removeMemberMutation = useMutation({
@@ -247,6 +256,9 @@ export default function AdminPage() {
       setSelectedTrainerToRemove('');
       showToast('Trainer erfolgreich entfernt', 'success');
     },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Trainer konnte nicht entfernt werden', 'error');
+    },
   });
 
   const deleteOrganizationMutation = useMutation({
@@ -254,6 +266,9 @@ export default function AdminPage() {
     onSuccess: () => {
       logout();
       window.location.href = '/';
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Organisation konnte nicht gelöscht werden', 'error');
     },
   });
 
@@ -263,6 +278,9 @@ export default function AdminPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-teams'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Trainer-Einladung konnte nicht erstellt werden', 'error');
     },
   });
 
@@ -851,7 +869,7 @@ export default function AdminPage() {
 
   const userTableHeadCellClass = 'px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase';
   const userTableCellClass = 'px-4 py-2 whitespace-nowrap';
-  const userTableTextCellClass = 'px-4 py-2 text-sm text-gray-300';
+  const userTableTextCellClass = 'px-4 py-2 text-sm text-gray-300 whitespace-nowrap';
   const userTableEmptyCellClass = 'px-4 py-3 text-sm text-gray-400';
   const userActionButtonClass = 'min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   const auditHeaderCellClass = 'py-1.5 pr-3';

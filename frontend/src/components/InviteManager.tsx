@@ -355,15 +355,15 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
       )}
 
       {invites && invites.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="table-shell">
+          <table className="min-w-[560px] w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700 text-left text-gray-300">
-                <th className="py-2 pr-3">Name</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Gültig bis</th>
-                <th className="py-2 pr-3">Verwendet</th>
-                <th className="py-2 pr-3">Aktionen</th>
+                <th className="py-2 pl-3 pr-3 whitespace-nowrap">Name</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Status</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Gültig bis</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Verwendet</th>
+                <th className="py-2 pr-3 whitespace-nowrap">Aktionen</th>
               </tr>
             </thead>
             <tbody>
@@ -375,8 +375,8 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
 
                 return (
                   <tr key={invite.id} className="border-b border-gray-800">
-                    <td className="py-3 pr-3 font-medium text-white">{inviteeName}</td>
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pl-3 pr-3 font-medium text-white whitespace-nowrap">{inviteeName}</td>
+                    <td className="py-3 pr-3 whitespace-nowrap">
                       {(isExpired || isMaxedOut) ? (
                         <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
                           {isExpired ? 'Abgelaufen' : 'Limit erreicht'}
@@ -385,13 +385,13 @@ export default function InviteManager({ teamId, teamName }: InviteManagerProps) 
                         <span className="px-2 py-0.5 bg-green-900/30 text-green-300 text-xs rounded">Aktiv</span>
                       )}
                     </td>
-                    <td className="py-3 pr-3 text-gray-300">
+                    <td className="py-3 pr-3 text-gray-300 whitespace-nowrap">
                       {invite.expires_at ? new Date(invite.expires_at).toLocaleDateString('de-DE') : '-'}
                     </td>
-                    <td className="py-3 pr-3 text-gray-300 tabular-nums">
+                    <td className="py-3 pr-3 text-gray-300 tabular-nums whitespace-nowrap">
                       {invite.used_count}{invite.max_uses ? ` / ${invite.max_uses}` : ''}
                     </td>
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pr-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => copyInviteText(invite.token, inviteeName, inviteUrl)}

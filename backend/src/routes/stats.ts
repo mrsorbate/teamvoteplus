@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -106,7 +107,7 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
       }
     });
   } catch (error) {
-    console.error('Get team stats error:', error);
+    logger.error('Get team stats error:', error);
     res.status(500).json({ error: 'Failed to fetch statistics' });
   }
 });
@@ -152,7 +153,7 @@ router.get('/player/:userId', (req: AuthRequest, res) => {
       attendance
     });
   } catch (error) {
-    console.error('Get player stats error:', error);
+    logger.error('Get player stats error:', error);
     res.status(500).json({ error: 'Failed to fetch player statistics' });
   }
 });

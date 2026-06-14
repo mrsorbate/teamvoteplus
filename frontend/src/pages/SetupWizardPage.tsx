@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Upload, Building2, Globe, Shield } from 'lucide-react';
 import axios from 'axios';
 import { resolveAssetUrl } from '../lib/utils';
+import TeamVoteLogo from '../components/TeamVoteLogo';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -149,9 +150,7 @@ export default function SetupWizardPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Willkommen bei teamvote+
-          </h1>
+          <TeamVoteLogo className="justify-center mb-4" iconClassName="h-14 w-14 rounded-2xl sm:h-16 sm:w-16" textClassName="text-4xl sm:text-5xl" />
           <p className="text-lg text-gray-300">
             {step === 1 ? 'Dein Verein' : step === 2 ? 'Admin-Daten' : step === 3 ? 'Zeitzone' : 'Finale Zusammenfassung'}
           </p>

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import webpush from 'web-push';
 import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -57,7 +58,7 @@ async function sendPushToSubscriptions(subscriptions: StoredPushSubscription[], 
       if (statusCode === 404 || statusCode === 410) {
         removeSubscriptionByEndpoint.run(subscription.endpoint);
       } else {
-        console.error('Web push send error:', error);
+        logger.error('Web push send error:', error);
       }
     }
   }
@@ -149,7 +150,7 @@ router.post('/unsubscribe', (req: AuthRequest, res) => {
 
 router.post('/test', async (req: AuthRequest, res) => {
   if (!isPushConfigured) {
-    console.error('Push test failed: VAPID not configured');
+    logger.error('Push test failed: VAPID not configured');
     return res.status(503).json({ error: 'Push is not configured on server', vapidConfigured: false });
   }
 
@@ -167,18 +168,18 @@ router.post('/test', async (req: AuthRequest, res) => {
     .all(userId) as StoredPushSubscription[];
 
   if (subscriptions.length === 0) {
-    console.warn(`Push test: no subscriptions found for user ${userId}`);
+    logger.warn(`Push test: no subscriptions found for user ${userId}`);
     return res.json({ success: false, sent: 0, subscriptions: 0, error: 'No push subscriptions found' });
   }
 
-  console.log(`Push test: sending to ${subscriptions.length} subscriptions for user ${userId}`);
+  logger.info(`Push test: sending to ${subscriptions.length} subscriptions for user ${userId}`);
   const sent = await sendPushToSubscriptions(subscriptions, {
     title: title || 'teamvote+',
     body: body || 'Dies ist eine Test-Benachrichtigung.',
     url: url || '/',
   });
 
-  console.log(`Push test: ${sent}/${subscriptions.length} notifications sent`);
+  logger.info(`Push test: ${sent}/${subscriptions.length} notifications sent`);
   return res.json({ success: sent > 0, sent, subscriptions: subscriptions.length, vapidConfigured: isPushConfigured });
 });
 

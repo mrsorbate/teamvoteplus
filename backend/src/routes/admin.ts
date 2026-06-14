@@ -7,10 +7,19 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { JWT_SECRET } from '../config';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
 import { getPublicFrontendBaseUrl } from '../utils/publicUrl';
+import { createRateLimiter } from '../middleware/rateLimit';
+import { logger } from '../utils/logger';
 
 const router = Router();
+
+// 3 attempts per 15 min — first-setup is unauthenticated and critical (CRITICAL-4)
+const firstSetupLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Too many setup attempts, please try again later.' },
+});
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads');
@@ -47,7 +56,7 @@ const upload = multer({
 
 // First-time setup endpoint (no auth required)
 // This creates the first admin user and completes organization setup
-router.post('/first-setup', async (req, res) => {
+router.post('/first-setup', firstSetupLimiter, async (req, res) => {
   try {
     const { organizationName, organizationShortName, adminUsername, adminEmail, adminPassword, timezone } = req.body;
 
@@ -61,8 +70,8 @@ router.post('/first-setup', async (req, res) => {
       return res.status(400).json({ error: 'Username must be 3-30 chars and can only contain letters, numbers and underscores' });
     }
 
-    if (adminPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (adminPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     // Check if setup has already been completed
@@ -112,7 +121,7 @@ router.post('/first-setup', async (req, res) => {
     const token = jwt.sign(
       { id: userResult.lastInsertRowid, username: normalizedUsername, email: adminEmail, role: 'admin' },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: JWT_EXPIRES_IN as import('jsonwebtoken').SignOptions['expiresIn'] }
     );
 
     res.status(201).json({
@@ -126,7 +135,7 @@ router.post('/first-setup', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('First-time setup error:', error);
+    logger.error('First-time setup error:', error);
     res.status(500).json({ error: 'Setup failed' });
   }
 });
@@ -216,7 +225,7 @@ const logAdminAction = (
       details ? JSON.stringify(details) : null
     );
   } catch (auditError) {
-    console.error('Audit log write error:', auditError);
+    logger.error('Audit log write error:', auditError);
   }
 };
 
@@ -228,7 +237,6 @@ router.use(requireAdmin);
 // Get recent admin audit logs
 router.get('/audit-logs', (req: AuthRequest, res) => {
   try {
-    ensureAdminAuditSchema();
     const limitRaw = Number(req.query.limit || 50);
     const limit = Number.isInteger(limitRaw) ? Math.min(Math.max(limitRaw, 1), 200) : 50;
 
@@ -257,7 +265,7 @@ router.get('/audit-logs', (req: AuthRequest, res) => {
       }))
     );
   } catch (error) {
-    console.error('Get audit logs error:', error);
+    logger.error('Get audit logs error:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });
@@ -283,7 +291,7 @@ router.get('/teams', (req: AuthRequest, res) => {
 
     res.json(teams);
   } catch (error) {
-    console.error('Get all teams error:', error);
+    logger.error('Get all teams error:', error);
     res.status(500).json({ error: 'Failed to fetch teams' });
   }
 });
@@ -325,7 +333,7 @@ router.put('/teams/:id', (req: AuthRequest, res) => {
       description: normalizedDescription,
     });
   } catch (error) {
-    console.error('Update team error:', error);
+    logger.error('Update team error:', error);
     return res.status(500).json({ error: 'Failed to update team' });
   }
 });
@@ -362,7 +370,7 @@ router.get('/users', (req: AuthRequest, res) => {
 
     res.json(users);
   } catch (error) {
-    console.error('Get all users error:', error);
+    logger.error('Get all users error:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
@@ -409,7 +417,7 @@ router.delete('/users/:id', (req: AuthRequest, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Delete user error:', error);
+    logger.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
@@ -464,7 +472,7 @@ router.post('/users/:id/reset-password', async (req: AuthRequest, res) => {
 
     res.json({ success: true, generatedPassword: finalPassword });
   } catch (error) {
-    console.error('Reset user password error:', error);
+    logger.error('Reset user password error:', error);
     res.status(500).json({ error: 'Failed to reset user password' });
   }
 });
@@ -512,13 +520,12 @@ router.post('/trainer-invites', (req: AuthRequest, res) => {
     const hasInvitedUserId = trainerInviteColumns.some((col) => col.name === 'invited_user_id');
 
     const generatePendingUsername = (): string => {
-      while (true) {
+      for (let attempt = 0; attempt < 10; attempt++) {
         const candidate = `pending_tr_${crypto.randomBytes(6).toString('hex')}`.slice(0, 30);
         const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(candidate);
-        if (!existing) {
-          return candidate;
-        }
+        if (!existing) return candidate;
       }
+      throw new Error('Could not generate unique pending username after 10 attempts');
     };
 
     const pendingUsername = generatePendingUsername();
@@ -583,7 +590,7 @@ router.post('/trainer-invites', (req: AuthRequest, res) => {
       invite_url: `${getPublicFrontendBaseUrl(req)}/invite/${token}`
     });
   } catch (error) {
-    console.error('Create trainer invite error:', error);
+    logger.error('Create trainer invite error:', error);
     res.status(500).json({ error: (error as any)?.message || 'Failed to create trainer invite' });
   }
 });
@@ -643,7 +650,7 @@ router.post('/users/:id/trainer-invite-resend', (req: AuthRequest, res) => {
       invite_url: `${getPublicFrontendBaseUrl(req)}/invite/${token}`
     });
   } catch (error) {
-    console.error('Resend trainer invite error:', error);
+    logger.error('Resend trainer invite error:', error);
     res.status(500).json({ error: (error as any)?.message || 'Failed to resend trainer invite' });
   }
 });
@@ -669,8 +676,8 @@ router.post('/users/trainer', async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Username must be 3-30 chars and can only contain letters, numbers and underscores' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     const existingUsername = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(normalizedUsername);
@@ -697,7 +704,7 @@ router.post('/users/trainer', async (req: AuthRequest, res) => {
       role: 'trainer'
     });
   } catch (error) {
-    console.error('Create trainer error:', error);
+    logger.error('Create trainer error:', error);
     res.status(500).json({ error: 'Failed to create trainer' });
   }
 });
@@ -723,8 +730,8 @@ router.post('/users/admin', async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Username must be 3-30 chars and can only contain letters, numbers and underscores' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     const existingUsername = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(normalizedUsername);
@@ -760,7 +767,7 @@ router.post('/users/admin', async (req: AuthRequest, res) => {
       role: 'admin'
     });
   } catch (error) {
-    console.error('Create admin error:', error);
+    logger.error('Create admin error:', error);
     res.status(500).json({ error: 'Failed to create admin' });
   }
 });
@@ -834,7 +841,7 @@ router.post('/teams/:teamId/members', (req: AuthRequest, res) => {
     if (error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'User is already a team member' });
     }
-    console.error('Add team member error:', error);
+    logger.error('Add team member error:', error);
     res.status(500).json({ error: 'Failed to add team member' });
   }
 });
@@ -863,7 +870,7 @@ router.get('/teams/:teamId/trainers', (req: AuthRequest, res) => {
 
     res.json(trainers);
   } catch (error) {
-    console.error('Get team trainers error:', error);
+    logger.error('Get team trainers error:', error);
     res.status(500).json({ error: 'Failed to fetch team trainers' });
   }
 });
@@ -890,7 +897,7 @@ router.delete('/teams/:id', (req: AuthRequest, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Delete team error:', error);
+    logger.error('Delete team error:', error);
     res.status(500).json({ error: 'Failed to delete team' });
   }
 });
@@ -940,7 +947,7 @@ router.delete('/teams/:teamId/members/:userId', (req: AuthRequest, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Remove team member error:', error);
+    logger.error('Remove team member error:', error);
     res.status(500).json({ error: 'Failed to remove team member' });
   }
 });
@@ -948,10 +955,12 @@ router.delete('/teams/:teamId/members/:userId', (req: AuthRequest, res) => {
 // Get organization settings
 router.get('/settings', (req: AuthRequest, res) => {
   try {
-    const org = db.prepare('SELECT * FROM organizations LIMIT 1').get();
+    const org = db.prepare(
+      'SELECT id, name, short_name, logo, timezone, setup_completed, created_at, updated_at FROM organizations LIMIT 1'
+    ).get();
     res.json(org);
   } catch (error) {
-    console.error('Get settings error:', error);
+    logger.error('Get settings error:', error);
     res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
@@ -975,10 +984,12 @@ router.post('/settings/setup', (req: AuthRequest, res) => {
       timezone || 'Europe/Berlin'
     );
 
-    const org = db.prepare('SELECT * FROM organizations WHERE id = 1').get();
+    const org = db.prepare(
+      'SELECT id, name, short_name, logo, timezone, setup_completed, created_at, updated_at FROM organizations WHERE id = 1'
+    ).get();
     res.json(org);
   } catch (error) {
-    console.error('Setup wizard error:', error);
+    logger.error('Setup wizard error:', error);
     res.status(500).json({ error: 'Failed to complete setup' });
   }
 });
@@ -988,19 +999,21 @@ router.delete('/organization', (req: AuthRequest, res) => {
   try {
     const currentOrg = db.prepare('SELECT name FROM organizations WHERE id = 1').get() as any;
 
-    db.prepare('DELETE FROM team_members').run();
-    db.prepare('DELETE FROM event_responses').run();
-    db.prepare('DELETE FROM events').run();
-    db.prepare('DELETE FROM team_invites').run();
-    db.prepare('DELETE FROM trainer_invites').run();
-    db.prepare('DELETE FROM teams').run();
-    db.prepare('DELETE FROM users').run();
-
-    db.prepare(`
-      UPDATE organizations
-      SET name = ?, short_name = NULL, logo = NULL, timezone = 'Europe/Berlin', setup_completed = 0, updated_at = CURRENT_TIMESTAMP
-      WHERE id = 1
-    `).run('Neuer Verein');
+    // All deletes in a single transaction to prevent partial state on failure (#7)
+    db.transaction(() => {
+      db.prepare('DELETE FROM team_members').run();
+      db.prepare('DELETE FROM event_responses').run();
+      db.prepare('DELETE FROM events').run();
+      db.prepare('DELETE FROM team_invites').run();
+      db.prepare('DELETE FROM trainer_invites').run();
+      db.prepare('DELETE FROM teams').run();
+      db.prepare('DELETE FROM users').run();
+      db.prepare(`
+        UPDATE organizations
+        SET name = ?, short_name = NULL, logo = NULL, timezone = 'Europe/Berlin', setup_completed = 0, updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1
+      `).run('Neuer Verein');
+    })();
 
     if (fs.existsSync(uploadsDir)) {
       const files = fs.readdirSync(uploadsDir);
@@ -1011,7 +1024,7 @@ router.delete('/organization', (req: AuthRequest, res) => {
             fs.unlinkSync(filePath);
           }
         } catch (cleanupError) {
-          console.warn('Failed to remove upload file during organization reset:', filePath, cleanupError);
+          logger.warn('Failed to remove upload file during organization reset:', filePath, cleanupError);
         }
       }
     }
@@ -1021,7 +1034,7 @@ router.delete('/organization', (req: AuthRequest, res) => {
       message: `Organization "${currentOrg?.name || 'Unbekannt'}" and all related data deleted. Setup reset required.`
     });
   } catch (error) {
-    console.error('Delete organization error:', error);
+    logger.error('Delete organization error:', error);
     res.status(500).json({ error: 'Failed to delete organization' });
   }
 });
@@ -1062,7 +1075,7 @@ router.post('/settings/logo',
     const org = db.prepare('SELECT * FROM organizations WHERE id = 1').get();
     res.json(org);
   } catch (error) {
-    console.error('Logo upload error:', error);
+    logger.error('Logo upload error:', error);
     res.status(500).json({ error: 'Failed to upload logo' });
   }
 });

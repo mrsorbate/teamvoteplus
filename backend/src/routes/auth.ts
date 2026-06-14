@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken';
 import db from '../database/init';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
-import type { JWTPayload } from '../middleware/auth';
+import { authenticate, type AuthRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 const router = Router();
 const loginRateLimitWindowMs = Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
@@ -55,7 +56,6 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
     // Verify password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      console.error(`Invalid password for user: ${normalizedUsername}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -87,36 +87,24 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
   }
 });
 
-// Get current user
-router.get('/me', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
+// Get current user — authenticate middleware handles token verification (#6)
+router.get('/me', authenticate, (req: AuthRequest, res) => {
+  const user = db.prepare(
+    `SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
+            height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
+     FROM users WHERE id = ?`
+  ).get(req.user!.id);
 
-    const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-
-    const user = db.prepare(
-      `SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
-              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
-       FROM users WHERE id = ?`
-    ).get(decoded.id);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json(user);
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
   }
+
+  res.json(user);
 });
 
 export default router;

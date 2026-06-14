@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsAPI, profileAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { User, Lock, Camera, Trash2, Check, X, AlertTriangle, AlertCircle, Edit2, Bell } from 'lucide-react';
+import { User, Lock, Camera, Trash2, Check, X, AlertTriangle, AlertCircle, Edit2, Bell, LogOut } from 'lucide-react';
 import { useToast } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
@@ -15,7 +16,8 @@ import {
 } from '../lib/pushNotifications';
 
 export default function SettingsPage() {
-  const { user: authUser, token: authToken, setAuth } = useAuthStore();
+  const { user: authUser, token: authToken, setAuth, logout } = useAuthStore();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -432,6 +434,11 @@ export default function SettingsPage() {
     sendTestPushMutation.mutate();
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   const isPushConfigured = Boolean(pushStatus?.configured);
   const isPushSubscribed = Boolean(pushStatus?.subscribed);
 
@@ -443,6 +450,21 @@ export default function SettingsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Einstellungen</h1>
           <p className="text-sm sm:text-base text-gray-300 mt-1">Verwalte dein Profil und deine Einstellungen</p>
         </div>
+      </div>
+
+      <div className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Sitzung</h2>
+          <p className="mt-1 text-sm text-gray-300">Melde dich auf diesem Gerät ab.</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="btn btn-secondary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Abmelden</span>
+        </button>
       </div>
 
       {/* Profile Picture Section */}

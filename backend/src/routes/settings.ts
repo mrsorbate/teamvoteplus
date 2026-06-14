@@ -1,27 +1,28 @@
 import { Router } from 'express';
 import db from '../database/init';
-import { authenticate } from '../middleware/auth';
+import { authenticate, type AuthRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
 // Public endpoint to get organization settings
 router.get('/organization', (req, res) => {
   try {
-    const org = db.prepare('SELECT * FROM organizations LIMIT 1').get();
+    const org = db.prepare('SELECT name, short_name, logo, timezone FROM organizations LIMIT 1').get();
     if (!org) {
       return res.status(404).json({ error: 'Organization not found' });
     }
     res.json(org);
   } catch (error) {
-    console.error('Get organization error:', error);
+    logger.error('Get organization error:', error);
     res.status(500).json({ error: 'Failed to fetch organization' });
   }
 });
 
 // Get all trainer's teams with custom names
-router.get('/trainer-team-names', authenticate, (req, res) => {
+router.get('/trainer-team-names', authenticate, (req: AuthRequest, res) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.user!.id;
 
     const teams = db
       .prepare(
@@ -41,15 +42,15 @@ router.get('/trainer-team-names', authenticate, (req, res) => {
 
     res.json(teams);
   } catch (error) {
-    console.error('Get trainer team names error:', error);
+    logger.error('Get trainer team names error:', error);
     res.status(500).json({ error: 'Failed to fetch trainer team names' });
   }
 });
 
 // Update custom team name for a trainer
-router.put('/trainer-team-names/:teamId', authenticate, (req, res) => {
+router.put('/trainer-team-names/:teamId', authenticate, (req: AuthRequest, res) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.user!.id;
     const teamId = parseInt(req.params.teamId, 10);
     const { trainer_custom_team_name } = req.body;
 
@@ -82,13 +83,9 @@ router.put('/trainer-team-names/:teamId', authenticate, (req, res) => {
       `
     ).run(trimmedName, teamId, userId);
 
-    res.json({
-      id: teamId,
-      trainer_custom_team_name: trimmedName,
-      message: 'Team name updated successfully',
-    });
+    res.json({ id: teamId, trainer_custom_team_name: trimmedName });
   } catch (error) {
-    console.error('Update trainer team name error:', error);
+    logger.error('Update trainer team name error:', error);
     res.status(500).json({ error: 'Failed to update team name' });
   }
 });

@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
+import TeamVoteLogo from '../components/TeamVoteLogo';
 
 export default function TeamJoinPage() {
   const { token } = useParams<{ token: string }>();
@@ -244,12 +245,11 @@ export default function TeamJoinPage() {
                 <span className="text-primary-200 font-bold text-lg">T</span>
               </div>
             )}
-            <div>
-              <p className="eyebrow-label">teamvote+</p>
+            <div className="min-w-0">
+              <TeamVoteLogo iconClassName="h-8 w-8 rounded-lg" textClassName="text-2xl" />
               <p className="text-base font-semibold text-white">
                 {organization?.name || 'Dein Verein'}
               </p>
-              <p className="text-xs text-gray-400">Offizieller Team-Beitritt</p>
             </div>
           </div>
         </div>

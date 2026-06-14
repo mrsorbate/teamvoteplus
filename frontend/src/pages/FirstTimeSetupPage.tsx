@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 import { resolveAssetUrl } from '../lib/utils';
+import TeamVoteLogo from '../components/TeamVoteLogo';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -173,7 +174,7 @@ export default function FirstTimeSetupPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <img src="/teamvoteplus-logo.svg" alt="teamvote+" className="mx-auto h-16 sm:h-20 w-auto" />
+          <TeamVoteLogo className="justify-center" iconClassName="h-14 w-14 rounded-2xl sm:h-16 sm:w-16" textClassName="text-4xl sm:text-5xl" />
           <p className="mt-4 text-lg font-semibold text-gray-300">
             {step === 1 ? 'Dein Verein' : step === 2 ? 'Admin-Daten' : step === 3 ? 'Zeitzone' : 'Finale Zusammenfassung'}
           </p>

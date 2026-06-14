@@ -5,6 +5,7 @@ import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -86,7 +87,7 @@ router.get('/me', (req: AuthRequest, res) => {
 
     res.json(user);
   } catch (error) {
-    console.error('Get profile error:', error);
+    logger.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
@@ -264,9 +265,9 @@ router.put('/me', (req: AuthRequest, res) => {
        FROM users WHERE id = ?`
     ).get(req.user!.id);
 
-    res.json({ message: 'Profile updated successfully', user: updatedUser });
+    res.json(updatedUser);
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
@@ -307,7 +308,7 @@ router.put('/password', async (req: AuthRequest, res) => {
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Update password error:', error);
+    logger.error('Update password error:', error);
     res.status(500).json({ error: 'Failed to update password' });
   }
 });
@@ -341,7 +342,7 @@ router.post('/picture', upload.single('picture') as any, (req: AuthRequest, res)
       profile_picture: picturePath
     });
   } catch (error) {
-    console.error('Upload profile picture error:', error);
+    logger.error('Upload profile picture error:', error);
     res.status(500).json({ error: 'Failed to upload profile picture' });
   }
 });
@@ -368,7 +369,7 @@ router.delete('/picture', (req: AuthRequest, res) => {
       res.status(404).json({ error: 'No profile picture to delete' });
     }
   } catch (error) {
-    console.error('Delete profile picture error:', error);
+    logger.error('Delete profile picture error:', error);
     res.status(500).json({ error: 'Failed to delete profile picture' });
   }
 });

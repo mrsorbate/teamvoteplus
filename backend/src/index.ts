@@ -5,20 +5,12 @@ import axios from 'axios';
 import helmet from 'helmet';
 import db from './database/init';
 import { createRateLimiter } from './middleware/rateLimit';
-import authRoutes from './routes/auth';
-import teamsRoutes from './routes/teams';
-import eventsRoutes from './routes/events';
-import statsRoutes from './routes/stats';
-import invitesRoutes from './routes/invites';
-import adminRoutes from './routes/admin';
-import profileRoutes from './routes/profile';
-import settingsRoutes from './routes/settings';
-import notificationsRoutes from './routes/notifications';
-import postsRoutes from './routes/posts';
+import { registerRoutes } from './routes';
 import { startAutoGameImportJob } from './services/autoGameImport';
 import { startScheduler } from './services/scheduler';
 import { authenticate, AuthRequest } from './middleware/auth';
 import { upload } from './middleware/upload';
+import { logger } from './utils/logger';
 
 dotenv.config();
 
@@ -48,7 +40,9 @@ const authLimiter = createRateLimiter({
   message: { error: 'Too many auth attempts, please try again later.' },
 });
 
-// Middleware
+// trust proxy: 1 trusts X-Forwarded-For from the first hop (MEDIUM-3).
+// Only safe when the server is exclusively reachable through a single reverse proxy.
+// Set to false if the server is directly Internet-accessible.
 app.set('trust proxy', 1);
 
 app.use(
@@ -59,6 +53,9 @@ app.use(
 
 if (corsOrigins.length > 0) {
   app.use(cors({ origin: corsOrigins }));
+} else if (process.env.NODE_ENV === 'production') {
+  // Production with no CORS_ORIGIN set: reject all cross-origin requests (#3)
+  app.use(cors({ origin: false }));
 } else {
   app.use(cors());
 }
@@ -66,8 +63,8 @@ if (corsOrigins.length > 0) {
 app.use(express.json());
 app.use('/api', apiLimiter);
 
-// Serve uploaded files
-app.use('/uploads', express.static('uploads'));
+// Serve uploaded files — timestamp-suffixed filenames make these immutable (#11)
+app.use('/uploads', express.static('uploads', { maxAge: '7d', immutable: true }));
 
 // Root route
 app.get('/', (req, res) => {
@@ -123,9 +120,16 @@ app.get('/api/health', (req, res) => {
   }
 });
 
+// Badge proxy rate limiter — unauthenticated endpoint (HIGH-5)
+const badgeProxyLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many badge proxy requests.' },
+});
+
 // Image proxy for fussball.de team badges (CORS workaround)
 // Must be registered before generic authenticated /api routers.
-app.get('/api/badge-proxy', async (req, res) => {
+app.get('/api/badge-proxy', badgeProxyLimiter, async (req, res) => {
   const url = String(req.query.url || '');
   let parsedUrl: URL;
   try {
@@ -158,17 +162,8 @@ app.get('/api/badge-proxy', async (req, res) => {
   }
 });
 
-// Routes
-app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/teams', teamsRoutes);
-app.use('/api/events', eventsRoutes);
-app.use('/api/stats', statsRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api', invitesRoutes);
-app.use('/api', postsRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/profile', profileRoutes);
+// Routes (#17)
+registerRoutes(app, authLimiter);
 
 // File upload endpoint (duplicate of admin route — kept for compatibility, auth-guarded)
 app.post('/api/admin/upload/logo', authenticate, upload.single('logo'), (req: AuthRequest, res) => {
@@ -194,12 +189,15 @@ app.post('/api/admin/upload/logo', authenticate, upload.single('logo'), (req: Au
   }
 });
 
-// Error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
-  });
+// Error handler — never leak internal details for 5xx errors (#5)
+app.use((err: Error & { status?: number; statusCode?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err.status ?? err.statusCode ?? 500;
+  logger.error(err.stack ?? err.message);
+  if (status >= 500) {
+    res.status(status).json({ error: 'Internal server error' });
+  } else {
+    res.status(status).json({ error: err.message || 'Request error' });
+  }
 });
 
 app.listen(PORT, () => {

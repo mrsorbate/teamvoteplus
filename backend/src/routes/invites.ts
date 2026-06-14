@@ -5,12 +5,21 @@ import jwt from 'jsonwebtoken';
 import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { getPublicFrontendBaseUrl } from '../utils/publicUrl';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config';
+import { createRateLimiter } from '../middleware/rateLimit';
+import { logger } from '../utils/logger';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const SHORT_TOKEN_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-const createShortJoinToken = (length = 8): string => {
+// Strict per-IP rate limiter for unauthenticated registration (CRITICAL-2)
+const registerInviteLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many registration attempts, please try again later.' },
+});
+
+const createShortJoinToken = (length = 12): string => {
   const bytes = crypto.randomBytes(length);
   let token = '';
   for (let i = 0; i < length; i += 1) {
@@ -124,7 +133,7 @@ router.post('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
       invite_url: `${getPublicFrontendBaseUrl(req)}/invite/${token}`
     });
   } catch (error) {
-    console.error('Create invite error:', error);
+    logger.error('Create invite error:', error);
     res.status(500).json({ error: 'Failed to create invite' });
   }
 });
@@ -188,7 +197,7 @@ router.post('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) =>
       expires_at: null,
     });
   } catch (error) {
-    console.error('Create team join link error:', error);
+    logger.error('Create team join link error:', error);
     return res.status(500).json({ error: 'Failed to create team join link' });
   }
 });
@@ -246,7 +255,7 @@ router.get('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) => 
       join_url: `${frontendUrl}/join/${invite.token}`,
     });
   } catch (error) {
-    console.error('Get team join link error:', error);
+    logger.error('Get team join link error:', error);
     return res.status(500).json({ error: 'Failed to fetch team join link' });
   }
 });
@@ -284,7 +293,7 @@ router.get('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
 
     res.json(invites);
   } catch (error) {
-    console.error('Get invites error:', error);
+    logger.error('Get invites error:', error);
     res.status(500).json({ error: 'Failed to fetch invites' });
   }
 });
@@ -394,7 +403,7 @@ router.get('/invites/:token', (req, res) => {
       invite_type: inviteType,
     });
   } catch (error) {
-    console.error('Get invite error:', error);
+    logger.error('Get invite error:', error);
     res.status(500).json({ error: 'Failed to fetch invite' });
   }
 });
@@ -428,50 +437,63 @@ router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
       return res.status(410).json({ error: 'Invite has reached maximum uses' });
     }
 
-    // Check if already a member
-    const existingMember = db.prepare(
-      'SELECT id FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(invite.team_id, req.user!.id);
+    // Atomic increment — prevents TOCTOU race (CRITICAL-3)
+    const incrementResult = db.prepare(
+      'UPDATE team_invites SET used_count = used_count + 1 WHERE id = ? AND used_count < COALESCE(max_uses, 1)'
+    ).run(invite.id);
 
-    if (existingMember) {
-      return res.status(409).json({ error: 'You are already a member of this team' });
+    if (incrementResult.changes === 0) {
+      return res.status(410).json({ error: 'Invite has reached maximum uses' });
     }
 
-    // Add user to team
-    const addMemberStmt = db.prepare(
-      'INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)'
-    );
-    addMemberStmt.run(invite.team_id, req.user!.id, invite.role);
+    try {
+      db.transaction(() => {
+        // Check if already a member inside the transaction
+        const existingMember = db.prepare(
+          'SELECT id FROM team_members WHERE team_id = ? AND user_id = ?'
+        ).get(invite.team_id, req.user!.id);
 
-    // Increment used count
-    db.prepare('UPDATE team_invites SET used_count = used_count + 1 WHERE id = ?').run(invite.id);
+        if (existingMember) {
+          throw Object.assign(new Error('already_member'), { status: 409 });
+        }
 
-    // Create pending responses for all upcoming events
-    const upcomingEvents = db.prepare(
-      "SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')"
-    ).all(invite.team_id) as any[];
+        db.prepare('INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)').run(
+          invite.team_id, req.user!.id, invite.role
+        );
 
-    const responseStmt = db.prepare(
-      'INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)'
-    );
+        const upcomingEvents = db.prepare(
+          "SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')"
+        ).all(invite.team_id) as Array<{ id: number }>;
 
-    for (const event of upcomingEvents) {
-      responseStmt.run(event.id, req.user!.id, 'pending');
+        const responseStmt = db.prepare(
+          'INSERT OR IGNORE INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)'
+        );
+        for (const event of upcomingEvents) {
+          responseStmt.run(event.id, req.user!.id, 'pending');
+        }
+      })();
+    } catch (innerError: any) {
+      // Roll back the used_count increment on failure
+      db.prepare('UPDATE team_invites SET used_count = used_count - 1 WHERE id = ?').run(invite.id);
+      if (innerError.status === 409) {
+        return res.status(409).json({ error: 'You are already a member of this team' });
+      }
+      throw innerError;
     }
 
     const inviteType = !invite.player_name && (invite.max_uses ?? 1) >= 1000
       ? 'team_join_link'
       : 'player_invite';
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Successfully joined the team',
       team_id: invite.team_id,
       invite_type: inviteType,
     });
   } catch (error: any) {
-    console.error('Accept invite error:', error);
-    if (error.message.includes('UNIQUE constraint failed')) {
+    logger.error('Accept invite error:', error);
+    if (error.message?.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'You are already a member of this team' });
     }
     res.status(500).json({ error: 'Failed to accept invite' });
@@ -505,13 +527,13 @@ router.delete('/invites/:id', authenticate, (req: AuthRequest, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Delete invite error:', error);
+    logger.error('Delete invite error:', error);
     res.status(500).json({ error: 'Failed to delete invite' });
   }
 });
 
 // Register with player invite (create account and accept invite in one step)
-router.post('/invites/:token/register', async (req, res) => {
+router.post('/invites/:token/register', registerInviteLimiter, async (req, res) => {
   try {
     ensureTrainerInviteSchema();
     ensureTeamInviteSchema();
@@ -528,8 +550,8 @@ router.post('/invites/:token/register', async (req, res) => {
       return res.status(400).json({ error: 'Username must be 3-30 chars and can only contain letters, numbers and underscores' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     const trainerInviteColumns = db.pragma('table_info(trainer_invites)') as Array<{ name: string }>;
@@ -652,7 +674,7 @@ router.post('/invites/:token/register', async (req, res) => {
       const authToken = jwt.sign(
         { id: trainerUserId, username: normalizedUsername, email: normalizedEmail, role: 'trainer' },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: JWT_EXPIRES_IN as import('jsonwebtoken').SignOptions['expiresIn'] }
       );
 
       return res.status(201).json({
@@ -685,8 +707,12 @@ router.post('/invites/:token/register', async (req, res) => {
 
     const effectiveMaxUses = invite.max_uses ?? 1;
 
-    // Check if max uses reached
-    if (invite.used_count >= effectiveMaxUses) {
+    // Atomic increment — prevents TOCTOU race (CRITICAL-3)
+    const teamInviteIncrement = db.prepare(
+      'UPDATE team_invites SET used_count = used_count + 1 WHERE id = ? AND used_count < COALESCE(max_uses, 1)'
+    ).run(invite.id);
+
+    if (teamInviteIncrement.changes === 0) {
       return res.status(410).json({ error: 'Invite has reached maximum uses' });
     }
 
@@ -730,9 +756,6 @@ router.post('/invites/:token/register', async (req, res) => {
     );
     memberStmt.run(invite.team_id, userResult.lastInsertRowid, invite.role, invite.player_jersey_number);
 
-    // Increment used count
-    db.prepare('UPDATE team_invites SET used_count = used_count + 1 WHERE id = ?').run(invite.id);
-
     // Create pending responses for all upcoming events
     const upcomingEvents = db.prepare(
       "SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')"
@@ -750,7 +773,7 @@ router.post('/invites/:token/register', async (req, res) => {
     const authToken = jwt.sign(
       { id: userResult.lastInsertRowid, username: normalizedUsername, email: normalizedEmail, role: invite.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: JWT_EXPIRES_IN as import('jsonwebtoken').SignOptions['expiresIn'] }
     );
 
     res.status(201).json({
@@ -765,7 +788,7 @@ router.post('/invites/:token/register', async (req, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Register with invite error:', error);
+    logger.error('Register with invite error:', error);
     if (error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'Username or email already in use' });
     }

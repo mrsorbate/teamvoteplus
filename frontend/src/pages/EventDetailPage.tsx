@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
+import { useToast } from '../lib/useToast';
 
 const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -22,6 +23,7 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
   const [responseValidationMessage, setResponseValidationMessage] = useState('');
@@ -60,6 +62,10 @@ export default function EventDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      showToast(msg || 'Rückmeldung konnte nicht gespeichert werden', 'error');
+    },
   });
 
   // Mutation for trainer to update player response
@@ -70,6 +76,10 @@ export default function EventDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       setExpandedResponseUserId(null);
     },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      showToast(msg || 'Rückmeldung konnte nicht gespeichert werden', 'error');
+    },
   });
 
   const deleteEventMutation = useMutation({
@@ -77,6 +87,10 @@ export default function EventDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       navigate(`/teams/${event?.team_id}/events`);
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      showToast(msg || 'Termin konnte nicht gelöscht werden', 'error');
     },
   });
 

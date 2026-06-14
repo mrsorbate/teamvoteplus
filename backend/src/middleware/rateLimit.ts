@@ -15,6 +15,9 @@ type Entry = {
   resetAt: number;
 };
 
+// In-memory store — counts are per-process. Under PM2 cluster mode each worker
+// tracks its own window independently, so effective limits multiply by worker count.
+// Use a shared store (Redis) if horizontal scaling is needed.
 const stores = new WeakMap<object, Map<string, Entry>>();
 
 const getStore = (instanceKey: object) => {
@@ -61,6 +64,11 @@ export const createRateLimiter = (options: RateLimitOptions) => {
     }
 
     const remainingSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    const remaining = Math.max(0, max - entry.count);
+
+    res.setHeader('X-RateLimit-Limit', String(max));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
 
     if (entry.count >= max) {
       res.setHeader('Retry-After', String(remainingSeconds));
@@ -81,6 +89,7 @@ export const createRateLimiter = (options: RateLimitOptions) => {
     }
 
     entry.count += 1;
+    res.setHeader('X-RateLimit-Remaining', String(Math.max(0, max - entry.count)));
     return next();
   };
 };

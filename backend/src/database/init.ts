@@ -6,8 +6,10 @@ import { randomBytes } from 'crypto';
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../database.sqlite');
 const db: DatabaseType = new Database(dbPath);
 
-// Enable foreign keys
+// Enable foreign keys and WAL mode for concurrent read performance (#9)
 db.pragma('foreign_keys = ON');
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
 
 // Create tables
 db.exec(`

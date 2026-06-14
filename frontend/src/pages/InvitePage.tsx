@@ -5,6 +5,7 @@ import { invitesAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
+import TeamVoteLogo from '../components/TeamVoteLogo';
 
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>();
@@ -147,7 +148,7 @@ export default function InvitePage() {
         <div className="text-center">
           {/* App Branding */}
           <div className="flex flex-col items-center mb-5 sm:mb-6">
-            <img src="/teamvoteplus-logo.svg" alt="teamvote+" className="h-14 sm:h-16 w-auto mb-3" />
+            <TeamVoteLogo iconClassName="h-14 w-14 rounded-2xl" textClassName="text-4xl sm:text-5xl" />
           </div>
 
           {/* Separator */}
