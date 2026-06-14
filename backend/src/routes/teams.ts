@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -7,6 +7,7 @@ import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { CreateTeamDTO } from '../types';
 import { FussballDeClient, buildTeamPageUrl } from '../services/fussballDe/client';
+import type { TeamMatch } from '../services/fussballDe/types';
 import { sendPushToUsers } from '../services/pushNotifications';
 import { getPublicFrontendBaseUrl } from '../utils/publicUrl';
 import { logger } from '../utils/logger';
@@ -184,7 +185,7 @@ const parseInternalScore = (title: unknown, description: unknown): { home: numbe
   return null;
 };
 
-const parseInternalLeagueName = (matches: any[]): string | null => {
+const parseInternalLeagueName = (matches: Array<Record<string, unknown>>): string | null => {
   const normalize = (value: unknown): string => String(value || '').trim();
 
   for (const match of matches) {
@@ -285,7 +286,7 @@ const parseExternalLeagueNameFromMatches = (
     .map(([competition]) => competition)[0] || null;
 };
 
-const buildInternalTableRows = (team: any, matches: any[]) => {
+const buildInternalTableRows = (team: { fussballde_team_name?: unknown; name?: unknown }, matches: Array<Record<string, unknown>>) => {
   const rows = new Map<string, { team: string; games: number; won: number; draw: number; lost: number; gf: number; ga: number; points: number }>();
 
   const ensureRow = (teamName: string) => {
@@ -298,7 +299,7 @@ const buildInternalTableRows = (team: any, matches: any[]) => {
 
   const ownTeamName = String(team?.fussballde_team_name || team?.name || '').trim();
 
-  const parseParticipantFallback = (match: any): { homeTeam: string; awayTeam: string } | null => {
+  const parseParticipantFallback = (match: Record<string, unknown>): { homeTeam: string; awayTeam: string } | null => {
     const parsedTitle = parseInternalParticipants(match?.title);
     if (parsedTitle) {
       return parsedTitle;
@@ -317,7 +318,7 @@ const buildInternalTableRows = (team: any, matches: any[]) => {
       : { homeTeam: opponent, awayTeam: ownTeamName };
   };
 
-  const parseStructuredScore = (match: any): { home: number; away: number } | null => {
+  const parseStructuredScore = (match: Record<string, unknown>): { home: number; away: number } | null => {
     const home = Number(match?.home_goals);
     const away = Number(match?.away_goals);
     if (Number.isInteger(home) && Number.isInteger(away) && home >= 0 && away >= 0) {
@@ -472,7 +473,7 @@ const formatICalDate = (value: unknown): string | null => {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 };
 
-const getCalendarUrls = (req: AuthRequest | any, teamId: number, token: string | null | undefined) => {
+const getCalendarUrls = (req: AuthRequest, teamId: number, token: string | null | undefined) => {
   const normalizedToken = String(token || '').trim();
   if (!normalizedToken) {
     return { calendar_feed_url: null, calendar_webcal_url: null };
@@ -542,7 +543,7 @@ router.get('/:id/calendar.ics', (req, res) => {
       return res.status(400).json({ error: 'Invalid calendar request' });
     }
 
-    const team = db.prepare(`SELECT id, name, ${calendarTokenSelectExpression} FROM teams WHERE id = ?`).get(teamId) as any;
+    const team = db.prepare(`SELECT id, name, ${calendarTokenSelectExpression} FROM teams WHERE id = ?`).get(teamId) as { id: number; name: string; calendar_token: string | null } | undefined;
     const requestedTokenVariants = getCalendarTokenVariants(token);
     const storedTokenVariants = getCalendarTokenVariants(String(team?.calendar_token || ''));
     const isTokenValid = Array.from(requestedTokenVariants).some((candidate) => storedTokenVariants.has(candidate));
@@ -557,14 +558,14 @@ router.get('/:id/calendar.ics', (req, res) => {
        INNER JOIN event_teams et ON et.event_id = e.id
        WHERE et.team_id = ?
        ORDER BY e.start_time ASC`
-    ).all(teamId) as Array<any>;
+    ).all(teamId) as Array<{ id: number; title: string; description: string | null; start_time: string; end_time: string | null; updated_at: string; location_venue: string | null; location_street: string | null; location_zip_city: string | null; location: string | null }>;
 
     const deletedEvents = db.prepare(
       `SELECT event_id, title, start_time, end_time, deleted_at
        FROM deleted_events
        WHERE team_id = ?
        ORDER BY deleted_at ASC`
-    ).all(teamId) as Array<any>;
+    ).all(teamId) as Array<{ event_id: number; title: string | null; start_time: string | null; end_time: string | null; deleted_at: string }>;
 
     const nowStamp = formatICalDate(new Date().toISOString()) || '19700101T000000Z';
     const lines: string[] = [
@@ -698,6 +699,28 @@ router.get('/:id', (req: AuthRequest, res) => {
   }
 });
 
+type TeamSettingsRow = {
+  id: number;
+  fussballde_id: string | null;
+  fussballde_team_name: string | null;
+  default_response: string | null;
+  default_rsvp_deadline_hours: number | null;
+  default_rsvp_deadline_hours_training: number | null;
+  default_rsvp_deadline_hours_match: number | null;
+  default_rsvp_deadline_hours_other: number | null;
+  default_arrival_minutes: number | null;
+  default_arrival_minutes_training: number | null;
+  default_arrival_minutes_match: number | null;
+  default_arrival_minutes_other: number | null;
+  default_duration_minutes: number | null;
+  default_duration_minutes_training: number | null;
+  default_duration_minutes_match: number | null;
+  default_duration_minutes_other: number | null;
+  home_venues: string | null;
+  default_home_venue_name: string | null;
+  calendar_token: string | null;
+};
+
 // Get team settings
 router.get('/:id/settings', (req: AuthRequest, res) => {
   try {
@@ -718,7 +741,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
               home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`
-    ).get(teamId) as any;
+    ).get(teamId) as TeamSettingsRow | undefined;
 
     const calendarUrls = getCalendarUrls(req, teamId, settings?.calendar_token);
 
@@ -809,7 +832,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     if (!membership || membership.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can update team settings' });
@@ -822,12 +845,12 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
               home_venues, default_home_venue_name
        FROM teams WHERE id = ?`
-    ).get(teamId) as any;
+    ).get(teamId) as TeamSettingsRow | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    let nextFussballId = team.fussballde_id as string | null;
+    let nextFussballId = team.fussballde_id;
     if (hasFussballId || hasFussballIds) {
       const rawFussballIdInput = hasFussballIds
         ? (Array.isArray(fussballde_ids) ? fussballde_ids.join(',') : String(fussballde_ids || ''))
@@ -841,7 +864,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextFussballId = normalizedFussballIds.length > 0 ? normalizedFussballIds.join(',') : null;
     }
 
-    let nextFussballTeamName = team.fussballde_team_name as string | null;
+    let nextFussballTeamName = team.fussballde_team_name;
     if (hasFussballTeamName || hasFussballTeamNames) {
       const rawTeamNameInput = hasFussballTeamNames
         ? (Array.isArray(fussballde_team_names) ? fussballde_team_names.join(',') : String(fussballde_team_names || ''))
@@ -851,7 +874,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     }
 
     const allowedDefaultResponses = new Set(['pending', 'accepted', 'tentative', 'declined']);
-    let nextDefaultResponse = team.default_response as string | null;
+    let nextDefaultResponse = team.default_response;
     if (hasDefaultResponse) {
       const normalizedDefaultResponse = String(default_response || '').trim().toLowerCase() || 'pending';
       if (!allowedDefaultResponses.has(normalizedDefaultResponse)) {
@@ -860,7 +883,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultResponse = normalizedDefaultResponse;
     }
 
-    let nextDefaultRsvpDeadlineHours = team.default_rsvp_deadline_hours as number | null;
+    let nextDefaultRsvpDeadlineHours = team.default_rsvp_deadline_hours;
     if (hasDefaultRsvpDeadlineHours) {
       let normalizedRsvpDeadlineHours: number | null = null;
       if (default_rsvp_deadline_hours !== null && default_rsvp_deadline_hours !== undefined && String(default_rsvp_deadline_hours).trim() !== '') {
@@ -883,7 +906,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       return parsed;
     };
 
-    let nextDefaultRsvpDeadlineHoursTraining = team.default_rsvp_deadline_hours_training as number | null;
+    let nextDefaultRsvpDeadlineHoursTraining = team.default_rsvp_deadline_hours_training;
     if (hasDefaultRsvpDeadlineHoursTraining) {
       const normalized = normalizeRsvpHours(default_rsvp_deadline_hours_training);
       if (normalized === 'invalid') {
@@ -892,7 +915,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultRsvpDeadlineHoursTraining = normalized;
     }
 
-    let nextDefaultRsvpDeadlineHoursMatch = team.default_rsvp_deadline_hours_match as number | null;
+    let nextDefaultRsvpDeadlineHoursMatch = team.default_rsvp_deadline_hours_match;
     if (hasDefaultRsvpDeadlineHoursMatch) {
       const normalized = normalizeRsvpHours(default_rsvp_deadline_hours_match);
       if (normalized === 'invalid') {
@@ -901,7 +924,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultRsvpDeadlineHoursMatch = normalized;
     }
 
-    let nextDefaultRsvpDeadlineHoursOther = team.default_rsvp_deadline_hours_other as number | null;
+    let nextDefaultRsvpDeadlineHoursOther = team.default_rsvp_deadline_hours_other;
     if (hasDefaultRsvpDeadlineHoursOther) {
       const normalized = normalizeRsvpHours(default_rsvp_deadline_hours_other);
       if (normalized === 'invalid') {
@@ -910,7 +933,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultRsvpDeadlineHoursOther = normalized;
     }
 
-    let nextDefaultArrivalMinutes = team.default_arrival_minutes as number | null;
+    let nextDefaultArrivalMinutes = team.default_arrival_minutes;
     if (hasDefaultArrivalMinutes) {
       let normalizedArrivalMinutes: number | null = null;
       if (default_arrival_minutes !== null && default_arrival_minutes !== undefined && String(default_arrival_minutes).trim() !== '') {
@@ -933,7 +956,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       return parsed;
     };
 
-    let nextDefaultArrivalMinutesTraining = team.default_arrival_minutes_training as number | null;
+    let nextDefaultArrivalMinutesTraining = team.default_arrival_minutes_training;
     if (hasDefaultArrivalMinutesTraining) {
       const normalized = normalizeArrivalMinutes(default_arrival_minutes_training);
       if (normalized === 'invalid') {
@@ -942,7 +965,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultArrivalMinutesTraining = normalized;
     }
 
-    let nextDefaultArrivalMinutesMatch = team.default_arrival_minutes_match as number | null;
+    let nextDefaultArrivalMinutesMatch = team.default_arrival_minutes_match;
     if (hasDefaultArrivalMinutesMatch) {
       const normalized = normalizeArrivalMinutes(default_arrival_minutes_match);
       if (normalized === 'invalid') {
@@ -951,7 +974,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultArrivalMinutesMatch = normalized;
     }
 
-    let nextDefaultArrivalMinutesOther = team.default_arrival_minutes_other as number | null;
+    let nextDefaultArrivalMinutesOther = team.default_arrival_minutes_other;
     if (hasDefaultArrivalMinutesOther) {
       const normalized = normalizeArrivalMinutes(default_arrival_minutes_other);
       if (normalized === 'invalid') {
@@ -960,7 +983,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultArrivalMinutesOther = normalized;
     }
 
-    let nextDefaultDurationMinutes = team.default_duration_minutes as number | null;
+    let nextDefaultDurationMinutes = team.default_duration_minutes;
     if (hasDefaultDurationMinutes) {
       let normalizedDurationMinutes: number | null = null;
       if (default_duration_minutes !== null && default_duration_minutes !== undefined && String(default_duration_minutes).trim() !== '') {
@@ -983,7 +1006,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       return parsed;
     };
 
-    let nextDefaultDurationMinutesTraining = team.default_duration_minutes_training as number | null;
+    let nextDefaultDurationMinutesTraining = team.default_duration_minutes_training;
     if (hasDefaultDurationMinutesTraining) {
       const normalized = normalizeDurationMinutes(default_duration_minutes_training);
       if (normalized === 'invalid') {
@@ -992,7 +1015,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultDurationMinutesTraining = normalized;
     }
 
-    let nextDefaultDurationMinutesMatch = team.default_duration_minutes_match as number | null;
+    let nextDefaultDurationMinutesMatch = team.default_duration_minutes_match;
     if (hasDefaultDurationMinutesMatch) {
       const normalized = normalizeDurationMinutes(default_duration_minutes_match);
       if (normalized === 'invalid') {
@@ -1001,7 +1024,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultDurationMinutesMatch = normalized;
     }
 
-    let nextDefaultDurationMinutesOther = team.default_duration_minutes_other as number | null;
+    let nextDefaultDurationMinutesOther = team.default_duration_minutes_other;
     if (hasDefaultDurationMinutesOther) {
       const normalized = normalizeDurationMinutes(default_duration_minutes_other);
       if (normalized === 'invalid') {
@@ -1078,7 +1101,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
               home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`
-    ).get(teamId) as any;
+    ).get(teamId) as TeamSettingsRow | undefined;
 
     const calendarUrls = getCalendarUrls(req, teamId, updatedSettings?.calendar_token);
 
@@ -1105,7 +1128,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
             default_arrival_minutes_match, default_arrival_minutes,
             home_venues, default_home_venue_name
      FROM teams WHERE id = ?`
-  ).get(teamId) as any;
+  ).get(teamId) as { id: number; name: string; fussballde_id: string | null; fussballde_team_name: string | null; default_response: string | null; default_rsvp_deadline_hours_match: number | null; default_rsvp_deadline_hours: number | null; default_arrival_minutes_match: number | null; default_arrival_minutes: number | null; home_venues: string | null; default_home_venue_name: string | null } | undefined;
 
   if (!team) throw new Error('TEAM_NOT_FOUND');
 

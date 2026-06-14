@@ -754,7 +754,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
     // Create pending responses for all upcoming events
     const upcomingEvents = db.prepare(
       "SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')"
-    ).all(invite.team_id) as any[];
+    ).all(invite.team_id) as Array<{ id: number }>;
 
     const responseStmt = db.prepare(
       'INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)'
@@ -784,7 +784,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
     });
   } catch (error) {
     logger.error('Register with invite error:', error);
-    if (error.message.includes('UNIQUE constraint failed')) {
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'Username or email already in use' });
     }
     res.status(500).json({ error: 'Failed to register' });
