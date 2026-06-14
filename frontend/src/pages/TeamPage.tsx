@@ -49,7 +49,7 @@ export default function TeamPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="card">
-        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {teamCrestUrl && (
             <img
               src={teamCrestUrl}
@@ -57,8 +57,8 @@ export default function TeamPage() {
               className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl border border-gray-700/80 bg-gray-900/70 object-contain p-1.5"
             />
           )}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white break-words">{team?.name}</h1>
+          <div className="flex min-h-12 flex-1 min-w-0 flex-col justify-center sm:min-h-14">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight break-words">{team?.name}</h1>
             {team?.description && (
               <p className="text-sm sm:text-base text-gray-300 mt-1 break-words">{team.description}</p>
             )}
