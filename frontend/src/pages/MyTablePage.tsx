@@ -169,49 +169,98 @@ export default function MyTablePage() {
               </div>
 
               {Array.isArray(section.rows) && section.rows.length > 0 ? (
-                <div className="table-shell">
-                  <table className="min-w-[360px] w-full divide-y divide-gray-700 text-sm">
-                    <thead className="bg-gray-800">
-                      <tr>
-                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">#</th>
-                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Team</th>
-                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Sp</th>
-                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Tore</th>
-                        <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-left sm:px-3">Pkt</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-gray-900 divide-y divide-gray-700">
-                      {section.rows.map((row, index) => (
-                        <tr
-                          key={`${section.teamId}-${index}`}
-                          className={isOwnTeamRow(section, row)
-                            ? 'bg-primary-900/40'
-                            : ''}
+                <>
+                  <div className="space-y-2 sm:hidden">
+                    {section.rows.map((row, index) => {
+                      const ownRow = isOwnTeamRow(section, row);
+                      const badgeUrl = normalizeBadgeUrl(row?.img);
+
+                      return (
+                        <div
+                          key={`${section.teamId}-${index}-mobile`}
+                          className={`rounded-xl border px-3 py-2 ${
+                            ownRow
+                              ? 'border-primary-700/60 bg-primary-900/30'
+                              : 'border-gray-700/70 bg-gray-900'
+                          }`}
                         >
-                          <td className="whitespace-nowrap px-2 py-2 text-white sm:px-3">{row.place ?? index + 1}</td>
-                          <td className="whitespace-nowrap px-2 py-2 text-white sm:px-3">
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                              {normalizeBadgeUrl(row?.img) ? (
-                                <img
-                                  src={normalizeBadgeUrl(row?.img)!}
-                                  alt={`${String(row.team || 'Team')} Wappen`}
-                                  className="w-6 h-6 shrink-0 crest-badge rounded"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="w-6 h-6 shrink-0 rounded-full bg-gray-700" />
-                              )}
-                              <span className={`whitespace-nowrap ${isOwnTeamRow(section, row) ? 'font-semibold text-primary-100' : ''}`}>{String(row.team || '-')}</span>
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 text-gray-300 sm:px-3">{row.games ?? '-'}</td>
-                          <td className="whitespace-nowrap px-2 py-2 text-gray-300 sm:px-3">{String(row.goal || '-')}</td>
-                          <td className="whitespace-nowrap px-2 py-2 font-semibold text-white sm:px-3">{row.points ?? '-'}</td>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="w-7 shrink-0 text-center font-heading text-lg font-semibold tabular-nums text-white">
+                              {row.place ?? index + 1}
+                            </span>
+                            {badgeUrl ? (
+                              <img
+                                src={badgeUrl}
+                                alt={`${String(row.team || 'Team')} Wappen`}
+                                className="h-7 w-7 shrink-0 crest-badge rounded"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="h-7 w-7 shrink-0 rounded-full bg-gray-700" />
+                            )}
+                            <span className={`min-w-0 flex-1 truncate text-sm text-white ${ownRow ? 'font-semibold text-primary-100' : ''}`}>
+                              {String(row.team || '-')}
+                            </span>
+                            <span className="shrink-0 rounded-lg bg-gray-800 px-2 py-1 text-sm font-semibold tabular-nums text-white">
+                              {row.points ?? '-'} Pkt
+                            </span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 pl-9 text-xs text-gray-400">
+                            <span className="tabular-nums">Spiele: <span className="text-gray-200">{row.games ?? '-'}</span></span>
+                            <span className="tabular-nums">Tore: <span className="text-gray-200">{String(row.goal || '-')}</span></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="table-shell hidden sm:block">
+                    <table className="min-w-full divide-y divide-gray-700 text-sm">
+                      <thead className="bg-gray-800">
+                        <tr>
+                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">#</th>
+                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Team</th>
+                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Sp</th>
+                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Tore</th>
+                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Pkt</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="bg-gray-900 divide-y divide-gray-700">
+                        {section.rows.map((row, index) => {
+                          const ownRow = isOwnTeamRow(section, row);
+                          const badgeUrl = normalizeBadgeUrl(row?.img);
+
+                          return (
+                            <tr
+                              key={`${section.teamId}-${index}`}
+                              className={ownRow ? 'bg-primary-900/40' : ''}
+                            >
+                              <td className="whitespace-nowrap px-3 py-2 text-white">{row.place ?? index + 1}</td>
+                              <td className="whitespace-nowrap px-3 py-2 text-white">
+                                <div className="flex items-center gap-2 whitespace-nowrap">
+                                  {badgeUrl ? (
+                                    <img
+                                      src={badgeUrl}
+                                      alt={`${String(row.team || 'Team')} Wappen`}
+                                      className="w-6 h-6 shrink-0 crest-badge rounded"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="w-6 h-6 shrink-0 rounded-full bg-gray-700" />
+                                  )}
+                                  <span className={`whitespace-nowrap ${ownRow ? 'font-semibold text-primary-100' : ''}`}>{String(row.team || '-')}</span>
+                                </div>
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2 text-gray-300">{row.games ?? '-'}</td>
+                              <td className="whitespace-nowrap px-3 py-2 text-gray-300">{String(row.goal || '-')}</td>
+                              <td className="whitespace-nowrap px-3 py-2 font-semibold text-white">{row.points ?? '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <div className="text-sm text-gray-400">Für dieses Team ist keine Tabelle verfügbar.</div>
               )}

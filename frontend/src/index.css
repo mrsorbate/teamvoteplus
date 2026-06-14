@@ -128,20 +128,15 @@
     overscroll-behavior-y: none;
   }
 
-  /* Mobile-only: Orientierungssperre */
+  /* Mobile PWA: document scroll must stay available, especially on Android. */
   @media (max-width: 1024px) {
     html, body {
-      width: 100vw;
-      height: 100dvh;
-      height: 100vh;
-      overflow: hidden;
+      width: 100%;
+      min-height: 100dvh;
+      height: auto;
       overflow-x: hidden;
-      overflow-y: hidden;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      overflow-y: auto;
+      position: static;
       transform: translateZ(0);
       -webkit-transform: translateZ(0);
       -webkit-user-select: text;
@@ -149,22 +144,18 @@
     }
 
     #root {
-      width: 100vw;
-      height: 100dvh;
-      height: 100vh;
-      overflow: hidden;
-      position: fixed;
-      top: 0;
-      left: 0;
+      width: 100%;
+      min-height: 100dvh;
+      height: auto;
+      overflow: visible;
+      position: static;
     }
   }
 
   @media (max-width: 1024px) and (orientation: landscape) {
     html, body, #root {
-      max-height: 100dvh;
-      height: 100dvh;
-      width: 100vw;
-      max-width: 100vw;
+      width: 100%;
+      max-width: 100%;
     }
   }
 }

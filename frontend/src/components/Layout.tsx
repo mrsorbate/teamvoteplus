@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -39,6 +40,16 @@ export default function Layout({ organization }: LayoutProps) {
   const prefersReducedMotion = useReducedMotion();
   const organizationName = organization?.name || 'Dein Verein';
   const organizationLogo = organization?.logo;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.getElementById('root')?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname]);
 
   const { data: teams } = useQuery({
     queryKey: ['teams'],
@@ -208,8 +219,8 @@ export default function Layout({ organization }: LayoutProps) {
       <main id="main-content" className="max-w-7xl mx-auto px-safe sm:px-6 lg:px-8 pt-4 sm:pt-6 pwa-main-safe">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 6 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
         >
           <Outlet />
