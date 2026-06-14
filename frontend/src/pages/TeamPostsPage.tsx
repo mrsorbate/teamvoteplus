@@ -162,23 +162,21 @@ export default function TeamPostsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 sm:space-y-6">
-      <div className="card">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => goBack(`/teams/${teamId}`)}
-            className="icon-button rounded-full"
-            aria-label="Zurück"
-            title="Zurück"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white break-words flex items-center gap-3">
-              <MessageSquare className="w-8 h-8 text-primary-400 shrink-0" />
-              <span>Nachrichten &amp; Umfragen</span>
-            </h1>
-          </div>
+      <div className="flex items-center gap-3 sm:gap-4">
+        <button
+          type="button"
+          onClick={() => goBack(`/teams/${teamId}`)}
+          className="icon-button rounded-full"
+          aria-label="Zurück"
+          title="Zurück"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white break-words flex items-center gap-3">
+            <MessageSquare className="w-8 h-8 text-primary-400 shrink-0" />
+            <span>Nachrichten &amp; Umfragen</span>
+          </h1>
         </div>
       </div>
 
