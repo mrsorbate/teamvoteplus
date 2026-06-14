@@ -1,9 +1,10 @@
 import { useState, useRef, Fragment } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Navigate } from 'react-router-dom';
-import { Plus, Trash2, Users, UserPlus, UserMinus, Shield, Settings, Upload, Copy, Share2, Check, X, KeyRound, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Users, UserPlus, UserMinus, Shield, Settings, Upload, Copy, Share2, Check, X, KeyRound, Edit2, RotateCw } from 'lucide-react';
 import { useToast, type ToastType } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
@@ -27,6 +28,7 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const { showToast: showGlobalToast } = useToast();
+  const prefersReducedMotion = useReducedMotion();
   
   const [showOrganizationSettings, setShowOrganizationSettings] = useState(false);
   const [organizationName, setOrganizationName] = useState('');
@@ -1684,14 +1686,26 @@ export default function AdminPage() {
           </h2>
           <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             <span className="text-xs text-gray-400">Auto-Refresh: 60s</span>
-            <button
+            <motion.button
               type="button"
               onClick={() => refetchAuditLogs()}
               disabled={auditLogsFetching}
-              className="btn btn-secondary text-xs"
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+              animate={auditLogsFetching && !prefersReducedMotion ? { boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.18)' } : { boxShadow: '0 0 0 0 rgba(220, 38, 38, 0)' }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="btn btn-secondary text-xs disabled:cursor-wait"
+              aria-live="polite"
             >
+              <motion.span
+                aria-hidden="true"
+                animate={auditLogsFetching && !prefersReducedMotion ? { rotate: 360 } : { rotate: 0 }}
+                transition={auditLogsFetching && !prefersReducedMotion ? { duration: 0.75, ease: 'linear', repeat: Infinity } : { duration: 0.18 }}
+                className="inline-flex"
+              >
+                <RotateCw className="w-4 h-4" />
+              </motion.span>
               {auditLogsFetching ? 'Aktualisiert...' : 'Aktualisieren'}
-            </button>
+            </motion.button>
           </div>
         </div>
 

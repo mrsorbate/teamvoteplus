@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { eventsAPI, postsAPI, teamsAPI, badgeProxyUrl } from '../lib/api';
@@ -12,6 +13,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const prefersReducedMotion = useReducedMotion();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
   const [pendingDecline, setPendingDecline] = useState<{ eventId: number; title: string } | null>(null);
   const [declineReason, setDeclineReason] = useState('');
@@ -30,7 +32,7 @@ export default function DashboardPage() {
     return <Navigate to="/admin" replace />;
   }
 
-  const { data: teams, isLoading: teamsLoading } = useQuery({
+  const { data: teams, isLoading: teamsLoading, isFetching: teamsFetching } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
       const response = await teamsAPI.getAll();
@@ -39,7 +41,7 @@ export default function DashboardPage() {
     enabled: user?.role !== 'admin',
   });
 
-  const { data: upcomingEvents, isLoading: eventsLoading } = useQuery({
+  const { data: upcomingEvents, isLoading: eventsLoading, isFetching: eventsFetching } = useQuery({
     queryKey: ['upcoming-events'],
     queryFn: async () => {
       const response = await eventsAPI.getMyUpcoming();
@@ -47,7 +49,7 @@ export default function DashboardPage() {
     },
   });
 
-  const { data: openPosts } = useQuery({
+  const { data: openPosts, isFetching: postsFetching } = useQuery({
     queryKey: ['open-posts'],
     queryFn: async () => {
       const response = await postsAPI.getOpen();
@@ -127,6 +129,7 @@ export default function DashboardPage() {
       || (teams.length > 1 && teamsWithPhotos.length >= 1)
     )
   );
+  const isDashboardRefreshing = teamsFetching || eventsFetching || postsFetching;
 
   if (eventsLoading || (user?.role !== 'admin' && teamsLoading)) {
     return (
@@ -152,18 +155,32 @@ export default function DashboardPage() {
         <h1 className="text-3xl sm:text-4xl font-heading font-bold text-white tracking-wide">Dashboard</h1>
         <p className="text-sm sm:text-base text-gray-400 mt-1 break-words">Willkommen zurück, <span className="text-gray-200 font-medium">{user?.name}</span>!</p>
         <div className="mt-3">
-          <button
+          <motion.button
             type="button"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['teams'] });
-              queryClient.invalidateQueries({ queryKey: ['upcoming-events'] });
-              queryClient.invalidateQueries({ queryKey: ['open-posts'] });
+            onClick={async () => {
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['teams'] }),
+                queryClient.invalidateQueries({ queryKey: ['upcoming-events'] }),
+                queryClient.invalidateQueries({ queryKey: ['open-posts'] }),
+              ]);
             }}
-            className="btn btn-secondary w-full sm:w-auto"
+            disabled={isDashboardRefreshing}
+            whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+            animate={isDashboardRefreshing && !prefersReducedMotion ? { boxShadow: '0 0 0 3px rgba(220, 38, 38, 0.18)' } : { boxShadow: '0 0 0 0 rgba(220, 38, 38, 0)' }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="btn btn-secondary w-full sm:w-auto disabled:cursor-wait"
+            aria-live="polite"
           >
-            <RotateCw className="w-4 h-4" />
-            Aktualisieren
-          </button>
+            <motion.span
+              aria-hidden="true"
+              animate={isDashboardRefreshing && !prefersReducedMotion ? { rotate: 360 } : { rotate: 0 }}
+              transition={isDashboardRefreshing && !prefersReducedMotion ? { duration: 0.75, ease: 'linear', repeat: Infinity } : { duration: 0.18 }}
+              className="inline-flex"
+            >
+              <RotateCw className="w-4 h-4" />
+            </motion.span>
+            {isDashboardRefreshing ? 'Aktualisiert...' : 'Aktualisieren'}
+          </motion.button>
         </div>
       </div>
 
