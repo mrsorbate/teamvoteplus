@@ -66,6 +66,7 @@ export default function TeamPostsPage() {
   const [content, setContent] = useState('');
   const [optionsText, setOptionsText] = useState('Ja\nNein');
   const [search, setSearch] = useState('');
+  const [feedType, setFeedType] = useState<'all' | 'announcement' | 'poll'>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const getSegmentButtonClass = (isActive: boolean) =>
@@ -107,18 +108,20 @@ export default function TeamPostsPage() {
 
   const filteredPosts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (!normalizedSearch) return posts || [];
 
-    return (posts || []).filter((post) => {
-      const text = [
-        post.title,
-        post.content || '',
-        post.created_by_name || '',
-        ...(post.poll_options || []),
-      ].join(' ').toLowerCase();
-      return text.includes(normalizedSearch);
-    });
-  }, [posts, search]);
+    return (posts || [])
+      .filter((post) => feedType === 'all' || post.type === feedType)
+      .filter((post) => {
+        if (!normalizedSearch) return true;
+        const text = [
+          post.title,
+          post.content || '',
+          post.created_by_name || '',
+          ...(post.poll_options || []),
+        ].join(' ').toLowerCase();
+        return text.includes(normalizedSearch);
+      });
+  }, [feedType, posts, search]);
 
   const handleScopeChange = (nextScope: 'open' | 'all') => {
     setScope(nextScope);
@@ -235,18 +238,16 @@ export default function TeamPostsPage() {
         </div>
       </div>
 
-      <section className="card space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="eyebrow-label">Kommunikation</p>
-            <h2 className="text-xl font-bold text-white">Historie &amp; Umfragen</h2>
-          </div>
-          <div className="flex rounded-2xl border border-gray-700 bg-gray-950/40 p-1" role="group" aria-label="Feed filtern">
+      <section className="space-y-3">
+        <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Feed filtern">
             <button
               type="button"
-              onClick={() => handleScopeChange('all')}
-              className={getSegmentButtonClass(scope === 'all')}
-              aria-pressed={scope === 'all'}
+              onClick={() => {
+                setFeedType('all');
+                handleScopeChange('all');
+              }}
+              className={getSegmentButtonClass(scope === 'all' && feedType === 'all')}
+              aria-pressed={scope === 'all' && feedType === 'all'}
             >
               Alle
             </button>
@@ -258,7 +259,22 @@ export default function TeamPostsPage() {
             >
               Offen
             </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setFeedType('announcement')}
+            className={getSegmentButtonClass(feedType === 'announcement')}
+            aria-pressed={feedType === 'announcement'}
+          >
+            Nachrichten
+          </button>
+          <button
+            type="button"
+            onClick={() => setFeedType('poll')}
+            className={getSegmentButtonClass(feedType === 'poll')}
+            aria-pressed={feedType === 'poll'}
+          >
+            Umfragen
+          </button>
         </div>
 
         <label className="relative block" htmlFor="team-feed-search">
@@ -272,92 +288,6 @@ export default function TeamPostsPage() {
             placeholder="Feed durchsuchen"
           />
         </label>
-
-        {isTrainer && (
-          <div className="rounded-2xl border border-gray-700 bg-gray-900/70 p-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-base font-semibold text-white">Neuer Beitrag</h3>
-              <div className="flex gap-2" role="group" aria-label="Beitragstyp auswählen">
-                <button
-                  type="button"
-                  onClick={() => setPostType('announcement')}
-                  className={getSegmentButtonClass(postType === 'announcement')}
-                  aria-pressed={postType === 'announcement'}
-                >
-                  <Megaphone className="h-4 w-4" />
-                  Nachricht
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostType('poll')}
-                  className={getSegmentButtonClass(postType === 'poll')}
-                  aria-pressed={postType === 'poll'}
-                >
-                  <Vote className="h-4 w-4" />
-                  Umfrage
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="team-post-title" className="mb-1 block text-sm font-medium text-gray-300">Titel</label>
-              <input
-                id="team-post-title"
-                type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="input"
-                placeholder="Kurze Überschrift"
-              />
-            </div>
-
-            {postType === 'announcement' ? (
-              <div>
-                <label htmlFor="team-post-content" className="mb-1 block text-sm font-medium text-gray-300">Nachricht</label>
-                <textarea
-                  id="team-post-content"
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                  className="input min-h-[120px]"
-                  placeholder="Information für das Team"
-                />
-              </div>
-            ) : (
-              <div>
-                <label htmlFor="team-post-options" className="mb-1 block text-sm font-medium text-gray-300">Antwortoptionen</label>
-                <textarea
-                  id="team-post-options"
-                  value={optionsText}
-                  onChange={(event) => setOptionsText(event.target.value)}
-                  className="input min-h-[120px]"
-                  placeholder="Ja&#10;Nein"
-                />
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                setErrorMessage(null);
-                createPostMutation.mutate();
-              }}
-              disabled={createPostMutation.isPending}
-              className="btn btn-primary w-full sm:w-auto"
-            >
-              {createPostMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Speichert...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Veröffentlichen
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </section>
 
       {errorMessage && (
@@ -531,6 +461,92 @@ export default function TeamPostsPage() {
             {search ? 'Passe die Suche an oder entferne den Suchbegriff.' : 'Sobald Trainer etwas veröffentlichen, bleibt es hier sichtbar.'}
           </p>
         </div>
+      )}
+
+      {isTrainer && (
+        <section className="rounded-2xl border border-gray-700 bg-gray-900/70 p-4 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-base font-semibold text-white">Neuer Beitrag</h2>
+            <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0" role="group" aria-label="Beitragstyp auswählen">
+              <button
+                type="button"
+                onClick={() => setPostType('announcement')}
+                className={getSegmentButtonClass(postType === 'announcement')}
+                aria-pressed={postType === 'announcement'}
+              >
+                <Megaphone className="h-4 w-4" />
+                Nachricht
+              </button>
+              <button
+                type="button"
+                onClick={() => setPostType('poll')}
+                className={getSegmentButtonClass(postType === 'poll')}
+                aria-pressed={postType === 'poll'}
+              >
+                <Vote className="h-4 w-4" />
+                Umfrage
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="team-post-title" className="mb-1 block text-sm font-medium text-gray-300">Titel</label>
+            <input
+              id="team-post-title"
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="input"
+              placeholder="Kurze Überschrift"
+            />
+          </div>
+
+          {postType === 'announcement' ? (
+            <div>
+              <label htmlFor="team-post-content" className="mb-1 block text-sm font-medium text-gray-300">Nachricht</label>
+              <textarea
+                id="team-post-content"
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                className="input min-h-[120px]"
+                placeholder="Information für das Team"
+              />
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="team-post-options" className="mb-1 block text-sm font-medium text-gray-300">Antwortoptionen</label>
+              <textarea
+                id="team-post-options"
+                value={optionsText}
+                onChange={(event) => setOptionsText(event.target.value)}
+                className="input min-h-[120px]"
+                placeholder="Ja&#10;Nein"
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setErrorMessage(null);
+              createPostMutation.mutate();
+            }}
+            disabled={createPostMutation.isPending}
+            className="btn btn-primary w-full sm:w-auto"
+          >
+            {createPostMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Speichert...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Veröffentlichen
+              </>
+            )}
+          </button>
+        </section>
       )}
     </div>
   );

@@ -198,16 +198,16 @@ export default function MyTablePage() {
                             ) : (
                               <div className="h-7 w-7 shrink-0 rounded-full bg-gray-700" />
                             )}
-                            <span className={`min-w-0 flex-1 truncate text-sm text-white ${ownRow ? 'font-semibold text-primary-100' : ''}`}>
-                              {String(row.team || '-')}
-                            </span>
-                            <span className="shrink-0 rounded-lg bg-gray-800 px-2 py-1 text-sm font-semibold tabular-nums text-white">
-                              {row.points ?? '-'} Pkt
-                            </span>
-                          </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 pl-9 text-xs text-gray-400">
-                            <span className="tabular-nums">Spiele: <span className="text-gray-200">{row.games ?? '-'}</span></span>
-                            <span className="tabular-nums">Tore: <span className="text-gray-200">{String(row.goal || '-')}</span></span>
+                            <div className="min-w-0 flex-1">
+                              <span className={`block truncate text-sm text-white ${ownRow ? 'font-semibold text-primary-100' : ''}`}>
+                                {String(row.team || '-')}
+                              </span>
+                              <div className="mt-1 inline-flex items-center divide-x divide-gray-700 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/50 text-[11px] font-semibold tabular-nums text-gray-300">
+                                <span className="px-2 py-1">{row.games ?? '-'} Sp</span>
+                                <span className="px-2 py-1">{String(row.goal || '-')} TD</span>
+                                <span className="px-2 py-1 text-white">{row.points ?? '-'} Pkt</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       );
@@ -220,9 +220,9 @@ export default function MyTablePage() {
                         <tr>
                           <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">#</th>
                           <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Team</th>
-                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Sp</th>
-                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Tore</th>
-                          <th className="eyebrow-label whitespace-nowrap px-3 py-2 text-left">Pkt</th>
+                          <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-center w-12">Sp</th>
+                          <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-center w-14">TD</th>
+                          <th className="eyebrow-label whitespace-nowrap px-2 py-2 text-center w-14">Pkt</th>
                         </tr>
                       </thead>
                       <tbody className="bg-gray-900 divide-y divide-gray-700">
@@ -251,9 +251,9 @@ export default function MyTablePage() {
                                   <span className={`whitespace-nowrap ${ownRow ? 'font-semibold text-primary-100' : ''}`}>{String(row.team || '-')}</span>
                                 </div>
                               </td>
-                              <td className="whitespace-nowrap px-3 py-2 text-gray-300">{row.games ?? '-'}</td>
-                              <td className="whitespace-nowrap px-3 py-2 text-gray-300">{String(row.goal || '-')}</td>
-                              <td className="whitespace-nowrap px-3 py-2 font-semibold text-white">{row.points ?? '-'}</td>
+                              <td className="whitespace-nowrap px-2 py-2 text-center tabular-nums text-gray-300">{row.games ?? '-'}</td>
+                              <td className="whitespace-nowrap px-2 py-2 text-center tabular-nums text-gray-300">{String(row.goal || '-')}</td>
+                              <td className="whitespace-nowrap px-2 py-2 text-center font-semibold tabular-nums text-white">{row.points ?? '-'}</td>
                             </tr>
                           );
                         })}

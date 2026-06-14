@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2, Loader2, Check, Pencil } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
@@ -554,6 +554,10 @@ export default function EventEditPage() {
     setInviteSelectionModalOpen(false);
   };
 
+  const navigateToEventDetails = () => {
+    navigate(`/events/${eventId}`, { replace: true });
+  };
+
   if (!isTrainer) {
     return <Navigate to="/events" replace />;
   }
@@ -567,17 +571,17 @@ export default function EventEditPage() {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => {
-            const target = originFrom || `/events/${eventId}`;
-            navigate(target, { replace: true });
-          }}
-          className="text-gray-300 hover:text-white"
+          onClick={navigateToEventDetails}
+          className="icon-button rounded-full"
           aria-label="Zurück"
           title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl sm:text-3xl font-bold text-white">Termin bearbeiten</h1>
+        <h1 className="flex min-h-11 items-center gap-3 text-xl sm:text-3xl font-bold text-white">
+          <Pencil className="h-6 w-6 shrink-0 text-primary-400 sm:h-8 sm:w-8" />
+          <span>Termin bearbeiten</span>
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -1002,7 +1006,7 @@ export default function EventEditPage() {
                   <>
                     <div>
                       <p id="event-edit-repeat-days-label" className="block text-sm font-medium text-gray-300 mb-2">Wochentage auswählen</p>
-                      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="event-edit-repeat-days-label">
+                      <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1" role="group" aria-labelledby="event-edit-repeat-days-label">
                         {[
                           { value: 1, label: 'Mo' },
                           { value: 2, label: 'Di' },
@@ -1023,7 +1027,7 @@ export default function EventEditPage() {
                                   : [...prev, day.value]
                               ));
                             }}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            className={`h-11 w-12 shrink-0 rounded-lg text-center font-medium transition-colors ${
                               seriesRepeatDays.includes(day.value)
                                 ? 'bg-primary-600 text-white'
                                 : 'bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600'
@@ -1073,10 +1077,7 @@ export default function EventEditPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                const target = originFrom || `/events/${eventId}`;
-                navigate(target, { replace: true });
-              }}
+              onClick={navigateToEventDetails}
               className="btn btn-secondary w-full inline-flex items-center justify-center text-center"
             >
               Abbrechen

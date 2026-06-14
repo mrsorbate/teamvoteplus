@@ -25,6 +25,7 @@ const ensureProfileUserColumns = () => {
         { name: 'jersey_number', sqlType: 'INTEGER' },
         { name: 'footedness', sqlType: 'TEXT' },
         { name: 'position', sqlType: 'TEXT' },
+        { name: 'stats_visible_to_team', sqlType: 'INTEGER NOT NULL DEFAULT 1' },
     ];
     for (const column of requiredColumns) {
         if (!existing.has(column.name)) {
@@ -71,7 +72,7 @@ router.get('/me', (req, res) => {
     try {
         ensureProfileUserColumns();
         const user = init_1.default.prepare(`SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
-              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
+              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position, stats_visible_to_team
        FROM users WHERE id = ?`).get(req.user.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -86,7 +87,7 @@ router.get('/me', (req, res) => {
 router.put('/me', (req, res) => {
     try {
         ensureProfileUserColumns();
-        const { phone_number, nickname, height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position, } = req.body;
+        const { phone_number, nickname, height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position, stats_visible_to_team, } = req.body;
         const user = init_1.default.prepare('SELECT role FROM users WHERE id = ?').get(req.user.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -100,6 +101,7 @@ router.put('/me', (req, res) => {
         const hasJerseyNumberUpdate = Object.prototype.hasOwnProperty.call(req.body, 'jersey_number');
         const hasFootednessUpdate = Object.prototype.hasOwnProperty.call(req.body, 'footedness');
         const hasPositionUpdate = Object.prototype.hasOwnProperty.call(req.body, 'position');
+        const hasStatsVisibilityUpdate = Object.prototype.hasOwnProperty.call(req.body, 'stats_visible_to_team');
         if (hasPhoneUpdate && user.role !== 'trainer') {
             return res.status(403).json({ error: 'Only trainers can update phone number' });
         }
@@ -185,6 +187,14 @@ router.put('/me', (req, res) => {
             updates.push('position = ?');
             params.push(normalizedPosition.length > 0 ? normalizedPosition : null);
         }
+        if (hasStatsVisibilityUpdate) {
+            const normalizedVisibility = stats_visible_to_team === true
+                || stats_visible_to_team === 1
+                || stats_visible_to_team === '1'
+                || stats_visible_to_team === 'true';
+            updates.push('stats_visible_to_team = ?');
+            params.push(normalizedVisibility ? 1 : 0);
+        }
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No profile fields to update' });
         }
@@ -210,7 +220,7 @@ router.put('/me', (req, res) => {
             }
         }
         const updatedUser = init_1.default.prepare(`SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
-              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
+              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position, stats_visible_to_team
        FROM users WHERE id = ?`).get(req.user.id);
         res.json(updatedUser);
     }

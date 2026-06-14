@@ -454,13 +454,13 @@ export default function EventDetailPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => handleBackNavigation()}
-            className="shrink-0 text-gray-300 hover:text-white"
+            className="icon-button shrink-0 rounded-full"
             aria-label="Zurück"
             title="Zurück"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl sm:text-3xl font-bold text-white">Termin nicht verfügbar</h1>
+          <h1 className="flex min-h-11 items-center text-xl sm:text-3xl font-bold text-white">Termin nicht verfügbar</h1>
         </div>
 
         <div className="card">
@@ -478,14 +478,14 @@ export default function EventDetailPage() {
         <button
           type="button"
           onClick={() => handleBackNavigation()}
-          className="shrink-0 text-gray-300 hover:text-white"
+          className="icon-button shrink-0 rounded-full"
           aria-label="Zurück"
           title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex min-h-11 items-center gap-2 sm:gap-3">
             {event?.type === 'match' && opponentCrestUrl ? (
               <img
                 src={opponentCrestUrl}

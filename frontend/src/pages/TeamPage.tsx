@@ -96,14 +96,13 @@ export default function TeamPage() {
 
         <Link
           to={`/teams/${teamId}/posts`}
-          className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4"
+          className="card hover:shadow-md transition-shadow flex items-center space-x-2 sm:space-x-4 py-3 sm:py-4"
         >
-          <div className="bg-amber-900/30 border border-amber-700/50 p-2.5 sm:p-3 rounded-lg">
+          <div className="bg-amber-900/30 border border-amber-700/50 p-2.5 rounded-lg">
             <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-white text-sm sm:text-base">Nachrichten &amp; Umfragen</h3>
-            <p className="text-xs sm:text-sm text-gray-300 break-words">Offene Einträge ansehen</p>
+            <h3 className="font-semibold text-white text-sm sm:text-base">Team Feed</h3>
           </div>
         </Link>
 

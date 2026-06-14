@@ -42,6 +42,7 @@ db.exec(`
     jersey_number INTEGER,
     footedness TEXT,
     position TEXT,
+    stats_visible_to_team INTEGER NOT NULL DEFAULT 1,
     role TEXT NOT NULL CHECK(role IN ('admin', 'trainer', 'player')),
     is_registered INTEGER NOT NULL DEFAULT 1,
     profile_picture TEXT,
@@ -362,6 +363,7 @@ try {
     addUserColumn('jersey_number', 'INTEGER');
     addUserColumn('footedness', 'TEXT');
     addUserColumn('position', 'TEXT');
+    addUserColumn('stats_visible_to_team', 'INTEGER NOT NULL DEFAULT 1');
     const hasIsRegistered = columns.some((col) => col.name === 'is_registered');
     if (!hasIsRegistered) {
         db.exec('ALTER TABLE users ADD COLUMN is_registered INTEGER NOT NULL DEFAULT 1');
