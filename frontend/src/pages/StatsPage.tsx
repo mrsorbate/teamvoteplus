@@ -169,7 +169,7 @@ export default function StatsPage() {
   return (
     <div className="space-y-4 sm:space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
@@ -178,8 +178,8 @@ export default function StatsPage() {
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-2xl font-heading font-bold text-white flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-primary-500 shrink-0" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
+          <TrendingUp className="w-8 h-8 text-primary-400 shrink-0" />
           Statistiken
         </h1>
       </div>

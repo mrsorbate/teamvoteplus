@@ -707,22 +707,21 @@ export default function TeamSettingsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
-          className="text-gray-300 hover:text-white"
+          className="icon-button rounded-full"
           aria-label="Zurück"
           title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-3xl font-bold text-white break-words flex items-center gap-2">
-            <Settings className="w-6 h-6 text-primary-400 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white break-words flex items-center gap-3">
+            <Settings className="w-8 h-8 text-primary-400 shrink-0" />
             <span>Team-Einstellungen</span>
           </h1>
-          <p className="text-xs sm:text-sm text-gray-300 mt-1">Standardwerte und fussball.de Verknüpfung verwalten</p>
         </div>
       </div>
 

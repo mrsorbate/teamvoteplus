@@ -42,15 +42,6 @@ export default function TeamPostsPage() {
         : 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
     }`;
 
-  const { data: team } = useQuery({
-    queryKey: ['team', teamId],
-    queryFn: async () => {
-      const response = await teamsAPI.getById(teamId);
-      return response.data;
-    },
-    enabled: Number.isInteger(teamId) && teamId > 0,
-  });
-
   const { data: members } = useQuery({
     queryKey: ['team-members', teamId],
     queryFn: async () => {
@@ -172,21 +163,21 @@ export default function TeamPostsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-5 sm:space-y-6">
       <div className="card">
-        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             type="button"
             onClick={() => goBack(`/teams/${teamId}`)}
-            className="mt-0.5 sm:mt-0 text-gray-300 hover:text-white"
+            className="icon-button rounded-full"
             aria-label="Zurück"
             title="Zurück"
           >
-            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white break-words">Nachrichten & Umfragen</h1>
-            <p className="text-sm sm:text-base text-gray-300 mt-1 break-words">
-              {team?.name || 'Team'}
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white break-words flex items-center gap-3">
+              <MessageSquare className="w-8 h-8 text-primary-400 shrink-0" />
+              <span>Nachrichten &amp; Umfragen</span>
+            </h1>
           </div>
         </div>
       </div>

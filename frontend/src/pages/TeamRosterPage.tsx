@@ -25,7 +25,7 @@ export default function TeamRosterPage() {
     setConfirmRemove(false);
   };
 
-  const { data: team, isLoading: teamLoading } = useQuery({
+  const { isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
     queryFn: async () => {
       const response = await teamsAPI.getById(teamId);
@@ -164,7 +164,7 @@ export default function TeamRosterPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           type="button"
           onClick={() => goBack(`/teams/${teamId}`)}
@@ -174,10 +174,10 @@ export default function TeamRosterPage() {
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-4xl font-heading font-bold text-white tracking-wide break-words flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary-400 shrink-0" />
-            <span>Kader — {team?.name}</span>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white break-words flex items-center gap-3">
+            <Users className="w-8 h-8 text-primary-400 shrink-0" />
+            <span>Trainer &amp; Spieler</span>
           </h1>
         </div>
       </div>
