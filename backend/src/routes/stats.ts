@@ -78,7 +78,7 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
       SELECT COUNT(*) as count
       FROM events
       WHERE team_id = ? AND start_time < datetime('now')
-    `).get(teamId) as any;
+    `).get(teamId) as { count: number } | undefined;
 
     const pastEventsByCategoryRows = db.prepare(`
       SELECT type, COUNT(*) as count

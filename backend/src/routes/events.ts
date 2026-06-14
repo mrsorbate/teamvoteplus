@@ -197,16 +197,16 @@ router.get('/', (req: AuthRequest, res) => {
       WHERE 1 = 1
     `;
 
-    const params: any[] = [team_id, req.user!.id];
+    const params: (string | number | null)[] = [String(team_id), req.user!.id];
 
     if (from) {
       query += ' AND e.start_time >= ?';
-      params.push(from);
+      params.push(String(from));
     }
 
     if (to) {
       query += ' AND e.start_time <= ?';
-      params.push(to);
+      params.push(String(to));
     }
 
     if (!from && !to) {
@@ -236,7 +236,7 @@ router.get('/:id', (req: AuthRequest, res) => {
       FROM events e
       INNER JOIN users u ON e.created_by = u.id
       WHERE e.id = ?
-    `).get(eventId) as any;
+    `).get(eventId) as (Record<string, unknown> & { id: number; team_id: number; series_id: string | null; created_by: number; visibility_all: number | null; rsvp_deadline: string | null; series_count: number | null; created_by_name: string }) | undefined;
 
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });

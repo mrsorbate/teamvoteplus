@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -285,8 +285,7 @@ router.put('/password', async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'New password must be at least 6 characters' });
     }
 
-    // Get current user with password
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user!.id) as any;
+    const user = db.prepare('SELECT password FROM users WHERE id = ?').get(req.user!.id) as { password: string } | undefined;
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -314,14 +313,13 @@ router.put('/password', async (req: AuthRequest, res) => {
 });
 
 // Upload profile picture
-router.post('/picture', upload.single('picture') as any, (req: AuthRequest, res) => {
+router.post('/picture', upload.single('picture') as RequestHandler, (req: AuthRequest, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Get old profile picture
-    const dbUser = db.prepare('SELECT profile_picture FROM users WHERE id = ?').get(req.user!.id) as any;
+    const dbUser = db.prepare('SELECT profile_picture FROM users WHERE id = ?').get(req.user!.id) as { profile_picture: string | null } | undefined;
 
     // Delete old profile picture if it exists
     if (dbUser?.profile_picture) {
@@ -350,7 +348,7 @@ router.post('/picture', upload.single('picture') as any, (req: AuthRequest, res)
 // Delete profile picture
 router.delete('/picture', (req: AuthRequest, res) => {
   try {
-    const user = db.prepare('SELECT profile_picture FROM users WHERE id = ?').get(req.user!.id) as any;
+    const user = db.prepare('SELECT profile_picture FROM users WHERE id = ?').get(req.user!.id) as { profile_picture: string | null } | undefined;
 
     if (user?.profile_picture) {
       // Delete file

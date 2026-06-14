@@ -54,7 +54,9 @@ async function sendPushToSubscriptions(subscriptions: StoredPushSubscription[], 
       await webpush.sendNotification(toWebPushSubscription(subscription), serializedPayload);
       sent += 1;
     } catch (error) {
-      const statusCode = Number(error?.statusCode || 0);
+      const statusCode = error != null && typeof (error as { statusCode?: unknown }).statusCode === 'number'
+        ? (error as { statusCode: number }).statusCode
+        : 0;
       if (statusCode === 404 || statusCode === 410) {
         removeSubscriptionByEndpoint.run(subscription.endpoint);
       } else {

@@ -10,6 +10,14 @@ router.use(authenticate);
 
 type PostType = 'announcement' | 'poll';
 
+type PostRow = {
+  id: number; team_id: number; type: PostType; title: string;
+  content: string | null; poll_options: string | null; created_at: string;
+  team_name?: string; created_by_name: string; created_by?: number;
+  updated_at?: string; my_seen_at: string | null;
+  my_answer_option: number | null; my_answered_at: string | null;
+};
+
 const parseOptions = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
@@ -65,7 +73,7 @@ router.get('/posts/open', (req: AuthRequest, res) => {
         )
       ORDER BY datetime(p.created_at) DESC
       LIMIT 50
-    `).all(userId, userId) as any[];
+    `).all(userId, userId) as PostRow[];
 
     const payload = rows.map((row) => ({
       ...row,
@@ -110,7 +118,7 @@ router.get('/teams/:id/posts', (req: AuthRequest, res) => {
       WHERE p.team_id = ?
         AND p.is_active = 1
       ORDER BY datetime(p.created_at) DESC
-    `).all(userId, teamId) as any[];
+    `).all(userId, teamId) as PostRow[];
 
     const payload = rows
       .map((row) => ({
@@ -187,7 +195,7 @@ router.post('/teams/:id/posts', async (req: AuthRequest, res) => {
        FROM team_posts p
        INNER JOIN users u ON u.id = p.created_by
        WHERE p.id = ?`
-    ).get(createdPostId) as any;
+    ).get(createdPostId) as PostRow | undefined;
 
     return res.status(201).json({
       ...created,

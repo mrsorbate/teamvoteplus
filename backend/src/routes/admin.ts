@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response, type NextFunction, type RequestHandler } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -75,7 +75,7 @@ router.post('/first-setup', firstSetupLimiter, async (req, res) => {
     }
 
     // Check if setup has already been completed
-    const org = db.prepare('SELECT setup_completed FROM organizations WHERE id = 1').get() as any;
+    const org = db.prepare('SELECT setup_completed FROM organizations WHERE id = 1').get() as { setup_completed: number } | undefined;
     if (org?.setup_completed === 1) {
       return res.status(403).json({ error: 'Setup has already been completed' });
     }
@@ -144,7 +144,7 @@ router.post('/first-setup', firstSetupLimiter, async (req, res) => {
 router.use(authenticate);
 
 // Middleware to check admin role
-const requireAdmin = (req: AuthRequest, res: any, next: any) => {
+const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
   if (req.user!.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required' });
   }
@@ -208,7 +208,7 @@ const logAdminAction = (
   action: string,
   targetType?: string,
   targetId?: number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ) => {
   try {
     ensureAdminAuditSchema();
@@ -256,7 +256,7 @@ router.get('/audit-logs', (req: AuthRequest, res) => {
       LEFT JOIN users u ON u.id = l.actor_id
       ORDER BY l.created_at DESC, l.id DESC
       LIMIT ?
-    `).all(limit) as Array<any>;
+    `).all(limit) as Array<{ id: number; actor_id: number; actor_username: string | null; actor_role: string | null; action: string; target_type: string | null; target_id: number | null; details_json: string | null; created_at: string; actor_name: string | null }>;
 
     res.json(
       logs.map((log) => ({
@@ -311,7 +311,7 @@ router.put('/teams/:id', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Team name is required' });
     }
 
-    const team = db.prepare('SELECT id, name, description FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name, description FROM teams WHERE id = ?').get(teamId) as { id: number; name: string; description: string | null } | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
@@ -388,7 +388,7 @@ router.delete('/users/:id', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
 
-    const targetUser = db.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(userId) as any;
+    const targetUser = db.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(userId) as { id: number; role: string; name: string; username: string; email: string } | undefined;
     if (!targetUser) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -448,7 +448,7 @@ router.post('/users/:id/reset-password', async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const targetUser = db.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(userId) as any;
+    const targetUser = db.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(userId) as { id: number; role: string; name: string; username: string; email: string } | undefined;
     if (!targetUser) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -493,7 +493,7 @@ router.post('/trainer-invites', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'At least one team must be selected' });
     }
 
-    const normalizedTeamIds = [...new Set(teamIds.map((id: any) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0))];
+    const normalizedTeamIds = [...new Set(teamIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0))];
     if (normalizedTeamIds.length === 0) {
       return res.status(400).json({ error: 'At least one valid team must be selected' });
     }
@@ -591,7 +591,7 @@ router.post('/trainer-invites', (req: AuthRequest, res) => {
     });
   } catch (error) {
     logger.error('Create trainer invite error:', error);
-    res.status(500).json({ error: (error as any)?.message || 'Failed to create trainer invite' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create trainer invite' });
   }
 });
 
@@ -605,7 +605,7 @@ router.post('/users/:id/trainer-invite-resend', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid user id' });
     }
 
-    const trainer = db.prepare('SELECT id, name, role FROM users WHERE id = ?').get(userId) as any;
+    const trainer = db.prepare('SELECT id, name, role FROM users WHERE id = ?').get(userId) as { id: number; name: string; role: string } | undefined;
     if (!trainer || trainer.role !== 'trainer') {
       return res.status(404).json({ error: 'Trainer not found' });
     }
@@ -651,7 +651,7 @@ router.post('/users/:id/trainer-invite-resend', (req: AuthRequest, res) => {
     });
   } catch (error) {
     logger.error('Resend trainer invite error:', error);
-    res.status(500).json({ error: (error as any)?.message || 'Failed to resend trainer invite' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to resend trainer invite' });
   }
 });
 
@@ -787,13 +787,12 @@ router.post('/teams/:teamId/members', (req: AuthRequest, res) => {
     }
 
     // Check if team exists
-    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string } | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    // Check if user exists
-    const user = db.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(user_id) as any;
+    const user = db.prepare('SELECT id, role, name, username, email FROM users WHERE id = ?').get(user_id) as { id: number; role: string; name: string; username: string; email: string } | undefined;
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -811,7 +810,7 @@ router.post('/teams/:teamId/members', (req: AuthRequest, res) => {
     // Create pending responses for all upcoming events
     const upcomingEvents = db.prepare(
       "SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')"
-    ).all(teamId) as any[];
+    ).all(teamId) as Array<{ id: number }>;
 
     const responseStmt = db.prepare(
       'INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)'
@@ -838,7 +837,7 @@ router.post('/teams/:teamId/members', (req: AuthRequest, res) => {
       position: null
     });
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'User is already a team member' });
     }
     logger.error('Add team member error:', error);
@@ -880,7 +879,7 @@ router.delete('/teams/:id', (req: AuthRequest, res) => {
   try {
     const teamId = parseInt(req.params.id);
 
-    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string } | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
@@ -908,8 +907,8 @@ router.delete('/teams/:teamId/members/:userId', (req: AuthRequest, res) => {
     const teamId = parseInt(req.params.teamId);
     const userId = parseInt(req.params.userId);
 
-    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as any;
-    const user = db.prepare('SELECT id, name, username, email FROM users WHERE id = ?').get(userId) as any;
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string } | undefined;
+    const user = db.prepare('SELECT id, name, username, email FROM users WHERE id = ?').get(userId) as { id: number; name: string; username: string; email: string } | undefined;
 
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
@@ -921,7 +920,7 @@ router.delete('/teams/:teamId/members/:userId', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, userId) as any;
+    ).get(teamId, userId) as { role: string } | undefined;
 
     if (!membership) {
       return res.status(404).json({ error: 'Membership not found' });
@@ -997,7 +996,7 @@ router.post('/settings/setup', (req: AuthRequest, res) => {
 // Delete organization and all related data (admin only)
 router.delete('/organization', (req: AuthRequest, res) => {
   try {
-    const currentOrg = db.prepare('SELECT name FROM organizations WHERE id = 1').get() as any;
+    const currentOrg = db.prepare('SELECT name FROM organizations WHERE id = 1').get() as { name: string } | undefined;
 
     // All deletes in a single transaction to prevent partial state on failure (#7)
     db.transaction(() => {
@@ -1048,7 +1047,7 @@ router.post('/settings/logo',
     }
     next();
   },
-  upload.single('logo') as any,
+  upload.single('logo') as RequestHandler,
   (req: AuthRequest, res) => {
   try {
     if (!req.file) {
@@ -1058,7 +1057,7 @@ router.post('/settings/logo',
     const logoPath = `/uploads/${req.file.filename}`;
     
     // Delete old logo file if exists
-    const oldOrg = db.prepare('SELECT logo FROM organizations WHERE id = 1').get() as any;
+    const oldOrg = db.prepare('SELECT logo FROM organizations WHERE id = 1').get() as { logo: string | null } | undefined;
     if (oldOrg?.logo) {
       const oldFilePath = path.join(uploadsDir, path.basename(oldOrg.logo));
       if (fs.existsSync(oldFilePath)) {

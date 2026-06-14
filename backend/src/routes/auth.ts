@@ -47,7 +47,13 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
       `SELECT id, username, email, password, name, nickname, role, profile_picture, phone_number,
               height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
        FROM users WHERE LOWER(username) = ?`
-    ).get(normalizedUsername) as any;
+    ).get(normalizedUsername) as {
+      id: number; username: string; email: string; password: string; name: string;
+      nickname: string | null; role: 'admin' | 'trainer' | 'player'; profile_picture: string | null;
+      phone_number: string | null; height_cm: number | null; weight_kg: number | null;
+      clothing_size: string | null; shoe_size: string | null; jersey_number: number | null;
+      footedness: string | null; position: string | null;
+    } | undefined;
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
