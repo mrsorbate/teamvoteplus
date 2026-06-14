@@ -74,7 +74,7 @@ export default function Layout({ organization }: LayoutProps) {
       </a>
 
       {/* ── Top navigation bar ── */}
-      <nav className="relative z-30 border-b border-gray-700/70 bg-gray-950/90 pt-safe shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-gray-950/78">
+      <nav className="relative z-30 border-b border-gray-800/80 bg-gray-900/95 pt-safe shadow-[0_8px_22px_rgba(0,0,0,0.18)] backdrop-blur-xl supports-[backdrop-filter]:bg-gray-900/88">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
           <div className="flex justify-between min-h-[3.5rem] sm:h-14">
 
@@ -82,7 +82,7 @@ export default function Layout({ organization }: LayoutProps) {
             <div className="flex items-center min-w-0 flex-1">
               <Link
                 to={user?.role === 'admin' ? '/admin' : '/'}
-                className="group flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-gray-800/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:gap-2.5 sm:px-1.5 sm:py-0 sm:-ml-1.5"
+                className="group flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-gray-800/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 sm:w-auto sm:justify-start sm:gap-2.5 sm:px-1.5 sm:py-0 sm:-ml-1.5"
                 aria-label="Zur Startseite"
               >
                 <TeamVoteLogo
@@ -91,17 +91,20 @@ export default function Layout({ organization }: LayoutProps) {
                   textClassName="text-xl sm:text-2xl"
                 />
                 {organizationLogo && (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
-                    <img
-                      src={resolveAssetUrl(organizationLogo)}
-                      alt="Vereinslogo"
-                      className="max-h-6 w-auto object-contain"
-                    />
-                  </span>
+                  <>
+                    <span className="h-8 w-px shrink-0 bg-gray-700/80 sm:h-9" aria-hidden="true" />
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
+                      <img
+                        src={resolveAssetUrl(organizationLogo)}
+                        alt="Vereinslogo"
+                        className="max-h-6 w-auto object-contain"
+                      />
+                    </span>
+                  </>
                 )}
                 {organizationName !== 'Dein Verein' && (
-                  <span className="min-w-0 flex-1 text-sm font-semibold leading-tight text-gray-100 sm:max-w-[220px] sm:flex-none sm:text-gray-200">
-                    <span className="block whitespace-normal break-words sm:truncate">
+                  <span className="min-w-0 flex-1 text-sm font-semibold leading-tight text-gray-100 sm:max-w-[360px] sm:flex-none sm:text-base sm:text-gray-200">
+                    <span className="block whitespace-normal break-words sm:whitespace-nowrap sm:truncate">
                       {organizationName}
                     </span>
                   </span>
