@@ -1,6 +1,7 @@
 import { Calendar, Check, Clock, Cone, HelpCircle, Home, MapPin, Plane, Swords, X } from 'lucide-react';
 import { badgeProxyUrl } from '../lib/api';
 import { getEventDisplayTitle, getEventSquadIndicator, normalizeMatchFlag } from '../lib/eventDisplay';
+import { getMapsUrl } from '../lib/utils';
 
 type EventStatus = 'accepted' | 'declined' | 'tentative' | 'pending' | string | null | undefined;
 type EventResponseStatus = 'accepted' | 'tentative' | 'declined';
@@ -71,8 +72,6 @@ export default function EventCard({
   const locationText = ([event.location_venue, event.location_street, event.location_zip_city]
     .filter(Boolean)
     .join(', ') || event.location || '').trim();
-  const encodedLocationQuery = locationText ? encodeURIComponent(locationText) : '';
-  const googleMapsUrl = encodedLocationQuery ? `https://www.google.com/maps/search/?api=1&query=${encodedLocationQuery}` : '';
   const opponentCrestUrl = badgeProxyUrl(typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '') || '';
   const displayTitle = getEventDisplayTitle(event);
   const squadIndicator = getEventSquadIndicator(event);
@@ -88,7 +87,7 @@ export default function EventCard({
   }
   const shouldUseLocationAsMeetingPoint = !(event.type === 'match' && isAwayMatch);
   const meetingPointText = String(event?.meeting_point || (shouldUseLocationAsMeetingPoint ? locationText : '') || '').trim();
-  const meetingPointMapsUrl = event?.meeting_point ? '' : googleMapsUrl;
+  const meetingPointMapsUrl = event?.meeting_point ? getMapsUrl(event.meeting_point) : getMapsUrl(locationText);
   const meetingTimeDisplay = meetingTimeLabel ? `${meetingTimeLabel} Uhr Treffpunkt` : 'Treffpunkt offen';
   const canChooseTentative = (() => {
     if (!event?.rsvp_deadline) return true;

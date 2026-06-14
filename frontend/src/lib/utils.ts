@@ -46,6 +46,24 @@ export function resolveAssetUrl(assetPath?: string | null) {
   return assetPath;
 }
 
+export function isAppleMapsPlatform(userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''): boolean {
+  return /iPad|iPhone|iPod|Macintosh/i.test(userAgent);
+}
+
+export function getMapsUrl(address?: string | null): string {
+  const normalizedAddress = String(address || '').trim();
+  if (!normalizedAddress) {
+    return '';
+  }
+
+  const encodedAddress = encodeURIComponent(normalizedAddress);
+  if (isAppleMapsPlatform()) {
+    return `https://maps.apple.com/?q=${encodedAddress}`;
+  }
+
+  return `geo:0,0?q=${encodedAddress}`;
+}
+
 export type NumberFieldConfig = {
   min: number;
   max?: number;

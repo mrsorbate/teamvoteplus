@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { resolveAssetUrl } from '../lib/utils';
+import { getMapsUrl, resolveAssetUrl } from '../lib/utils';
 import { getEventDisplayTitle, getEventOpponentName, normalizeMatchFlag } from '../lib/eventDisplay';
 import type { EventResponseEntry } from '../lib/types';
 import { format } from 'date-fns';
@@ -344,9 +344,7 @@ export default function EventDetailPage() {
     locationParts.push(fallbackLocation);
   }
   const locationLabel = locationParts.join(', ');
-  const encodedLocationQuery = locationLabel ? encodeURIComponent(locationLabel) : '';
-  const googleMapsUrl = encodedLocationQuery ? `https://www.google.com/maps/search/?api=1&query=${encodedLocationQuery}` : '';
-  const appleMapsUrl = encodedLocationQuery ? `https://maps.apple.com/?q=${encodedLocationQuery}` : '';
+  const mapsUrl = getMapsUrl(locationLabel);
   const shouldShowAddressBlock = event?.type === 'match' || locationParts.length > 0;
   const isMatchWithoutAddress = event?.type === 'match' && locationParts.length === 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
@@ -532,7 +530,7 @@ export default function EventDetailPage() {
                   {locationLabel ? (
                     <div className="mt-1 space-y-1">
                       <a
-                        href={googleMapsUrl}
+                        href={mapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-semibold text-white break-words underline decoration-dotted underline-offset-2 hover:text-primary-400"
@@ -541,20 +539,12 @@ export default function EventDetailPage() {
                       </a>
                       <div className="flex flex-wrap gap-3 text-xs">
                         <a
-                          href={googleMapsUrl}
+                          href={mapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary-400 hover:text-primary-300"
                         >
-                          In Google Maps öffnen
-                        </a>
-                        <a
-                          href={appleMapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary-400 hover:text-primary-300"
-                        >
-                          In Apple Karten öffnen
+                          In Karten öffnen
                         </a>
                       </div>
                     </div>
