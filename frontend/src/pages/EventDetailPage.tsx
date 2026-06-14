@@ -5,6 +5,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
+import { getEventDisplayTitle, getEventOpponentName, normalizeMatchFlag } from '../lib/eventDisplay';
 import type { EventResponseEntry } from '../lib/types';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -255,26 +256,8 @@ export default function EventDetailPage() {
     );
   };
 
-  const getOpponentName = () => {
-    if (!event?.title) return '';
-    const parts = event.title.split(' - ');
-    if (parts.length === 2) {
-      const part1 = parts[0].trim();
-      const part2 = parts[1].trim();
-      if (event?.type === 'match') {
-        const isHomeMatch = event?.is_home_match === true || event?.is_home_match === 1 || event?.is_home_match === '1';
-        const isAwayMatch = event?.is_home_match === false || event?.is_home_match === 0 || event?.is_home_match === '0';
-        if (isHomeMatch || isAwayMatch) {
-          return isHomeMatch ? part2 : part1;
-        }
-      }
-      return part1;
-    }
-    return event.title;
-  };
-
-  const opponent = getOpponentName();
-  const displayTitle = String(opponent || event?.title || '').replace(/^spiel\s+gegen\s+/i, '').trim();
+  const opponent = getEventOpponentName(event);
+  const displayTitle = getEventDisplayTitle(event);
   const opponentCrestUrl = badgeProxyUrl(typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '') || '';
 
   const getInitials = (name: string) => {
@@ -327,13 +310,14 @@ export default function EventDetailPage() {
 
   const eventDateLabel = safeFormatDate(event?.start_time, 'PPP');
   const eventTimeRangeLabel = `${safeFormatDate(event?.start_time, 'p')} - ${safeFormatDate(event?.end_time, 'p')}`;
-  const locationParts = [
+  const isAwayMatchEvent = event?.type === 'match' && normalizeMatchFlag(event?.is_home_match, false);
+  const locationParts = isAwayMatchEvent ? [] : [
     normalizeLocationValue(event?.location_venue),
     normalizeLocationValue(event?.location_street),
     normalizeLocationValue(event?.location_zip_city),
   ].filter(Boolean);
   const fallbackLocation = normalizeLocationValue(event?.location);
-  if (fallbackLocation && !locationParts.includes(fallbackLocation)) {
+  if (!isAwayMatchEvent && fallbackLocation && !locationParts.includes(fallbackLocation)) {
     locationParts.push(fallbackLocation);
   }
   const locationLabel = locationParts.join(', ');

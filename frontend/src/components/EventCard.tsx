@@ -1,5 +1,6 @@
 import { Calendar, Check, Clock, Cone, HelpCircle, Home, MapPin, Plane, Swords, X } from 'lucide-react';
 import { badgeProxyUrl } from '../lib/api';
+import { getEventDisplayTitle, getEventSquadIndicator, normalizeMatchFlag } from '../lib/eventDisplay';
 
 type EventStatus = 'accepted' | 'declined' | 'tentative' | 'pending' | string | null | undefined;
 
@@ -16,52 +17,6 @@ interface EventCardProps {
   onDeclineWithReason: (event: any, title: string) => void;
   setActiveQuickActionsEventId: (value: number | null | ((previous: number | null) => number | null)) => void;
 }
-
-const normalizeMatchFlag = (value: unknown, target: boolean): boolean => {
-  if (target) {
-    return value === true || value === 1 || value === '1';
-  }
-  return value === false || value === 0 || value === '0';
-};
-
-const getOpponentName = (event: any): string => {
-  if (!event?.title) return '';
-  const parts = String(event.title).split(' - ');
-  if (parts.length === 2) {
-    const part1 = parts[0].trim();
-    const part2 = parts[1].trim();
-    if (event?.type === 'match') {
-      const isHomeMatch = normalizeMatchFlag(event?.is_home_match, true);
-      const isAwayMatch = normalizeMatchFlag(event?.is_home_match, false);
-      if (isHomeMatch || isAwayMatch) {
-        return isHomeMatch ? part2 : part1;
-      }
-    }
-    return part1;
-  }
-  return String(event.title);
-};
-
-const getSquadIndicator = (event: any): 'I' | 'II' | null => {
-  const title = String(event?.title || '').trim();
-  const teamName = String(event?.team_name || '').trim();
-  if (/^\[(?:II|2)\]\s*/i.test(title) || /^\((?:II|2)\)\s*/i.test(title) || /\bII\b/i.test(teamName)) {
-    return 'II';
-  }
-  if (/^\[(?:I|1)\]\s*/i.test(title) || /^\((?:I|1)\)\s*/i.test(title) || /\bI\b/i.test(teamName)) {
-    return 'I';
-  }
-  return null;
-};
-
-const getDisplayTitle = (event: any): string => {
-  const opponent = getOpponentName(event);
-  return String(opponent || event?.title || '')
-    .replace(/^\[(?:I{1,3}|\d+)\]\s*/i, '')
-    .replace(/^\((?:I{1,3}|\d+)\)\s*/i, '')
-    .replace(/^spiel\s+gegen\s+/i, '')
-    .trim();
-};
 
 const getActionButtonClass = (status: 'accepted' | 'tentative' | 'declined', currentStatus: EventStatus): string => {
   const isSelected = currentStatus === status;
@@ -120,8 +75,8 @@ export default function EventCard({
   const encodedLocationQuery = locationText ? encodeURIComponent(locationText) : '';
   const googleMapsUrl = encodedLocationQuery ? `https://www.google.com/maps/search/?api=1&query=${encodedLocationQuery}` : '';
   const opponentCrestUrl = badgeProxyUrl(typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '') || '';
-  const displayTitle = getDisplayTitle(event);
-  const squadIndicator = getSquadIndicator(event);
+  const displayTitle = getEventDisplayTitle(event);
+  const squadIndicator = getEventSquadIndicator(event);
   const isHomeMatch = normalizeMatchFlag(event?.is_home_match, true);
   const isAwayMatch = normalizeMatchFlag(event?.is_home_match, false);
   const hasMatchVenueIcon = event.type === 'match' && (isHomeMatch || isAwayMatch);
@@ -132,7 +87,9 @@ export default function EventCard({
     meetingDate.setMinutes(meetingDate.getMinutes() - arrivalMinutes);
     meetingTimeLabel = meetingDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   }
-  const meetingPointText = String(event?.meeting_point || locationText || '').trim();
+  const shouldUseLocationAsMeetingPoint = !(event.type === 'match' && isAwayMatch);
+  const meetingPointText = String(event?.meeting_point || (shouldUseLocationAsMeetingPoint ? locationText : '') || '').trim();
+  const meetingPointMapsUrl = event?.meeting_point ? '' : googleMapsUrl;
   const meetingTimeDisplay = meetingTimeLabel ? `${meetingTimeLabel} Uhr Treffpunkt` : 'Treffpunkt offen';
   const canChooseTentative = (() => {
     if (!event?.rsvp_deadline) return true;
@@ -181,7 +138,7 @@ export default function EventCard({
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 pr-12 sm:pr-14">
             {squadIndicator && (
               <span
-                className="inline-flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-yellow-300 text-sm font-heading font-bold text-gray-950"
+                className="inline-flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full bg-yellow-300 text-[11px] sm:text-xs font-heading font-bold text-gray-950"
                 title={`Mannschaft ${squadIndicator}`}
                 aria-label={`Mannschaft ${squadIndicator}`}
               >
@@ -253,9 +210,9 @@ export default function EventCard({
               onClick={(clickEvent) => clickEvent.stopPropagation()}
             >
               <MapPin className="w-3.5 h-3.5 shrink-0" />
-              {googleMapsUrl ? (
+              {meetingPointMapsUrl ? (
                 <a
-                  href={googleMapsUrl}
+                  href={meetingPointMapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="min-w-0 truncate underline decoration-dotted underline-offset-2 hover:text-primary-400"

@@ -318,9 +318,7 @@ export default function DashboardPage() {
           <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400 shrink-0" />
           <span className="truncate">Terminübersicht</span>
         </h2>
-        <div className="relative h-px w-full overflow-hidden rounded-full bg-gray-700/70" aria-hidden="true">
-          <div className="absolute inset-y-0 left-1/2 w-24 -translate-x-1/2 rounded-full bg-primary-500/80" />
-        </div>
+        <div className="h-px w-full rounded-full bg-primary-500/80" aria-hidden="true" />
       </div>
 
       <div className="space-y-3 sm:space-y-4">
@@ -336,7 +334,7 @@ export default function DashboardPage() {
                 isToday={isToday}
                 isStatusPending={updateResponseMutation.isPending}
                 showTeamNameFallback
-                requiresDeclineReason={user?.role !== 'trainer'}
+                requiresDeclineReason
                 onOpen={(selectedEvent) => {
                   const from = `${location.pathname}${location.search}${location.hash}`;
                   navigate(`/events/${selectedEvent.id}`, { state: { from } });
