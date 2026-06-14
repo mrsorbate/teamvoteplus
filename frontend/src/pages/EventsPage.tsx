@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, Plus, ArrowLeft, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
-import { useSmartBack } from '../hooks/useSmartBack';
+import { Calendar, Plus, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
 
 export default function EventsPage() {
@@ -14,7 +13,6 @@ export default function EventsPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const goBack = useSmartBack();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
   const [pendingDecline, setPendingDecline] = useState<{ eventId: number; title: string } | null>(null);
@@ -470,17 +468,8 @@ export default function EventsPage() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => goBack(teamId ? `/teams/${teamId}` : '/')}
-            className="mt-1 sm:mt-0 icon-button rounded-full"
-            aria-label="Zurück"
-            title="Zurück"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-3xl sm:text-4xl font-heading font-bold text-white tracking-wide flex items-center gap-3 min-w-0">
-            <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400 shrink-0" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 min-w-0">
+            <Calendar className="w-8 h-8 text-primary-400 shrink-0" />
             <span className="truncate">Terminübersicht</span>
           </h1>
         </div>

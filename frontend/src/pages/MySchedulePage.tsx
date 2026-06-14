@@ -283,8 +283,8 @@ export default function MySchedulePage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-primary-400" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
+          <Calendar className="w-8 h-8 text-primary-400 shrink-0" />
           <span>Mein Spielplan</span>
         </h1>
         <p className="text-xs sm:text-sm text-gray-300 mt-1">
