@@ -444,9 +444,11 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-start sm:items-center gap-3">
-        <User className="w-8 h-8 text-primary-400" />
-        <div>
+      <div className="flex items-center gap-4">
+        <div className="flex h-full min-h-[3.75rem] shrink-0 items-center">
+          <User className="w-8 h-8 text-primary-400" />
+        </div>
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Einstellungen</h1>
           <p className="text-sm sm:text-base text-gray-300 mt-1">Verwalte dein Profil und deine Einstellungen</p>
         </div>
