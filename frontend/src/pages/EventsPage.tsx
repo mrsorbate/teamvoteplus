@@ -4,8 +4,8 @@ import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'reac
 import { eventsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, Plus, CalendarCheck, History } from 'lucide-react';
-import AccessibleModal from '../components/AccessibleModal';
 import EventCard from '../components/EventCard';
+import ResponseReasonModal from '../components/ResponseReasonModal';
 
 export default function EventsPage() {
   const { id } = useParams<{ id: string }>();
@@ -16,9 +16,9 @@ export default function EventsPage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
-  const [pendingDecline, setPendingDecline] = useState<{ eventId: number; title: string } | null>(null);
-  const [declineReason, setDeclineReason] = useState('');
-  const [declineReasonError, setDeclineReasonError] = useState<string | null>(null);
+  const [pendingResponse, setPendingResponse] = useState<{ eventId: number; title: string; status: 'tentative' | 'declined' } | null>(null);
+  const [responseComment, setResponseComment] = useState('');
+  const [responseCommentError, setResponseCommentError] = useState<string | null>(null);
   const isTrainer = user?.role === 'trainer';
   const createdSuccess = searchParams.get('created') === '1';
   const viewParam = searchParams.get('view');
@@ -65,7 +65,7 @@ export default function EventsPage() {
 
   const eventItems = Array.isArray(events) ? events : [];
 
-  const quickDeclineReasons = [
+  const quickResponseReasons = [
     'Krankheit',
     'Arbeit',
     'Privater Termin',
@@ -73,43 +73,42 @@ export default function EventsPage() {
     'Verletzung',
   ];
 
-  const closeDeclineModal = () => {
+  const closeResponseModal = () => {
     if (updateResponseMutation.isPending) {
       return;
     }
-    setPendingDecline(null);
-    setDeclineReason('');
-    setDeclineReasonError(null);
+    setPendingResponse(null);
+    setResponseComment('');
+    setResponseCommentError(null);
   };
 
-  const handleDeclineSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!pendingDecline) {
+  const handleResponseCommentSubmit = () => {
+    if (!pendingResponse) {
       return;
     }
 
-    const normalizedReason = declineReason.trim();
-    if (!normalizedReason) {
-      setDeclineReasonError('Bitte gib einen Grund für die Absage an.');
+    const normalizedComment = responseComment.trim();
+    if (pendingResponse.status === 'declined' && !normalizedComment) {
+      setResponseCommentError('Bitte gib einen Grund für die Absage an.');
       return;
     }
 
-    setDeclineReasonError(null);
+    setResponseCommentError(null);
     updateResponseMutation.mutate(
       {
-        eventId: pendingDecline.eventId,
-        status: 'declined',
-        comment: normalizedReason,
+        eventId: pendingResponse.eventId,
+        status: pendingResponse.status,
+        comment: normalizedComment || undefined,
       },
       {
         onSuccess: () => {
-          setPendingDecline(null);
-          setDeclineReason('');
-          setDeclineReasonError(null);
+          setPendingResponse(null);
+          setResponseComment('');
+          setResponseCommentError(null);
         },
         onError: (error: any) => {
-          const apiMessage = String(error?.response?.data?.error || 'Absage konnte nicht gespeichert werden.');
-          setDeclineReasonError(apiMessage);
+          const apiMessage = String(error?.response?.data?.error || 'Rückmeldung konnte nicht gespeichert werden.');
+          setResponseCommentError(apiMessage);
         },
       }
     );
@@ -151,15 +150,14 @@ export default function EventsPage() {
         isPastView={isPastView}
         isStatusPending={updateResponseMutation.isPending}
         showTeamNameFallback={!teamId}
-        requiresDeclineReason
         onOpen={handleEventOpen}
         onStatusChange={(selectedEvent, status) => {
           updateResponseMutation.mutate({ eventId: selectedEvent.id, status });
         }}
-        onDeclineWithReason={(selectedEvent, title) => {
-          setPendingDecline({ eventId: selectedEvent.id, title });
-          setDeclineReason('');
-          setDeclineReasonError(null);
+        onResponseWithComment={(selectedEvent, status, title) => {
+          setPendingResponse({ eventId: selectedEvent.id, title, status });
+          setResponseComment('');
+          setResponseCommentError(null);
         }}
         setActiveQuickActionsEventId={setOpenQuickActionsEventId}
       />
@@ -270,88 +268,24 @@ export default function EventsPage() {
         )}
       </div>
 
-      {pendingDecline && (
-        <AccessibleModal
-          labelledBy="events-decline-reason-title"
-          onClose={closeDeclineModal}
-          className="backdrop-blur-[1px] px-4"
-          panelClassName="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800 p-4 sm:p-5 shadow-xl"
-        >
-          <form onSubmit={handleDeclineSubmit} className="space-y-4">
-            <div>
-              <h2 id="events-decline-reason-title" className="text-lg font-semibold text-white">
-                Absage begründen
-              </h2>
-              <p className="mt-1 text-sm text-gray-400">
-                {pendingDecline.title}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2" aria-label="Schnelle Absagegründe">
-              {quickDeclineReasons.map((reason) => (
-                <button
-                  key={reason}
-                  type="button"
-                  onClick={() => {
-                    setDeclineReason(reason);
-                    setDeclineReasonError(null);
-                  }}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    declineReason === reason
-                      ? 'bg-primary-900/40 border-primary-600 text-primary-100'
-                      : 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
-                  }`}
-                >
-                  {reason}
-                </button>
-              ))}
-            </div>
-
-            <div>
-              <label htmlFor="events-decline-reason" className="block text-sm font-medium text-gray-200">
-                Grund
-              </label>
-              <textarea
-                id="events-decline-reason"
-                value={declineReason}
-                onChange={(event) => {
-                  setDeclineReason(event.target.value);
-                  if (declineReasonError) {
-                    setDeclineReasonError(null);
-                  }
-                }}
-                rows={3}
-                aria-invalid={declineReasonError ? 'true' : 'false'}
-                aria-describedby={declineReasonError ? 'events-decline-reason-error' : undefined}
-                className="mt-2 w-full rounded-lg border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="z.B. krank, Arbeit, privater Termin"
-              />
-              {declineReasonError && (
-                <p id="events-decline-reason-error" className="mt-2 text-sm text-red-300" role="alert">
-                  {declineReasonError}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDeclineModal}
-                disabled={updateResponseMutation.isPending}
-                className="btn btn-secondary"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="submit"
-                disabled={updateResponseMutation.isPending}
-                className="btn btn-primary"
-              >
-                {updateResponseMutation.isPending ? 'Speichert...' : 'Absage speichern'}
-              </button>
-            </div>
-          </form>
-        </AccessibleModal>
+      {pendingResponse && (
+        <ResponseReasonModal
+          labelledBy="events-response-reason-title"
+          status={pendingResponse.status}
+          title={pendingResponse.title}
+          value={responseComment}
+          error={responseCommentError}
+          isPending={updateResponseMutation.isPending}
+          quickReasons={quickResponseReasons}
+          onChange={(value) => {
+            setResponseComment(value);
+            if (responseCommentError) {
+              setResponseCommentError(null);
+            }
+          }}
+          onClose={closeResponseModal}
+          onSubmit={handleResponseCommentSubmit}
+        />
       )}
     </div>
   );

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { eventsAPI, badgeProxyUrl } from '../lib/api';
@@ -11,9 +10,8 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
+import ResponseReasonModal from '../components/ResponseReasonModal';
 import { useToast } from '../lib/useToast';
-
-const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 
 export default function EventDetailPage() {
@@ -28,10 +26,9 @@ export default function EventDetailPage() {
 
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
   const [responseValidationMessage, setResponseValidationMessage] = useState('');
-  const [inlinePanel, setInlinePanel] = useState<'declined' | 'tentative' | null>(null);
-  const [inlineComment, setInlineComment] = useState('');
+  const [responseModalStatus, setResponseModalStatus] = useState<'declined' | 'tentative' | null>(null);
+  const [responseComment, setResponseComment] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
-  const prefersReducedMotion = useReducedMotion();
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteNote, setDeleteNote] = useState('');
@@ -62,9 +59,13 @@ export default function EventDetailPage() {
       eventsAPI.updateResponse(eventId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      setResponseModalStatus(null);
+      setResponseComment('');
+      setResponseValidationMessage('');
     },
     onError: (error: unknown) => {
       const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setResponseValidationMessage(msg || 'Rückmeldung konnte nicht gespeichert werden');
       showToast(msg || 'Rückmeldung konnte nicht gespeichert werden', 'error');
     },
   });
@@ -107,6 +108,13 @@ export default function EventDetailPage() {
   const declinedResponses = responses.filter((r) => r.status === 'declined');
   const tentativeResponses = responses.filter((r) => r.status === 'tentative');
   const pendingResponses = responses.filter((r) => r.status === 'pending');
+  const quickResponseReasons = [
+    'Krankheit',
+    'Arbeit',
+    'Privater Termin',
+    'Urlaub',
+    'Verletzung',
+  ];
   
   const isMatchEvent = event?.type === 'match';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
@@ -160,15 +168,36 @@ export default function EventDetailPage() {
     });
   };
 
-  const openInlinePanel = (status: 'declined' | 'tentative') => {
+  const openResponseModal = (status: 'declined' | 'tentative') => {
     if (status === 'tentative' && !canChooseTentative) {
       setResponseValidationMessage('Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.');
       return;
     }
 
     setResponseValidationMessage('');
-    setInlineComment(myResponse?.status === status ? (myResponse?.comment || '') : '');
-    setInlinePanel(prev => (prev === status ? null : status));
+    setResponseComment(myResponse?.status === status ? (myResponse?.comment || '') : '');
+    setResponseModalStatus(status);
+  };
+
+  const closeResponseModal = () => {
+    if (updateResponseMutation.isPending) {
+      return;
+    }
+    setResponseModalStatus(null);
+    setResponseComment('');
+    setResponseValidationMessage('');
+  };
+
+  const submitResponseModal = () => {
+    if (!responseModalStatus) {
+      return;
+    }
+    if (responseModalStatus === 'declined' && !responseComment.trim()) {
+      setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
+      return;
+    }
+    setSelectedStatus(responseModalStatus);
+    saveOwnResponse(responseModalStatus, responseComment);
   };
 
   const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
@@ -676,7 +705,7 @@ export default function EventDetailPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setInlinePanel(null);
+                  setResponseModalStatus(null);
                   setResponseValidationMessage('');
                   setSelectedStatus('accepted');
                   saveOwnResponse('accepted', '');
@@ -698,12 +727,12 @@ export default function EventDetailPage() {
               {/* Unsicher */}
               <button
                 type="button"
-                onClick={() => openInlinePanel('tentative')}
+                onClick={() => openResponseModal('tentative')}
                 disabled={!canChooseTentative || updateResponseMutation.isPending}
                 className={`w-full flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-base tracking-wide transition-all duration-200 ${
                   selectedStatus === 'tentative'
                     ? 'bg-yellow-600 text-white ring-2 ring-yellow-500/40'
-                    : inlinePanel === 'tentative'
+                    : responseModalStatus === 'tentative'
                     ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-600/60'
                     : 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50 hover:bg-yellow-900/40'
                 } disabled:opacity-40 disabled:cursor-not-allowed min-h-[52px]`}
@@ -712,65 +741,15 @@ export default function EventDetailPage() {
                 Unsicher
               </button>
 
-              {/* Inline panel — Unsicher */}
-              <AnimatePresence>
-              {inlinePanel === 'tentative' && (
-                <motion.div
-                  key="panel-tentative"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: EASE_EXPO }}
-                  style={{ overflow: 'hidden' }}
-                >
-                <div className="rounded-xl border border-yellow-700/40 bg-yellow-900/10 p-3">
-                  <label htmlFor="rsvp-tentative-comment" className="block text-xs font-heading font-semibold text-yellow-400 mb-2 uppercase tracking-wide">
-                    Kommentar <span className="text-gray-500 font-normal normal-case tracking-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    id="rsvp-tentative-comment"
-                    value={inlineComment}
-                    onChange={(e) => setInlineComment(e.target.value)}
-                    className="input text-sm"
-                    rows={2}
-                    placeholder="z.B. Entscheidung folgt am Abend"
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStatus('tentative');
-                        saveOwnResponse('tentative', inlineComment);
-                        setInlinePanel(null);
-                      }}
-                      disabled={updateResponseMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-yellow-600 text-white hover:bg-yellow-500 transition-colors disabled:opacity-50 min-h-[44px]"
-                    >
-                      {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      Bestätigen
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setInlinePanel(null); setInlineComment(''); }}
-                      className="btn btn-ghost"
-                    >
-                      Abbrechen
-                    </button>
-                  </div>
-                </div>
-                </motion.div>
-              )}
-              </AnimatePresence>
-
               {/* Absagen */}
               <button
                 type="button"
-                onClick={() => openInlinePanel('declined')}
+                onClick={() => openResponseModal('declined')}
                 disabled={updateResponseMutation.isPending}
                 className={`w-full flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-base tracking-wide transition-all duration-200 ${
                   selectedStatus === 'declined'
                     ? 'bg-red-600 text-white shadow-glow-primary ring-2 ring-red-500/40'
-                    : inlinePanel === 'declined'
+                    : responseModalStatus === 'declined'
                     ? 'bg-red-900/40 text-red-300 border border-red-600/60'
                     : 'bg-red-900/30 text-red-300 border border-red-700/50 hover:bg-red-900/40'
                 } disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px]`}
@@ -781,72 +760,7 @@ export default function EventDetailPage() {
                 Absagen
               </button>
 
-              {/* Inline panel — Absagen */}
-              <AnimatePresence>
-              {inlinePanel === 'declined' && (
-                <motion.div
-                  key="panel-declined"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: EASE_EXPO }}
-                  style={{ overflow: 'hidden' }}
-                >
-                <div className="rounded-xl border border-red-700/40 bg-red-900/10 p-3">
-                  <label htmlFor="rsvp-decline-reason" className="block text-xs font-heading font-semibold text-red-400 mb-2 uppercase tracking-wide">
-                    Grund <span className="text-gray-500 font-normal normal-case tracking-normal">(Pflichtfeld)</span>
-                  </label>
-                  <textarea
-                    id="rsvp-decline-reason"
-                    value={inlineComment}
-                    onChange={(e) => {
-                      setInlineComment(e.target.value);
-                      if (responseValidationMessage && e.target.value.trim()) {
-                        setResponseValidationMessage('');
-                      }
-                    }}
-                    className="input text-sm"
-                    rows={2}
-                    placeholder="z.B. Krank, Urlaub, Arbeit…"
-                  />
-                  {responseValidationMessage && (
-                    <p className="text-xs text-red-400 flex items-center gap-1.5 mt-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      {responseValidationMessage}
-                    </p>
-                  )}
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!inlineComment.trim()) {
-                          setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
-                          return;
-                        }
-                        setSelectedStatus('declined');
-                        saveOwnResponse('declined', inlineComment);
-                        setInlinePanel(null);
-                      }}
-                      disabled={updateResponseMutation.isPending}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-heading font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 min-h-[44px]"
-                    >
-                      {updateResponseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      Absage bestätigen
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setInlinePanel(null); setInlineComment(''); setResponseValidationMessage(''); }}
-                      className="btn btn-ghost"
-                    >
-                      Abbrechen
-                    </button>
-                  </div>
-                </div>
-                </motion.div>
-              )}
-              </AnimatePresence>
-
-              {!canChooseTentative && !inlinePanel && (
+              {!canChooseTentative && !responseModalStatus && (
                 <p className="text-xs text-gray-400 flex items-center gap-1.5 pt-1">
                   <Clock className="w-3.5 h-3.5 shrink-0" />
                   Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.
@@ -905,6 +819,26 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
+
+      {responseModalStatus && (
+        <ResponseReasonModal
+          labelledBy="event-detail-response-reason-title"
+          status={responseModalStatus}
+          title={displayTitle || event?.title || 'Termin'}
+          value={responseComment}
+          error={responseValidationMessage}
+          isPending={updateResponseMutation.isPending}
+          quickReasons={quickResponseReasons}
+          onChange={(value) => {
+            setResponseComment(value);
+            if (responseValidationMessage && value.trim()) {
+              setResponseValidationMessage('');
+            }
+          }}
+          onClose={closeResponseModal}
+          onSubmit={submitResponseModal}
+        />
+      )}
 
       {/* Delete Button Section */}
       {isTrainer && (

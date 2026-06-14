@@ -6,9 +6,9 @@ import { eventsAPI, postsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, Users, RotateCw, MessageSquare } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
-import AccessibleModal from '../components/AccessibleModal';
 import RefreshReloadOverlay from '../components/RefreshReloadOverlay';
 import EventCard from '../components/EventCard';
+import ResponseReasonModal from '../components/ResponseReasonModal';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -17,12 +17,12 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const prefersReducedMotion = useReducedMotion();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
-  const [pendingDecline, setPendingDecline] = useState<{ eventId: number; title: string } | null>(null);
-  const [declineReason, setDeclineReason] = useState('');
-  const [declineReasonError, setDeclineReasonError] = useState<string | null>(null);
+  const [pendingResponse, setPendingResponse] = useState<{ eventId: number; title: string; status: 'tentative' | 'declined' } | null>(null);
+  const [responseComment, setResponseComment] = useState('');
+  const [responseCommentError, setResponseCommentError] = useState<string | null>(null);
   const [manualRefreshActive, setManualRefreshActive] = useState(false);
 
-  const quickDeclineReasons = [
+  const quickResponseReasons = [
     'Krankheit',
     'Arbeit',
     'Privater Termin',
@@ -76,43 +76,42 @@ export default function DashboardPage() {
     },
   });
 
-  const closeDeclineModal = () => {
+  const closeResponseModal = () => {
     if (updateResponseMutation.isPending) {
       return;
     }
-    setPendingDecline(null);
-    setDeclineReason('');
-    setDeclineReasonError(null);
+    setPendingResponse(null);
+    setResponseComment('');
+    setResponseCommentError(null);
   };
 
-  const handleDeclineSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!pendingDecline) {
+  const handleResponseCommentSubmit = () => {
+    if (!pendingResponse) {
       return;
     }
 
-    const normalizedReason = declineReason.trim();
-    if (!normalizedReason) {
-      setDeclineReasonError('Bitte gib einen Grund für die Absage an.');
+    const normalizedComment = responseComment.trim();
+    if (pendingResponse.status === 'declined' && !normalizedComment) {
+      setResponseCommentError('Bitte gib einen Grund für die Absage an.');
       return;
     }
 
-    setDeclineReasonError(null);
+    setResponseCommentError(null);
     updateResponseMutation.mutate(
       {
-        eventId: pendingDecline.eventId,
-        status: 'declined',
-        comment: normalizedReason,
+        eventId: pendingResponse.eventId,
+        status: pendingResponse.status,
+        comment: normalizedComment || undefined,
       },
       {
         onSuccess: () => {
-          setPendingDecline(null);
-          setDeclineReason('');
-          setDeclineReasonError(null);
+          setPendingResponse(null);
+          setResponseComment('');
+          setResponseCommentError(null);
         },
         onError: (error: any) => {
-          const apiMessage = String(error?.response?.data?.error || 'Absage konnte nicht gespeichert werden.');
-          setDeclineReasonError(apiMessage);
+          const apiMessage = String(error?.response?.data?.error || 'Rückmeldung konnte nicht gespeichert werden.');
+          setResponseCommentError(apiMessage);
         },
       }
     );
@@ -334,7 +333,6 @@ export default function DashboardPage() {
                 isToday={isToday}
                 isStatusPending={updateResponseMutation.isPending}
                 showTeamNameFallback
-                requiresDeclineReason
                 onOpen={(selectedEvent) => {
                   const from = `${location.pathname}${location.search}${location.hash}`;
                   navigate(`/events/${selectedEvent.id}`, { state: { from } });
@@ -342,10 +340,10 @@ export default function DashboardPage() {
                 onStatusChange={(selectedEvent, status) => {
                   updateResponseMutation.mutate({ eventId: selectedEvent.id, status });
                 }}
-                onDeclineWithReason={(selectedEvent, title) => {
-                  setPendingDecline({ eventId: selectedEvent.id, title });
-                  setDeclineReason('');
-                  setDeclineReasonError(null);
+                onResponseWithComment={(selectedEvent, status, title) => {
+                  setPendingResponse({ eventId: selectedEvent.id, title, status });
+                  setResponseComment('');
+                  setResponseCommentError(null);
                   setOpenQuickActionsEventId(null);
                 }}
                 setActiveQuickActionsEventId={setOpenQuickActionsEventId}
@@ -367,81 +365,25 @@ export default function DashboardPage() {
         Alle Termine
       </Link>
 
-	      {pendingDecline && (
-	        <AccessibleModal
-	          labelledBy="decline-reason-title"
-	          onClose={closeDeclineModal}
-	          className="backdrop-blur-[1px] px-4"
-	          panelClassName="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800 p-4 sm:p-5 shadow-xl"
-	        >
-	            <h3 id="decline-reason-title" className="text-base sm:text-lg font-semibold text-white">Absagegrund</h3>
-	            <p className="mt-1 text-sm text-gray-300">
-	              Warum möchtest du für {pendingDecline.title} absagen?
-            </p>
-
-            <form className="mt-4 space-y-3" onSubmit={handleDeclineSubmit}>
-              <div className="flex flex-wrap gap-2" aria-label="Schnelle Absagegründe">
-                {quickDeclineReasons.map((reason) => (
-                  <button
-                    key={reason}
-                    type="button"
-                    onClick={() => {
-                      setDeclineReason(reason);
-                      setDeclineReasonError(null);
-                    }}
-                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-full border transition-colors ${
-                      declineReason === reason
-	                        ? 'bg-primary-900/40 border-primary-600 text-primary-100'
-	                        : 'bg-gray-800 border-gray-600 text-gray-200 hover:bg-gray-700'
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-
-              <label htmlFor="dashboard-decline-reason" className="block text-sm font-medium text-gray-200">
-                Grund
-              </label>
-              <textarea
-                id="dashboard-decline-reason"
-                value={declineReason}
-                onChange={(event) => {
-                  setDeclineReason(event.target.value);
-                  if (declineReasonError) {
-                    setDeclineReasonError(null);
-                  }
-                }}
-                placeholder="Kurz den Grund eingeben..."
-                aria-invalid={declineReasonError ? 'true' : 'false'}
-                aria-describedby={declineReasonError ? 'dashboard-decline-reason-error' : undefined}
-                className="input min-h-[96px]"
-              />
-
-              {declineReasonError && (
-                <p id="dashboard-decline-reason-error" className="text-sm text-red-300" role="alert">{declineReasonError}</p>
-              )}
-
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={closeDeclineModal}
-                  disabled={updateResponseMutation.isPending}
-                  className="btn btn-secondary"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateResponseMutation.isPending}
-                  className="btn btn-danger"
-                >
-                  {updateResponseMutation.isPending ? 'Speichern...' : 'Absagen'}
-                </button>
-	              </div>
-	            </form>
-	        </AccessibleModal>
-	      )}
+      {pendingResponse && (
+        <ResponseReasonModal
+          labelledBy="dashboard-response-reason-title"
+          status={pendingResponse.status}
+          title={pendingResponse.title}
+          value={responseComment}
+          error={responseCommentError}
+          isPending={updateResponseMutation.isPending}
+          quickReasons={quickResponseReasons}
+          onChange={(value) => {
+            setResponseComment(value);
+            if (responseCommentError) {
+              setResponseCommentError(null);
+            }
+          }}
+          onClose={closeResponseModal}
+          onSubmit={handleResponseCommentSubmit}
+        />
+      )}
     </div>
     </>
   );

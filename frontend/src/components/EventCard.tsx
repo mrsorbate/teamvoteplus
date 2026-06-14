@@ -3,6 +3,7 @@ import { badgeProxyUrl } from '../lib/api';
 import { getEventDisplayTitle, getEventSquadIndicator, normalizeMatchFlag } from '../lib/eventDisplay';
 
 type EventStatus = 'accepted' | 'declined' | 'tentative' | 'pending' | string | null | undefined;
+type EventResponseStatus = 'accepted' | 'tentative' | 'declined';
 
 interface EventCardProps {
   event: any;
@@ -11,10 +12,9 @@ interface EventCardProps {
   isToday?: boolean;
   isStatusPending?: boolean;
   showTeamNameFallback?: boolean;
-  requiresDeclineReason?: boolean;
   onOpen: (event: any) => void;
-  onStatusChange: (event: any, status: 'accepted' | 'tentative' | 'declined') => void;
-  onDeclineWithReason: (event: any, title: string) => void;
+  onStatusChange: (event: any, status: EventResponseStatus) => void;
+  onResponseWithComment: (event: any, status: Extract<EventResponseStatus, 'tentative' | 'declined'>, title: string) => void;
   setActiveQuickActionsEventId: (value: number | null | ((previous: number | null) => number | null)) => void;
 }
 
@@ -57,10 +57,9 @@ export default function EventCard({
   isToday = false,
   isStatusPending = false,
   showTeamNameFallback = false,
-  requiresDeclineReason = true,
   onOpen,
   onStatusChange,
-  onDeclineWithReason,
+  onResponseWithComment,
   setActiveQuickActionsEventId,
 }: EventCardProps) {
   const startDate = new Date(event.start_time);
@@ -99,10 +98,10 @@ export default function EventCard({
     return new Date() < tentativeCutoff;
   })();
 
-  const handleStatusClick = (status: 'accepted' | 'tentative' | 'declined', clickEvent: React.MouseEvent) => {
+  const handleStatusClick = (status: EventResponseStatus, clickEvent: React.MouseEvent) => {
     clickEvent.stopPropagation();
-    if (status === 'declined' && requiresDeclineReason) {
-      onDeclineWithReason(event, displayTitle || event.title || 'Termin');
+    if (status === 'tentative' || status === 'declined') {
+      onResponseWithComment(event, status, displayTitle || event.title || 'Termin');
       setActiveQuickActionsEventId(null);
       return;
     }
@@ -180,7 +179,7 @@ export default function EventCard({
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pr-12 sm:pr-14 text-gray-200">
             <span className="text-xl sm:text-2xl font-heading font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal text-gray-400">Uhr</span></span>
-            <span className="inline-flex min-w-0 items-center gap-1.5 text-xs sm:text-sm text-gray-400">
+            <span className="inline-flex min-w-0 translate-y-0.5 items-center gap-1.5 text-xs sm:text-sm text-gray-400">
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span className="truncate">{meetingTimeDisplay}</span>
             </span>
