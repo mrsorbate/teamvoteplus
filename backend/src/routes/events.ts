@@ -248,7 +248,7 @@ router.get('/:id', (req: AuthRequest, res) => {
     }
 
     const isTrainer = eventTeamIds.some((teamId) => {
-      const m = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user!.id) as any;
+      const m = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user!.id) as { role: string } | undefined;
       return m?.role === 'trainer';
     });
 
@@ -260,12 +260,12 @@ router.get('/:id', (req: AuthRequest, res) => {
       ORDER BY er.responded_at DESC
     `).all(eventId);
 
-    const canViewResponses = isTrainer || event.visibility_all === 1 || event.visibility_all === true;
+    const canViewResponses = isTrainer || event.visibility_all === 1;
     if (!canViewResponses) {
-      responses = responses.filter((r: any) => r.user_id === req.user!.id);
+      responses = (responses as Array<{ user_id: number }>).filter((r) => r.user_id === req.user!.id);
     }
 
-    const eventWithSeriesMeta = attachTeamMetaToEvent({ ...event }) as any;
+    const eventWithSeriesMeta = attachTeamMetaToEvent({ ...event }) as Record<string, unknown>;
     if (event.series_id) {
       const seriesEvents = db.prepare(
         'SELECT start_time FROM events WHERE series_id = ? ORDER BY start_time ASC'
@@ -301,7 +301,7 @@ router.get('/:id/squad', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid event id' });
     }
 
-    const event = db.prepare('SELECT id, team_id, type, created_by FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, type, created_by FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; type: string; created_by: number } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
     if (event.type !== 'match') return res.status(400).json({ error: 'Squad is only available for match events' });
     if (!isMemberOfAnyTeam(req.user!.id, getEventTeamIds(eventId))) {
@@ -346,7 +346,7 @@ router.put('/:id/squad', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid event id' });
     }
 
-    const event = db.prepare('SELECT id, team_id, type, created_by FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, type, created_by FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; type: string; created_by: number } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
     if (event.type !== 'match') return res.status(400).json({ error: 'Squad is only available for match events' });
     if (!canManageEvent(req.user!.id, eventId, event.created_by)) {
@@ -390,7 +390,7 @@ router.post('/:id/squad/release', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid event id' });
     }
 
-    const event = db.prepare('SELECT id, team_id, type, created_by FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, type, created_by FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; type: string; created_by: number } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
     if (event.type !== 'match') return res.status(400).json({ error: 'Squad is only available for match events' });
     if (!canManageEvent(req.user!.id, eventId, event.created_by)) {
@@ -471,6 +471,13 @@ router.post('/', async (req: AuthRequest, res) => {
 
     const targetTeamLabel = formatTeamLabel(getTeamNamesByIds(targetTeamIds));
 
+    type TeamSettings = {
+      default_response: string | null; default_rsvp_deadline_hours: number | null;
+      default_rsvp_deadline_hours_training: number | null; default_rsvp_deadline_hours_match: number | null; default_rsvp_deadline_hours_other: number | null;
+      default_arrival_minutes: number | null; default_arrival_minutes_training: number | null; default_arrival_minutes_match: number | null; default_arrival_minutes_other: number | null;
+      default_duration_minutes: number | null; default_duration_minutes_training: number | null; default_duration_minutes_match: number | null; default_duration_minutes_other: number | null;
+      home_venues: string | null;
+    };
     const teamSettings = db.prepare(
       `SELECT default_response,
               default_rsvp_deadline_hours,
@@ -479,7 +486,7 @@ router.post('/', async (req: AuthRequest, res) => {
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
               home_venues
        FROM teams WHERE id = ?`
-    ).get(team_id) as any;
+    ).get(team_id) as TeamSettings | undefined;
 
     if (!hasMatchingPitchTypeInHomeVenues(teamSettings?.home_venues, pitch_type)) {
       return res.status(400).json({ error: `Für die Platzart "${String(pitch_type || '').trim()}" ist kein Heimspiel-Platz hinterlegt` });
@@ -702,7 +709,7 @@ router.put('/:id', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const event = db.prepare('SELECT id, team_id, series_id, start_time, end_time, created_by FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, series_id, start_time, end_time, created_by FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; series_id: string | null; start_time: string; end_time: string; created_by: number } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
     const eventTeamIds = getEventTeamIds(eventId);
@@ -921,7 +928,7 @@ router.post('/:id/response', (req: AuthRequest, res) => {
     const { status, comment } = schemaResult.data;
     const normalizedComment = comment?.trim() ?? '';
 
-    const event = db.prepare('SELECT id, team_id, rsvp_deadline FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, rsvp_deadline FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; rsvp_deadline: string | null } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
     if (status === 'tentative' && event.rsvp_deadline) {
@@ -971,7 +978,7 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
     const { status, comment } = schemaResult.data;
     const normalizedComment = comment?.trim() ?? '';
 
-    const event = db.prepare('SELECT id, team_id, rsvp_deadline, created_by FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, rsvp_deadline, created_by FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; rsvp_deadline: string | null; created_by: number } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
     if (status === 'tentative' && event.rsvp_deadline) {
@@ -1013,7 +1020,7 @@ router.delete('/:id', async (req: AuthRequest, res) => {
     const deleteSeries = req.query.delete_series === 'true';
     const deleteNote = typeof req.body?.delete_note === 'string' ? req.body.delete_note.trim().slice(0, 200) : '';
 
-    const event = db.prepare('SELECT id, team_id, series_id, title, start_time, created_by FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, series_id, title, start_time, created_by FROM events WHERE id = ?').get(eventId) as { id: number; team_id: number; series_id: string | null; title: string; start_time: string; created_by: number } | undefined;
     if (!event) return res.status(404).json({ error: 'Event not found' });
     if (!canManageEvent(req.user!.id, eventId, event.created_by)) {
       return res.status(403).json({ error: 'Only trainers can delete events' });

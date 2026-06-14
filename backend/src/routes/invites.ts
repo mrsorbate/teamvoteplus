@@ -83,7 +83,7 @@ router.post('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
     // Check if user is trainer of this team
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(teamId, req.user!.id) as any;
+    ).get(teamId, req.user!.id) as { role: string } | undefined;
 
     let inviteRole: 'trainer' | 'player';
 
@@ -119,7 +119,7 @@ router.post('/teams/:teamId/invites', authenticate, (req: AuthRequest, res) => {
     const result = stmt.run(teamId, token, inviteRole, req.user!.id, expiresAt, maxUses, normalizedInviteeName);
 
     // Get team name for response
-    const team = db.prepare('SELECT name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT name FROM teams WHERE id = ?').get(teamId) as { name: string } | undefined;
 
     res.status(201).json({
       id: result.lastInsertRowid,
@@ -157,7 +157,7 @@ router.post('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) =>
       return res.status(403).json({ error: 'Only admins or trainers can create team join links' });
     }
 
-    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId) as { id: number; name: string } | undefined;
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
@@ -241,7 +241,7 @@ router.get('/teams/:teamId/join-link', authenticate, (req: AuthRequest, res) => 
         AND COALESCE(ti.max_uses, 1000) > COALESCE(ti.used_count, 0)
       ORDER BY datetime(ti.created_at) DESC
       LIMIT 1
-    `).get(teamId) as any;
+    `).get(teamId) as { id: number; token: string; team_id: number; role: string; max_uses: number | null; used_count: number; expires_at: string | null; created_at: string; team_name: string } | undefined;
 
     if (!invite) {
       return res.status(404).json({ error: 'No active team join link found' });
@@ -317,7 +317,7 @@ router.get('/invites/:token', (req, res) => {
       FROM trainer_invites ti
       INNER JOIN users u ON ti.created_by = u.id
       WHERE ti.token = ?
-    `).get(token) as any;
+    `).get(token) as { id: number; invited_name: string; team_ids: string; expires_at: string | null; used_count: number; invited_by_name: string } | undefined;
 
     if (trainerInvite) {
       if (trainerInvite.expires_at && new Date(trainerInvite.expires_at) < new Date()) {
@@ -332,7 +332,7 @@ router.get('/invites/:token', (req, res) => {
       try {
         const parsed = JSON.parse(trainerInvite.team_ids || '[]');
         if (Array.isArray(parsed)) {
-          teamIds = parsed.map((id: any) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0);
+          teamIds = parsed.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0);
         }
       } catch {
         teamIds = [];
@@ -376,7 +376,7 @@ router.get('/invites/:token', (req, res) => {
       INNER JOIN teams t ON ti.team_id = t.id
       INNER JOIN users u ON ti.created_by = u.id
       WHERE ti.token = ?
-    `).get(token) as any;
+    `).get(token) as { id: number; team_id: number; role: string; expires_at: string | null; max_uses: number | null; used_count: number; player_name: string | null; player_birth_date: string | null; player_jersey_number: number | null; team_name: string; team_description: string | null; invited_by_name: string } | undefined;
 
     if (!invite) {
       return res.status(404).json({ error: 'Invite not found' });
@@ -419,20 +419,18 @@ router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
       SELECT id, team_id, role, expires_at, max_uses, used_count, player_name
       FROM team_invites
       WHERE token = ?
-    `).get(token) as any;
+    `).get(token) as { id: number; team_id: number; role: string; expires_at: string | null; max_uses: number | null; used_count: number; player_name: string | null } | undefined;
 
     if (!invite) {
       return res.status(404).json({ error: 'Invite not found' });
     }
 
-    // Check if expired
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       return res.status(410).json({ error: 'Invite has expired' });
     }
 
     const effectiveMaxUses = invite.max_uses ?? 1;
 
-    // Check if max uses reached
     if (invite.used_count >= effectiveMaxUses) {
       return res.status(410).json({ error: 'Invite has reached maximum uses' });
     }
@@ -473,9 +471,8 @@ router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
         }
       })();
     } catch (innerError) {
-      // Roll back the used_count increment on failure
       db.prepare('UPDATE team_invites SET used_count = used_count - 1 WHERE id = ?').run(invite.id);
-      if (innerError.status === 409) {
+      if (innerError instanceof Error && (innerError as Error & { status?: number }).status === 409) {
         return res.status(409).json({ error: 'You are already a member of this team' });
       }
       throw innerError;
@@ -493,7 +490,7 @@ router.post('/invites/:token/accept', authenticate, (req: AuthRequest, res) => {
     });
   } catch (error) {
     logger.error('Accept invite error:', error);
-    if (error.message?.includes('UNIQUE constraint failed')) {
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
       return res.status(409).json({ error: 'You are already a member of this team' });
     }
     res.status(500).json({ error: 'Failed to accept invite' });
@@ -508,16 +505,15 @@ router.delete('/invites/:id', authenticate, (req: AuthRequest, res) => {
     // Get invite to check permissions
     const invite = db.prepare(
       'SELECT team_id FROM team_invites WHERE id = ?'
-    ).get(inviteId) as any;
+    ).get(inviteId) as { team_id: number } | undefined;
 
     if (!invite) {
       return res.status(404).json({ error: 'Invite not found' });
     }
 
-    // Check if user is trainer of this team
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(invite.team_id, req.user!.id) as any;
+    ).get(invite.team_id, req.user!.id) as { role: string } | undefined;
 
     if (req.user!.role !== 'admin' && (!membership || membership.role !== 'trainer')) {
       return res.status(403).json({ error: 'Only admins or trainers can delete invites' });
@@ -561,7 +557,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
       SELECT id, invited_name, ${hasInvitedUserId ? 'invited_user_id' : 'NULL as invited_user_id'}, team_ids, expires_at, used_count
       FROM trainer_invites
       WHERE token = ?
-    `).get(token) as any;
+    `).get(token) as { id: number; invited_name: string; invited_user_id: number | null; team_ids: string; expires_at: string | null; used_count: number } | undefined;
 
     if (trainerInvite) {
       if (trainerInvite.expires_at && new Date(trainerInvite.expires_at) < new Date()) {
@@ -572,7 +568,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
         return res.status(410).json({ error: 'Invite has already been used' });
       }
 
-      const existingUsername = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(normalizedUsername) as any;
+      const existingUsername = db.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(normalizedUsername) as { id: number } | undefined;
       if (existingUsername) {
         if (!trainerInvite.invited_user_id || existingUsername.id !== trainerInvite.invited_user_id) {
           return res.status(409).json({ error: 'Username already exists' });
@@ -580,7 +576,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
       }
 
       const normalizedEmail = String(email).trim().toLowerCase();
-      const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(normalizedEmail) as any;
+      const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(normalizedEmail) as { id: number } | undefined;
       if (existingUser) {
         if (!trainerInvite.invited_user_id || existingUser.id !== trainerInvite.invited_user_id) {
           return res.status(409).json({ error: 'User with this email already exists' });
@@ -591,7 +587,7 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
       try {
         const parsed = JSON.parse(trainerInvite.team_ids || '[]');
         if (Array.isArray(parsed)) {
-          teamIds = parsed.map((id: any) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0);
+          teamIds = parsed.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0);
         }
       } catch {
         teamIds = [];
@@ -694,13 +690,12 @@ router.post('/invites/:token/register', registerInviteLimiter, async (req, res) 
       SELECT id, team_id, role, expires_at, max_uses, used_count, player_name, player_birth_date, player_jersey_number
       FROM team_invites
       WHERE token = ?
-    `).get(token) as any;
+    `).get(token) as { id: number; team_id: number; role: string; expires_at: string | null; max_uses: number | null; used_count: number; player_name: string | null; player_birth_date: string | null; player_jersey_number: number | null } | undefined;
 
     if (!invite) {
       return res.status(404).json({ error: 'Invite not found' });
     }
 
-    // Check if expired
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       return res.status(410).json({ error: 'Invite has expired' });
     }
