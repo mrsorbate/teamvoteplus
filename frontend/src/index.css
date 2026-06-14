@@ -137,8 +137,6 @@
       overflow-x: hidden;
       overflow-y: auto;
       position: static;
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
       -webkit-user-select: text;
       user-select: text;
     }

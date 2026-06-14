@@ -74,6 +74,33 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 // ─────────────────────────────────────────────────────────────────────────────
 
+const logPwaRuntimeDebug = (reason: string) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const standaloneMedia = window.matchMedia('(display-mode: standalone)').matches
+  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean }
+  const visualViewport = window.visualViewport
+
+  console.info('[TeamVote+ PWA debug]', {
+    reason,
+    displayModeStandalone: standaloneMedia,
+    navigatorStandalone: Boolean(navigatorWithStandalone.standalone),
+    innerHeight: window.innerHeight,
+    innerWidth: window.innerWidth,
+    visualViewportHeight: visualViewport?.height ?? null,
+    visualViewportWidth: visualViewport?.width ?? null,
+    userAgent: window.navigator.userAgent,
+  })
+}
+
+logPwaRuntimeDebug('startup')
+window.addEventListener('resize', () => logPwaRuntimeDebug('resize'))
+window.addEventListener('orientationchange', () => {
+  window.setTimeout(() => logPwaRuntimeDebug('orientationchange'), 100)
+})
+
 type OrientationLockType = 'portrait' | 'portrait-primary'
 
 interface ScreenOrientationWithLock {
@@ -131,7 +158,7 @@ const installPullToRefreshGuard = () => {
       node = node.parentElement
     }
 
-    return (document.getElementById('root') || document.scrollingElement || document.documentElement) as HTMLElement
+    return (document.scrollingElement || document.documentElement) as HTMLElement
   }
 
   const onTouchStart = (event: TouchEvent) => {
@@ -147,9 +174,8 @@ const installPullToRefreshGuard = () => {
     const currentY = event.touches[0]?.clientY ?? startY
     const deltaY = currentY - startY
     const atTop = scroller.scrollTop <= 0
-    const atBottom = Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight
 
-    if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+    if (atTop && deltaY > 0) {
       event.preventDefault()
     }
   }
