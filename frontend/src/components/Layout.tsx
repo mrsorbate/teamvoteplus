@@ -61,12 +61,6 @@ export default function Layout({ organization }: LayoutProps) {
   });
 
   const teamsMenuLabel = teams?.length === 1 ? 'Mein Team' : 'Meine Teams';
-  const currentTeamIdMatch = location.pathname.match(/^\/teams\/(\d+)/);
-  const currentTeamId = currentTeamIdMatch ? Number(currentTeamIdMatch[1]) : null;
-  const currentTeamName = currentTeamId && Array.isArray(teams)
-    ? String(teams.find((team: any) => Number(team?.id) === currentTeamId)?.name || '').trim()
-    : '';
-  const headerTeamName = currentTeamName || (teams?.length === 1 ? String(teams[0]?.name || '').trim() : '');
   const menuProfilePicture = profile?.profile_picture || user?.profile_picture;
 
   return (
@@ -88,46 +82,33 @@ export default function Layout({ organization }: LayoutProps) {
             <div className="flex items-center min-w-0 flex-1">
               <Link
                 to={user?.role === 'admin' ? '/admin' : '/'}
-                className="group flex min-h-11 w-full min-w-0 flex-col rounded-xl border border-gray-800/80 bg-gray-900/45 px-2.5 py-2 transition-colors hover:bg-gray-800/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:flex-row sm:items-center sm:gap-2.5 sm:border-0 sm:bg-transparent sm:px-1.5 sm:py-0 sm:-ml-1.5"
+                className="group flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-gray-800/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 sm:w-auto sm:gap-2.5 sm:px-1.5 sm:py-0 sm:-ml-1.5"
                 aria-label="Zur Startseite"
               >
-                <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:flex-none sm:justify-start">
-                  <TeamVoteLogo
-                    className="shrink-0"
-                    iconClassName="h-8 w-8 rounded-lg sm:h-9 sm:w-9 sm:rounded-xl"
-                    textClassName="text-xl sm:text-2xl"
-                  />
-                  {organizationLogo && (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
-                      <img
-                        src={resolveAssetUrl(organizationLogo)}
-                        alt="Vereinslogo"
-                        className="max-h-6 w-auto object-contain"
-                      />
+                <TeamVoteLogo
+                  className="shrink-0"
+                  iconClassName="h-8 w-8 rounded-lg sm:h-9 sm:w-9 sm:rounded-xl"
+                  textClassName="text-xl sm:text-2xl"
+                />
+                {organizationLogo && (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-800/70 px-1">
+                    <img
+                      src={resolveAssetUrl(organizationLogo)}
+                      alt="Vereinslogo"
+                      className="max-h-6 w-auto object-contain"
+                    />
+                  </span>
+                )}
+                {organizationName !== 'Dein Verein' && (
+                  <span className="min-w-0 flex-1 text-sm font-semibold leading-tight text-gray-100 sm:max-w-[220px] sm:flex-none sm:text-gray-200">
+                    <span className="block whitespace-normal break-words sm:truncate">
+                      {organizationName}
                     </span>
-                  )}
-                </div>
-                <div className="mt-2 flex w-full min-w-0 flex-1 items-center justify-center border-t border-gray-800/80 pt-2 sm:mt-0 sm:w-auto sm:flex-none sm:justify-start sm:border-t-0 sm:pt-0">
-                  {(organizationLogo || organizationName !== 'Dein Verein') && (
-                    <>
-                      {organizationName !== 'Dein Verein' && (
-                        <span className="flex min-w-0 flex-1 flex-col items-center justify-center leading-tight sm:flex-none sm:items-start">
-                          <span className="block w-full whitespace-normal break-words text-center text-base font-semibold text-gray-100 sm:hidden">
-                            {organizationName}
-                          </span>
-                          {headerTeamName && (
-                            <span className="mt-0.5 block w-full whitespace-normal break-words text-center text-sm font-medium text-gray-300 sm:hidden">
-                              {headerTeamName}
-                            </span>
-                          )}
-                          <span className="hidden text-sm font-semibold text-gray-200 truncate max-w-[220px] sm:block">
-                            {organizationName}
-                          </span>
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
+                  </span>
+                )}
+                {organizationName === 'Dein Verein' && !organizationLogo && (
+                  <span className="sr-only">teamvote+</span>
+                )}
               </Link>
             </div>
 
