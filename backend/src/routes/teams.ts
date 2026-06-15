@@ -1462,10 +1462,21 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
            WHERE id = ?`
         ).run(startTime, endTime, rsvpDeadline, existingOrFallback.id);
 
-        rescheduled.push(title);
+        const trigger = isPostponedMatch ? 'postponedKeyword' : `timeDiff(${Math.round(timeDiffMinutes)}min)`;
+        const isFutureGame = gameDate > now;
+
+        if (isFutureGame) {
+          logger.info(`[Import] Rescheduled future game: event=${existingOrFallback.id} "${title}" ${existingOrFallback.start_time} → ${startTime} trigger=${trigger}`);
+          rescheduled.push(title);
+        } else {
+          // Past game: update stored time silently, never send a push notification
+          logger.info(`[Import] Silent time update for past game (no notification): event=${existingOrFallback.id} "${title}" ${existingOrFallback.start_time} → ${startTime} trigger=${trigger}`);
+          updated.push(title);
+        }
       } else {
         skippedExisting += 1;
         skipped.push(`${title}: Bereits vorhanden`);
+        logger.debug(`[Import] Skipped unchanged game: event=${existingOrFallback.id} "${title}" start=${existingOrFallback.start_time} timeDiffMin=${Math.round(timeDiffMinutes)}`);
       }
       continue;
     }
