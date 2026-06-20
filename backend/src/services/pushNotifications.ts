@@ -16,6 +16,16 @@ export type PushPayload = {
   url?: string;
 };
 
+export type PushCategory = 'post' | 'poll' | 'important' | 'system';
+
+type PushPreference = 'all' | 'important' | 'polls' | 'none';
+
+type SendPushOptions = {
+  category?: PushCategory;
+  teamId?: number;
+  teamIds?: number[];
+};
+
 const VAPID_PUBLIC_KEY = String(process.env.VAPID_PUBLIC_KEY || '').trim();
 const VAPID_PRIVATE_KEY = String(process.env.VAPID_PRIVATE_KEY || '').trim();
 const VAPID_SUBJECT = String(process.env.VAPID_SUBJECT || 'mailto:admin@teamvoteplus.app').trim();
@@ -48,6 +58,46 @@ export const getStoredSubscriptionsForUsers = (userIds: number[]): StoredPushSub
      FROM push_subscriptions
      WHERE user_id IN (${placeholders})`
   ).all(...normalizedUserIds) as StoredPushSubscription[];
+};
+
+const normalizeTeamIds = (options?: SendPushOptions): number[] => {
+  const ids = [
+    ...(Array.isArray(options?.teamIds) ? options.teamIds : []),
+    options?.teamId,
+  ];
+  return [...new Set(ids.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+};
+
+const allowsCategory = (preference: PushPreference, category: PushCategory): boolean => {
+  if (preference === 'none') return false;
+  if (preference === 'all') return true;
+  if (preference === 'polls') return category === 'poll';
+  if (preference === 'important') return category === 'important' || category === 'system';
+  return true;
+};
+
+const getPreferenceForUser = (userId: number, teamIds: number[]): PushPreference => {
+  const targetTeamIds = teamIds.length > 0 ? teamIds : [0];
+  const placeholders = targetTeamIds.map(() => '?').join(', ');
+  const rows = db.prepare(
+    `SELECT team_id, preference
+     FROM push_notification_preferences
+     WHERE user_id = ?
+       AND team_id IN (0, ${placeholders})`
+  ).all(userId, ...targetTeamIds) as Array<{ team_id: number; preference: PushPreference }>;
+
+  for (const teamId of targetTeamIds) {
+    const teamPreference = rows.find((row) => Number(row.team_id) === teamId)?.preference;
+    if (teamPreference) return teamPreference;
+  }
+
+  return rows.find((row) => Number(row.team_id) === 0)?.preference || 'all';
+};
+
+const filterUserIdsByPreference = (userIds: number[], options?: SendPushOptions): number[] => {
+  const category = options?.category || 'important';
+  const teamIds = normalizeTeamIds(options);
+  return userIds.filter((userId) => allowsCategory(getPreferenceForUser(userId, teamIds), category));
 };
 
 export async function sendPushToSubscriptions(subscriptions: StoredPushSubscription[], payload: PushPayload): Promise<number> {
@@ -85,7 +135,11 @@ export async function sendPushToSubscriptions(subscriptions: StoredPushSubscript
   return sent;
 }
 
-export async function sendPushToUsers(userIds: number[], payload: PushPayload): Promise<number> {
-  const subscriptions = getStoredSubscriptionsForUsers(userIds);
+export async function sendPushToUsers(userIds: number[], payload: PushPayload, options?: SendPushOptions): Promise<number> {
+  const allowedUserIds = filterUserIdsByPreference(
+    [...new Set(userIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))],
+    options
+  );
+  const subscriptions = getStoredSubscriptionsForUsers(allowedUserIds);
   return sendPushToSubscriptions(subscriptions, payload);
 }

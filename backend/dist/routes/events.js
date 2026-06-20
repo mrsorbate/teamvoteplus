@@ -468,6 +468,9 @@ router.post('/', async (req, res) => {
                     title: 'Neuer Termin',
                     body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${(0, eventHelpers_1.formatEventDateTime)(String(first?.start_time || start_time))}${seriesSuffix}`,
                     url: first?.id ? `/events/${first.id}` : `/teams/${team_id}/events`,
+                }, {
+                    teamIds: targetTeamIds,
+                    category: 'important',
                 });
             }
             (0, teamFeed_1.createEventFeedPosts)({
@@ -497,6 +500,9 @@ router.post('/', async (req, res) => {
                     title: 'Neuer Termin',
                     body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${(0, eventHelpers_1.formatEventDateTime)(start_time)}`,
                     url: `/events/${result.lastInsertRowid}`,
+                }, {
+                    teamIds: targetTeamIds,
+                    category: 'important',
                 });
             }
             (0, teamFeed_1.createEventFeedPosts)({
@@ -830,6 +836,9 @@ router.delete('/:id', async (req, res) => {
                     title: 'Terminserie abgesagt',
                     body: `${seriesTeamLabel ? `${seriesTeamLabel}: ` : ''}${event.title || 'Eine Terminserie'} wurde abgesagt.${noteSuffix}`,
                     url: `/teams/${event.team_id}/events`,
+                }, {
+                    teamIds,
+                    category: 'important',
                 });
             }
             (0, teamFeed_1.createEventFeedPosts)({
@@ -861,6 +870,9 @@ router.delete('/:id', async (req, res) => {
                     title: 'Termin abgesagt',
                     body: `${singleTeamLabel ? `${singleTeamLabel}: ` : ''}${eventToDelete.title || 'Ein Termin'} am ${(0, eventHelpers_1.formatEventDateTime)(eventToDelete.start_time)} wurde abgesagt.${noteSuffix}`,
                     url: `/teams/${eventToDelete.team_id}/events`,
+                }, {
+                    teamIds,
+                    category: 'important',
                 });
             }
             (0, teamFeed_1.createEventFeedPosts)({

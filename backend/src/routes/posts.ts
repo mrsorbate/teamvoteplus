@@ -78,6 +78,11 @@ const uploadAttachments = multer({
 const FEED_REACTIONS = ['thumbs_up', 'heart', 'football', 'check'] as const;
 type FeedReaction = typeof FEED_REACTIONS[number];
 
+const supportsExtendedPostTypes = (): boolean => {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'team_posts'").get() as { sql?: string } | undefined;
+  return Boolean(row?.sql?.includes("'document'") && row.sql.includes("'event'"));
+};
+
 const parseOptions = (value: unknown): string[] => {
   if (typeof value === 'string') {
     const parsed = value.trim().startsWith('[')
@@ -337,9 +342,11 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
       return res.status(400).json({ error: 'Bitte mindestens eine Datei anhängen' });
     }
 
+    const storedType: PostType = type === 'document' && !supportsExtendedPostTypes() ? 'announcement' : type;
+
     const result = db.prepare(
       'INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(teamId, type, title, content || null, type === 'poll' ? JSON.stringify(options) : null, userId);
+    ).run(teamId, storedType, title, content || null, type === 'poll' ? JSON.stringify(options) : null, userId);
 
     const createdPostId = Number(result.lastInsertRowid);
     insertAttachments(createdPostId, files);
@@ -352,6 +359,9 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
         title: type === 'poll' ? 'Neue Umfrage' : type === 'document' ? 'Neue Datei' : 'Neue Nachricht',
         body: `${team?.name ? `${team.name}: ` : ''}${title}`,
         url: `/teams/${teamId}/posts?scope=all`,
+      }, {
+        teamId,
+        category: type === 'poll' ? 'poll' : 'post',
       });
     }
 

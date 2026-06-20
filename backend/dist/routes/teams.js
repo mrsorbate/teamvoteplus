@@ -13,6 +13,7 @@ const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
 const client_1 = require("../services/fussballDe/client");
 const pushNotifications_1 = require("../services/pushNotifications");
+const teamFeed_1 = require("../services/teamFeed");
 const publicUrl_1 = require("../utils/publicUrl");
 const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
@@ -1272,30 +1273,63 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
     const notifyUserIds = [...new Set(memberIds)];
     if (notifyUserIds.length > 0) {
         if (created.length > 0) {
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds: [teamId],
+                eventId: null,
+                action: 'created',
+                eventTitle: created.length === 1 ? created[0] : `${created.length} neue Spiele`,
+                createdBy: createdByUserId,
+                details: created.length === 1 ? 'Spiel wurde über fussball.de importiert.' : 'Spiele wurden über fussball.de importiert.',
+            });
             await (0, pushNotifications_1.sendPushToUsers)(notifyUserIds, {
                 title: 'Neues Spiel',
                 body: created.length === 1
                     ? `Neues Spiel: ${created[0]}`
                     : `${created.length} neue Spiele wurden hinzugefügt.`,
                 url: `/teams/${teamId}/events`,
+            }, {
+                teamId,
+                category: 'important',
             });
         }
         if (cancelled.length > 0) {
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds: [teamId],
+                eventId: null,
+                action: 'cancelled',
+                eventTitle: cancelled.length === 1 ? cancelled[0] : `${cancelled.length} Spiele`,
+                createdBy: createdByUserId,
+                details: cancelled.length === 1 ? 'Spiel wurde über fussball.de als abgesagt erkannt.' : 'Spiele wurden über fussball.de als abgesagt erkannt.',
+            });
             await (0, pushNotifications_1.sendPushToUsers)(notifyUserIds, {
                 title: 'Spiel abgesagt',
                 body: cancelled.length === 1
                     ? `${cancelled[0]} wurde abgesagt.`
                     : `${cancelled.length} Spiele wurden abgesagt.`,
                 url: `/teams/${teamId}/events`,
+            }, {
+                teamId,
+                category: 'important',
             });
         }
         if (rescheduled.length > 0) {
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds: [teamId],
+                eventId: null,
+                action: 'updated',
+                eventTitle: rescheduled.length === 1 ? rescheduled[0] : `${rescheduled.length} Spiele`,
+                createdBy: createdByUserId,
+                details: rescheduled.length === 1 ? 'Spiel wurde über fussball.de verlegt.' : 'Spiele wurden über fussball.de verlegt.',
+            });
             await (0, pushNotifications_1.sendPushToUsers)(notifyUserIds, {
                 title: 'Spiel verlegt',
                 body: rescheduled.length === 1
                     ? `${rescheduled[0]} wurde verlegt.`
                     : `${rescheduled.length} Spiele wurden verlegt.`,
                 url: `/teams/${teamId}/events`,
+            }, {
+                teamId,
+                category: 'important',
             });
         }
     }

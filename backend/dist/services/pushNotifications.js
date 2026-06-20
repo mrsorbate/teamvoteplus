@@ -35,6 +35,43 @@ const getStoredSubscriptionsForUsers = (userIds) => {
      WHERE user_id IN (${placeholders})`).all(...normalizedUserIds);
 };
 exports.getStoredSubscriptionsForUsers = getStoredSubscriptionsForUsers;
+const normalizeTeamIds = (options) => {
+    const ids = [
+        ...(Array.isArray(options?.teamIds) ? options.teamIds : []),
+        options?.teamId,
+    ];
+    return [...new Set(ids.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+};
+const allowsCategory = (preference, category) => {
+    if (preference === 'none')
+        return false;
+    if (preference === 'all')
+        return true;
+    if (preference === 'polls')
+        return category === 'poll';
+    if (preference === 'important')
+        return category === 'important' || category === 'system';
+    return true;
+};
+const getPreferenceForUser = (userId, teamIds) => {
+    const targetTeamIds = teamIds.length > 0 ? teamIds : [0];
+    const placeholders = targetTeamIds.map(() => '?').join(', ');
+    const rows = init_1.default.prepare(`SELECT team_id, preference
+     FROM push_notification_preferences
+     WHERE user_id = ?
+       AND team_id IN (0, ${placeholders})`).all(userId, ...targetTeamIds);
+    for (const teamId of targetTeamIds) {
+        const teamPreference = rows.find((row) => Number(row.team_id) === teamId)?.preference;
+        if (teamPreference)
+            return teamPreference;
+    }
+    return rows.find((row) => Number(row.team_id) === 0)?.preference || 'all';
+};
+const filterUserIdsByPreference = (userIds, options) => {
+    const category = options?.category || 'important';
+    const teamIds = normalizeTeamIds(options);
+    return userIds.filter((userId) => allowsCategory(getPreferenceForUser(userId, teamIds), category));
+};
 async function sendPushToSubscriptions(subscriptions, payload) {
     if (!isPushConfigured) {
         console.error('Push delivery skipped: VAPID keys are not configured on server.');
@@ -66,8 +103,9 @@ async function sendPushToSubscriptions(subscriptions, payload) {
     }
     return sent;
 }
-async function sendPushToUsers(userIds, payload) {
-    const subscriptions = (0, exports.getStoredSubscriptionsForUsers)(userIds);
+async function sendPushToUsers(userIds, payload, options) {
+    const allowedUserIds = filterUserIdsByPreference([...new Set(userIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))], options);
+    const subscriptions = (0, exports.getStoredSubscriptionsForUsers)(allowedUserIds);
     return sendPushToSubscriptions(subscriptions, payload);
 }
 //# sourceMappingURL=pushNotifications.js.map

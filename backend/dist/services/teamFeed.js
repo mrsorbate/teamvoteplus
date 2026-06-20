@@ -21,7 +21,7 @@ const createEventFeedPosts = ({ teamIds, eventId, action, eventTitle, eventDate,
         details || null,
     ].filter(Boolean);
     const insertPost = init_1.default.prepare(`INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by, event_id, event_action)
-     VALUES (?, 'event', ?, ?, NULL, ?, ?, ?)`);
+     VALUES (?, 'announcement', ?, ?, NULL, ?, ?, ?)`);
     try {
         init_1.default.transaction(() => {
             for (const teamId of uniqueTeamIds) {

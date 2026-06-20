@@ -73,6 +73,54 @@ router.get('/status', (req, res) => {
         vapidConfigured: Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
     });
 });
+router.get('/preferences', (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    const globalRow = init_1.default.prepare('SELECT preference FROM push_notification_preferences WHERE user_id = ? AND team_id = 0').get(userId);
+    const teams = init_1.default.prepare(`
+    SELECT t.id, t.name, COALESCE(p.preference, '') as preference
+    FROM team_members tm
+    INNER JOIN teams t ON t.id = tm.team_id
+    LEFT JOIN push_notification_preferences p ON p.user_id = tm.user_id AND p.team_id = t.id
+    WHERE tm.user_id = ?
+    ORDER BY t.name COLLATE NOCASE ASC
+  `).all(userId);
+    return res.json({
+        global: globalRow?.preference || 'all',
+        teams,
+    });
+});
+router.put('/preferences', (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    const preference = String(req.body?.preference || '').trim();
+    const teamId = Number(req.body?.team_id || 0);
+    const validPreferences = new Set(['all', 'important', 'polls', 'none']);
+    if (!validPreferences.has(preference)) {
+        return res.status(400).json({ error: 'Invalid notification preference' });
+    }
+    if (!Number.isInteger(teamId) || teamId < 0) {
+        return res.status(400).json({ error: 'Invalid team id' });
+    }
+    if (teamId > 0) {
+        const membership = init_1.default.prepare('SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, userId);
+        if (!membership) {
+            return res.status(403).json({ error: 'Not a team member' });
+        }
+    }
+    init_1.default.prepare(`
+    INSERT INTO push_notification_preferences (user_id, team_id, preference, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id, team_id) DO UPDATE SET
+      preference = excluded.preference,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(userId, teamId, preference);
+    return res.json({ success: true, team_id: teamId, preference });
+});
 router.post('/subscribe', (req, res) => {
     if (!isPushConfigured) {
         return res.status(503).json({ error: 'Push is not configured on server' });

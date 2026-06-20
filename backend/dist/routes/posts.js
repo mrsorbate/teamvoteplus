@@ -53,6 +53,10 @@ const uploadAttachments = (0, multer_1.default)({
     },
 });
 const FEED_REACTIONS = ['thumbs_up', 'heart', 'football', 'check'];
+const supportsExtendedPostTypes = () => {
+    const row = init_1.default.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'team_posts'").get();
+    return Boolean(row?.sql?.includes("'document'") && row.sql.includes("'event'"));
+};
 const parseOptions = (value) => {
     if (typeof value === 'string') {
         const parsed = value.trim().startsWith('[')
@@ -274,7 +278,8 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
         if (type === 'document' && files.length === 0) {
             return res.status(400).json({ error: 'Bitte mindestens eine Datei anhängen' });
         }
-        const result = init_1.default.prepare('INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(teamId, type, title, content || null, type === 'poll' ? JSON.stringify(options) : null, userId);
+        const storedType = type === 'document' && !supportsExtendedPostTypes() ? 'announcement' : type;
+        const result = init_1.default.prepare('INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(teamId, storedType, title, content || null, type === 'poll' ? JSON.stringify(options) : null, userId);
         const createdPostId = Number(result.lastInsertRowid);
         insertAttachments(createdPostId, files);
         const memberIds = getTeamMemberIds(teamId).filter((id) => id !== userId);
@@ -284,6 +289,9 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
                 title: type === 'poll' ? 'Neue Umfrage' : type === 'document' ? 'Neue Datei' : 'Neue Nachricht',
                 body: `${team?.name ? `${team.name}: ` : ''}${title}`,
                 url: `/teams/${teamId}/posts?scope=all`,
+            }, {
+                teamId,
+                category: type === 'poll' ? 'poll' : 'post',
             });
         }
         const created = init_1.default.prepare(`SELECT p.id, p.team_id, p.type, p.title, p.content, p.poll_options, p.created_at, p.updated_at, p.is_pinned, p.archived_at, p.event_id, p.event_action, p.created_by, u.name as created_by_name,

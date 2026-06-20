@@ -37,7 +37,7 @@ export const createEventFeedPosts = ({
 
   const insertPost = db.prepare(
     `INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by, event_id, event_action)
-     VALUES (?, 'event', ?, ?, NULL, ?, ?, ?)`
+     VALUES (?, 'announcement', ?, ?, NULL, ?, ?, ?)`
   );
 
   try {

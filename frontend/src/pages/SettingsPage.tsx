@@ -41,6 +41,14 @@ export default function SettingsPage() {
   const [customTeamNames, setCustomTeamNames] = useState<Record<number, string>>({});
   const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
 
+  type PushPreference = 'all' | 'important' | 'polls' | 'none';
+  const pushPreferenceOptions: Array<{ value: PushPreference; label: string; description: string }> = [
+    { value: 'all', label: 'Alle Beiträge', description: 'Termine, Nachrichten, Umfragen und Dokumente.' },
+    { value: 'important', label: 'Nur Wichtiges', description: 'Terminänderungen, Absagen und wichtige Systemhinweise.' },
+    { value: 'polls', label: 'Nur Umfragen', description: 'Nur neue Umfragen im Team Feed.' },
+    { value: 'none', label: 'Keine', description: 'Für diese Ebene keine Push-Benachrichtigungen.' },
+  ];
+
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
@@ -70,6 +78,18 @@ export default function SettingsPage() {
     queryFn: async () => {
       const response = await notificationsAPI.getStatus();
       return response.data as { configured: boolean; subscribed: boolean };
+    },
+    enabled: Boolean(authUser),
+  });
+
+  const { data: pushPreferences, isLoading: isPushPreferencesLoading } = useQuery({
+    queryKey: ['push-preferences'],
+    queryFn: async () => {
+      const response = await notificationsAPI.getPreferences();
+      return response.data as {
+        global: PushPreference;
+        teams: Array<{ id: number; name: string; preference: PushPreference | '' }>;
+      };
     },
     enabled: Boolean(authUser),
   });
@@ -263,6 +283,19 @@ export default function SettingsPage() {
     },
     onError: (error: any) => {
       const message = error?.response?.data?.error || error?.message || 'Test-Benachrichtigung konnte nicht gesendet werden';
+      showToast(message, 'error');
+    },
+  });
+
+  const updatePushPreferenceMutation = useMutation({
+    mutationFn: ({ teamId, preference }: { teamId: number; preference: PushPreference }) =>
+      notificationsAPI.updatePreference({ team_id: teamId, preference }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['push-preferences'] });
+      showToast('Benachrichtigungen gespeichert', 'success');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || 'Benachrichtigungseinstellung konnte nicht gespeichert werden';
       showToast(message, 'error');
     },
   });
@@ -986,6 +1019,62 @@ export default function SettingsPage() {
                 Klicke auf den Button unten, um Benachrichtigungen zu aktivieren. Der Browser wird nach Erlaubnis fragen.
               </p>
             )}
+
+            <div className="space-y-3 rounded-xl border border-gray-700 bg-gray-900/60 p-3">
+              <div>
+                <label htmlFor="push-global-preference" className="mb-1 block text-sm font-semibold text-white">
+                  Standard für Benachrichtigungen
+                </label>
+                <select
+                  id="push-global-preference"
+                  value={pushPreferences?.global || 'all'}
+                  onChange={(event) => updatePushPreferenceMutation.mutate({
+                    teamId: 0,
+                    preference: event.target.value as PushPreference,
+                  })}
+                  disabled={isPushPreferencesLoading || updatePushPreferenceMutation.isPending}
+                  className="input"
+                >
+                  {pushPreferenceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-400">
+                  {pushPreferenceOptions.find((option) => option.value === (pushPreferences?.global || 'all'))?.description}
+                </p>
+              </div>
+
+              {Array.isArray(pushPreferences?.teams) && pushPreferences.teams.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-white">Pro Team überschreiben</p>
+                  {pushPreferences.teams.map((team) => {
+                    const value = team.preference || pushPreferences.global || 'all';
+                    return (
+                      <div key={team.id} className="grid gap-2 rounded-lg border border-gray-800 bg-gray-950/40 p-2 sm:grid-cols-[1fr,13rem] sm:items-center">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-gray-100">{team.name}</p>
+                          <p className="text-xs text-gray-500">Leer entspricht dem Standard</p>
+                        </div>
+                        <select
+                          value={value}
+                          onChange={(event) => updatePushPreferenceMutation.mutate({
+                            teamId: team.id,
+                            preference: event.target.value as PushPreference,
+                          })}
+                          disabled={updatePushPreferenceMutation.isPending}
+                          className="input py-2 text-sm"
+                          aria-label={`Benachrichtigungen für ${team.name}`}
+                        >
+                          {pushPreferenceOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               {!isPushSubscribed ? (

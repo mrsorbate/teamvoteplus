@@ -349,6 +349,11 @@ export const notificationsAPI = {
 
   getStatus: () => api.get('/notifications/status'),
 
+  getPreferences: () => api.get('/notifications/preferences'),
+
+  updatePreference: (data: { team_id?: number; preference: 'all' | 'important' | 'polls' | 'none' }) =>
+    api.put('/notifications/preferences', data),
+
   subscribe: (subscription: {
     endpoint: string;
     expirationTime: number | null;

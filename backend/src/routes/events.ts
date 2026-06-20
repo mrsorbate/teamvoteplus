@@ -605,6 +605,9 @@ router.post('/', async (req: AuthRequest, res) => {
           title: 'Neuer Termin',
           body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${formatEventDateTime(String(first?.start_time || start_time))}${seriesSuffix}`,
           url: first?.id ? `/events/${first.id}` : `/teams/${team_id}/events`,
+        }, {
+          teamIds: targetTeamIds,
+          category: 'important',
         });
       }
 
@@ -644,6 +647,9 @@ router.post('/', async (req: AuthRequest, res) => {
           title: 'Neuer Termin',
           body: `${targetTeamLabel ? `${targetTeamLabel}: ` : ''}${title} am ${formatEventDateTime(start_time)}`,
           url: `/events/${result.lastInsertRowid}`,
+        }, {
+          teamIds: targetTeamIds,
+          category: 'important',
         });
       }
 
@@ -1099,6 +1105,9 @@ router.delete('/:id', async (req: AuthRequest, res) => {
           title: 'Terminserie abgesagt',
           body: `${seriesTeamLabel ? `${seriesTeamLabel}: ` : ''}${event.title || 'Eine Terminserie'} wurde abgesagt.${noteSuffix}`,
           url: `/teams/${event.team_id}/events`,
+        }, {
+          teamIds,
+          category: 'important',
         });
       }
 
@@ -1139,6 +1148,9 @@ router.delete('/:id', async (req: AuthRequest, res) => {
           title: 'Termin abgesagt',
           body: `${singleTeamLabel ? `${singleTeamLabel}: ` : ''}${eventToDelete.title || 'Ein Termin'} am ${formatEventDateTime(eventToDelete.start_time)} wurde abgesagt.${noteSuffix}`,
           url: `/teams/${eventToDelete.team_id}/events`,
+        }, {
+          teamIds,
+          category: 'important',
         });
       }
 
