@@ -404,7 +404,7 @@ const formatICalDate = (value) => {
 const getCalendarUrls = (req, teamId, token) => {
     const normalizedToken = String(token || '').trim();
     if (!normalizedToken) {
-        return { calendar_feed_url: null, calendar_webcal_url: null };
+        return { calendar_enabled: false, calendar_feed_url: null, calendar_webcal_url: null };
     }
     const compactToken = hexTokenToBase64Url(normalizedToken) || normalizedToken;
     const forwardedProto = String(req.headers?.['x-forwarded-proto'] || '').split(',')[0]?.trim();
@@ -416,9 +416,14 @@ const getCalendarUrls = (req, teamId, token) => {
     const calendarFeedUrl = `${protocol}://${host}/api/teams/${teamId}/calendar.ics?token=${encodeURIComponent(compactToken)}`;
     const calendarWebcalUrl = calendarFeedUrl.replace(/^https?:\/\//i, 'webcal://');
     return {
+        calendar_enabled: true,
         calendar_feed_url: calendarFeedUrl,
         calendar_webcal_url: calendarWebcalUrl,
     };
+};
+const requireTrainerMembership = (teamId, userId) => {
+    const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, userId);
+    return membership?.role === 'trainer';
 };
 // Create uploads directory if it doesn't exist
 const uploadsDir = path_1.default.join(__dirname, '../../uploads');
@@ -623,6 +628,59 @@ router.get('/:id/settings', (req, res) => {
     catch (error) {
         logger_1.logger.error('Get team settings error:', error);
         return res.status(500).json({ error: 'Failed to fetch team settings' });
+    }
+});
+router.post('/:id/calendar-token/renew', (req, res) => {
+    try {
+        if (!hasTeamsCalendarTokenColumn) {
+            return res.status(404).json({ error: 'Calendar export is not available' });
+        }
+        const teamId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(teamId) || teamId <= 0) {
+            return res.status(400).json({ error: 'Invalid team id' });
+        }
+        if (!requireTrainerMembership(teamId, req.user.id)) {
+            return res.status(403).json({ error: 'Only trainers can renew calendar access' });
+        }
+        const nextToken = (0, crypto_1.randomBytes)(24).toString('hex');
+        const result = init_1.default.prepare('UPDATE teams SET calendar_token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(nextToken, teamId);
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+        return res.json({
+            success: true,
+            ...getCalendarUrls(req, teamId, nextToken),
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Renew calendar token error:', error);
+        return res.status(500).json({ error: 'Failed to renew calendar access' });
+    }
+});
+router.post('/:id/calendar-token/disable', (req, res) => {
+    try {
+        if (!hasTeamsCalendarTokenColumn) {
+            return res.status(404).json({ error: 'Calendar export is not available' });
+        }
+        const teamId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(teamId) || teamId <= 0) {
+            return res.status(400).json({ error: 'Invalid team id' });
+        }
+        if (!requireTrainerMembership(teamId, req.user.id)) {
+            return res.status(403).json({ error: 'Only trainers can disable calendar access' });
+        }
+        const result = init_1.default.prepare('UPDATE teams SET calendar_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(teamId);
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Team not found' });
+        }
+        return res.json({
+            success: true,
+            ...getCalendarUrls(req, teamId, null),
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Disable calendar token error:', error);
+        return res.status(500).json({ error: 'Failed to disable calendar access' });
     }
 });
 // Update team settings (trainers only)

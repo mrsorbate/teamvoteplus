@@ -122,6 +122,10 @@ export const teamsAPI = {
 
   deleteTeamCrest: (id: number) => api.delete(`/teams/${id}/crest`),
 
+  renewCalendarToken: (id: number) => api.post(`/teams/${id}/calendar-token/renew`),
+
+  disableCalendarToken: (id: number) => api.post(`/teams/${id}/calendar-token/disable`),
+
   deleteTeam: (id: number) => api.delete(`/teams/${id}`),
 };
 

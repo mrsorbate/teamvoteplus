@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Settings, SlidersHorizontal, ChevronDown, ChevronUp, Edit2, Shield } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Camera, Copy, ExternalLink, Link2Off, RefreshCw, Settings, SlidersHorizontal, ChevronDown, ChevronUp, Edit2, Shield } from 'lucide-react';
 import { teamsAPI, settingsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -38,6 +38,8 @@ export default function TeamSettingsPage() {
   const [expandedHomeVenueIndex, setExpandedHomeVenueIndex] = useState<number | null>(null);
   const [customTeamName, setCustomTeamName] = useState('');
   const [showDeleteTeamConfirm, setShowDeleteTeamConfirm] = useState(false);
+  const [showDisableCalendarConfirm, setShowDisableCalendarConfirm] = useState(false);
+  const [showRenewCalendarConfirm, setShowRenewCalendarConfirm] = useState(false);
 
   const pitchTypeOptions: Array<{ value: string; label: string }> = [
     { value: 'Rasen', label: 'Rasen' },
@@ -291,6 +293,30 @@ export default function TeamSettingsPage() {
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern', 'error');
+    },
+  });
+
+  const renewCalendarTokenMutation = useMutation({
+    mutationFn: () => teamsAPI.renewCalendarToken(teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-settings', teamId] });
+      setShowRenewCalendarConfirm(false);
+      showToast('Kalenderzugriff erneuert', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Kalenderzugriff konnte nicht erneuert werden', 'error');
+    },
+  });
+
+  const disableCalendarTokenMutation = useMutation({
+    mutationFn: () => teamsAPI.disableCalendarToken(teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-settings', teamId] });
+      setShowDisableCalendarConfirm(false);
+      showToast('Kalenderzugriff deaktiviert', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Kalenderzugriff konnte nicht deaktiviert werden', 'error');
     },
   });
 
@@ -705,18 +731,19 @@ export default function TeamSettingsPage() {
 
   const teamPictureUrl = resolveAssetUrl(team?.team_picture);
   const teamCrestUrl = resolveAssetUrl(team?.team_crest);
+  const calendarEnabled = Boolean((settings as any)?.calendar_enabled);
   const calendarFeedUrl = String((settings as any)?.calendar_feed_url || '');
   const calendarWebcalUrl = String((settings as any)?.calendar_webcal_url || '');
 
-  const copyCalendarFeedUrl = async () => {
-    if (!calendarFeedUrl) {
+  const copyCalendarUrl = async (value: string, label: string) => {
+    if (!value) {
       showToast('Kein Kalender-Link verfügbar', 'warning');
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(calendarFeedUrl);
-      showToast('Kalender-Link kopiert', 'success');
+      await navigator.clipboard.writeText(value);
+      showToast(`${label} kopiert`, 'success');
     } catch {
       showToast('Kalender-Link konnte nicht kopiert werden', 'error');
     }
@@ -1580,44 +1607,132 @@ export default function TeamSettingsPage() {
             </button>
           </div>
 
-          <div className="card space-y-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-white">
-              Kalender-Export
-            </h2>
-            <p className="text-sm text-gray-300">
-              Diesen Link in Apple/Google/Outlook als Abo-Kalender hinzufügen. Neue oder geänderte Termine werden automatisch beim nächsten Kalender-Refresh übernommen.
-            </p>
-
-            <div className="space-y-2">
-              <label htmlFor="team-settings-calendar-feed-url" className="block text-xs text-gray-400">ICS-Feed URL</label>
-              <input
-                id="team-settings-calendar-feed-url"
-                type="text"
-                readOnly
-                value={calendarFeedUrl}
-                className="input"
-                placeholder="Kalender-Link wird geladen..."
-              />
+          <div className="card space-y-5 border-primary-900/60">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-white sm:text-xl">
+                  <CalendarDays className="h-5 w-5 text-primary-400" />
+                  Kalender-Integration
+                </h2>
+                <p className="mt-1 text-sm text-gray-300">
+                  Team-Termine als Kalender-Abo nutzen. Änderungen und Absagen werden über den Feed synchronisiert.
+                </p>
+              </div>
+              <span className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                calendarEnabled
+                  ? 'border-green-700/50 bg-green-900/30 text-green-200'
+                  : 'border-gray-700 bg-gray-900 text-gray-300'
+              }`}>
+                {calendarEnabled ? 'Aktiv' : 'Deaktiviert'}
+              </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                type="button"
-                onClick={copyCalendarFeedUrl}
-                className="btn btn-secondary w-full sm:w-auto"
-                disabled={!calendarFeedUrl}
-              >
-                Link kopieren
-              </button>
-              {calendarWebcalUrl && (
-                <a
-                  href={calendarWebcalUrl}
-                  className="btn btn-primary w-full sm:w-auto text-center"
+            {calendarEnabled ? (
+              <>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-3">
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-white">Kalender abonnieren</p>
+                        <p className="text-xs text-gray-400">Für Apple Kalender, iOS und kompatible Kalender-Apps.</p>
+                      </div>
+                      <ExternalLink className="h-4 w-4 shrink-0 text-primary-300" />
+                    </div>
+                    <input
+                      type="text"
+                      readOnly
+                      value={calendarWebcalUrl}
+                      className="input text-sm"
+                      aria-label="Webcal Kalender-Abo-Link"
+                    />
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <a href={calendarWebcalUrl} className="btn btn-primary flex-1 text-center">
+                        Abonnieren
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => copyCalendarUrl(calendarWebcalUrl, 'Abo-Link')}
+                        className="btn btn-secondary flex-1"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Kopieren
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-3">
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-white">ICS-Link</p>
+                        <p className="text-xs text-gray-400">Für manuelle Integration, Google Kalender oder externe Tools.</p>
+                      </div>
+                      <CalendarDays className="h-4 w-4 shrink-0 text-gray-300" />
+                    </div>
+                    <input
+                      id="team-settings-calendar-feed-url"
+                      type="text"
+                      readOnly
+                      value={calendarFeedUrl}
+                      className="input text-sm"
+                      aria-label="ICS Kalender-Link"
+                    />
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <a href={calendarFeedUrl} className="btn btn-secondary flex-1 text-center">
+                        .ics öffnen
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => copyCalendarUrl(calendarFeedUrl, 'ICS-Link')}
+                        className="btn btn-secondary flex-1"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Kopieren
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-800/60 bg-amber-950/20 p-3 text-sm text-amber-100">
+                  Wenn der Link geteilt wurde oder ein Gerät keinen Zugriff mehr haben soll, erneuere den Token. Danach funktionieren alte Kalender-Links nicht mehr.
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowRenewCalendarConfirm(true)}
+                    disabled={renewCalendarTokenMutation.isPending || disableCalendarTokenMutation.isPending}
+                    className="btn btn-secondary w-full disabled:opacity-50"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Token erneuern
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDisableCalendarConfirm(true)}
+                    disabled={renewCalendarTokenMutation.isPending || disableCalendarTokenMutation.isPending}
+                    className="btn btn-danger w-full disabled:opacity-50"
+                  >
+                    <Link2Off className="h-4 w-4" />
+                    Zugriff deaktivieren
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-4">
+                <p className="text-sm text-gray-300">
+                  Der Kalenderzugriff ist deaktiviert. Erneuere den Token, um einen neuen Kalender-Link zu erzeugen.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => renewCalendarTokenMutation.mutate()}
+                  disabled={renewCalendarTokenMutation.isPending}
+                  className="btn btn-primary mt-3 w-full sm:w-auto disabled:opacity-50"
                 >
-                  In Kalender abonnieren
-                </a>
-              )}
-            </div>
+                  <RefreshCw className={`h-4 w-4 ${renewCalendarTokenMutation.isPending ? 'animate-spin' : ''}`} />
+                  {renewCalendarTokenMutation.isPending ? 'Erzeuge Link...' : 'Kalenderzugriff aktivieren'}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="card border-2 border-red-900 space-y-4">
@@ -1636,6 +1751,70 @@ export default function TeamSettingsPage() {
               {deleteTeamMutation.isPending ? 'Löscht...' : 'Team löschen'}
             </button>
           </div>
+
+          {showRenewCalendarConfirm && (
+            <AccessibleModal
+              labelledBy="renew-calendar-token-title"
+              onClose={() => setShowRenewCalendarConfirm(false)}
+              bottomSheet
+              panelClassName="bg-gray-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-modal"
+            >
+              <h3 id="renew-calendar-token-title" className="text-lg font-bold text-white mb-2">Kalender-Token erneuern?</h3>
+              <p className="text-sm text-gray-300 mb-4">
+                Alte Kalender-Links funktionieren danach nicht mehr. Geräte müssen den neuen Link abonnieren.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowRenewCalendarConfirm(false)}
+                  className="btn btn-secondary flex-1"
+                  disabled={renewCalendarTokenMutation.isPending}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => renewCalendarTokenMutation.mutate()}
+                  disabled={renewCalendarTokenMutation.isPending}
+                  className="btn btn-primary flex-1 disabled:opacity-50"
+                >
+                  Erneuern
+                </button>
+              </div>
+            </AccessibleModal>
+          )}
+
+          {showDisableCalendarConfirm && (
+            <AccessibleModal
+              labelledBy="disable-calendar-token-title"
+              onClose={() => setShowDisableCalendarConfirm(false)}
+              bottomSheet
+              panelClassName="bg-gray-800 rounded-t-2xl sm:rounded-2xl p-6 max-w-sm w-full border border-gray-700 shadow-modal"
+            >
+              <h3 id="disable-calendar-token-title" className="text-lg font-bold text-white mb-2">Kalenderzugriff deaktivieren?</h3>
+              <p className="text-sm text-gray-300 mb-4">
+                Alle bestehenden Kalender-Abos verlieren den Zugriff. Du kannst später wieder einen neuen Link erzeugen.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDisableCalendarConfirm(false)}
+                  className="btn btn-secondary flex-1"
+                  disabled={disableCalendarTokenMutation.isPending}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => disableCalendarTokenMutation.mutate()}
+                  disabled={disableCalendarTokenMutation.isPending}
+                  className="btn btn-danger flex-1 disabled:opacity-50"
+                >
+                  Deaktivieren
+                </button>
+              </div>
+            </AccessibleModal>
+          )}
 
           {showDeleteTeamConfirm && (
             <AccessibleModal
