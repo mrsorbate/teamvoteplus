@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0+3611789",
+  "date": "20.06.2026",
+  "title": "Ein neues TeamVote+ Update ist verfügbar",
+  "summary": "Dieses Update enthält die folgenden Änderungen für deine Teams.",
+  "highlights": [
+    "Team Feed: Nachrichten, Umfragen und Feed-Beiträge wurden verbessert.",
+    "Push-Benachrichtigungen: Einstellungen und Versandlogik wurden aktualisiert.",
+    "Termine: Erstellung, Bearbeitung, Rückmeldungen oder Detailansichten wurden verbessert.",
+    "Teams und Spielimport: Teamdaten, Tabellen oder fussball.de-Import wurden angepasst.",
+    "Stabilität: Datenbankmigrationen wurden für bestehende Installationen abgesichert.",
+    "App-Update: Update-Hinweise und PWA-Aktualisierung wurden verbessert."
+  ]
+}

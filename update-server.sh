@@ -62,6 +62,15 @@ cp .env ".env.backup.$(date +%Y%m%d_%H%M%S)"
 echo -e "${BLUE}📥 Hole neue Version...${NC}"
 git pull
 
+if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+    if command -v npm >/dev/null 2>&1; then
+        echo -e "${BLUE}📝 Erzeuge Release-Notes...${NC}"
+        (cd frontend && npm run release-notes)
+    else
+        echo -e "${YELLOW}⚠️  npm nicht gefunden - nutze vorhandene Release-Notes aus dem Build.${NC}"
+    fi
+fi
+
 echo -e "${BLUE}🧩 Prüfe .env-Werte...${NC}"
 
 echo -e "${BLUE}🐳 Baue und starte Container neu...${NC}"

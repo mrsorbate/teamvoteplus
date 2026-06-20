@@ -145,6 +145,8 @@ const installPullToRefreshGuard = () => {
   }
 
   let startY = 0
+  const isAndroidStandalone = /Android/i.test(window.navigator.userAgent)
+    && window.matchMedia('(display-mode: standalone)').matches
 
   const getScrollableAncestor = (target: EventTarget | null): HTMLElement => {
     let node = target instanceof HTMLElement ? target : null
@@ -170,12 +172,19 @@ const installPullToRefreshGuard = () => {
       return
     }
 
+    if (isAndroidStandalone) {
+      return
+    }
+
     const scroller = getScrollableAncestor(event.target)
     const currentY = event.touches[0]?.clientY ?? startY
     const deltaY = currentY - startY
     const atTop = scroller.scrollTop <= 0
+    const documentScroller = document.scrollingElement || document.documentElement
+    const isDocumentScroller = scroller === documentScroller || scroller === document.documentElement || scroller === document.body
+    const documentHasOverflow = documentScroller.scrollHeight > documentScroller.clientHeight
 
-    if (atTop && deltaY > 0) {
+    if (isDocumentScroller && documentHasOverflow && atTop && deltaY > 0) {
       event.preventDefault()
     }
   }
@@ -185,81 +194,6 @@ const installPullToRefreshGuard = () => {
 }
 
 installPullToRefreshGuard()
-
-// Zusätzliche iPhone-spezifische Maßnahmen
-if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-  // Starke Sperr-Strategien für iOS
-  const applyIOSFixes = () => {
-    const html = document.documentElement
-    const body = document.body
-    const root = document.getElementById('root')
-
-    // Viewport-Größe auf 100% setzen
-    html.style.width = '100vw'
-    html.style.height = '100dvh'
-    html.style.position = 'fixed'
-    html.style.top = '0'
-    html.style.left = '0'
-    html.style.right = '0'
-    html.style.bottom = '0'
-    html.style.margin = '0'
-    html.style.padding = '0'
-    html.style.overflow = 'hidden'
-
-    body.style.width = '100vw'
-    body.style.height = '100dvh'
-    body.style.position = 'fixed'
-    body.style.top = '0'
-    body.style.left = '0'
-    body.style.right = '0'
-    body.style.bottom = '0'
-    body.style.margin = '0'
-    body.style.padding = '0'
-    body.style.overflow = 'hidden'
-    body.style.overflowY = 'auto'
-
-    if (root) {
-      root.style.width = '100vw'
-      root.style.height = '100dvh'
-      root.style.position = 'fixed'
-      root.style.top = '0'
-      root.style.left = '0'
-      root.style.right = '0'
-      root.style.bottom = '0'
-      root.style.overflow = 'hidden'
-      root.style.overflowY = 'auto'
-    }
-  }
-
-  // Initial Apply
-  applyIOSFixes()
-
-  // Reapply on orientation change
-  window.addEventListener('orientationchange', () => {
-    setTimeout(applyIOSFixes, 100)
-  })
-
-  // Reapply on resize
-  window.addEventListener('resize', () => {
-    applyIOSFixes()
-  })
-
-  // Prevent rotation by listening to device orientation
-  if ((window as any).DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', (event: any) => {
-      // Block landscape orientation
-      if (Math.abs(event.gamma) > 45 || Math.abs(event.beta) > 45) {
-        // Attempt to lock portrait
-        const orientation = (screen as any).orientation
-        if (orientation?.lock) {
-          orientation.lock('portrait-primary').catch(() => {
-            orientation.lock('portrait').catch(() => {})
-          })
-        }
-      }
-    }, true)
-  }
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "release-notes": "node scripts/generate-release-notes.mjs",
+    "prebuild": "npm run release-notes",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
