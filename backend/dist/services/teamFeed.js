@@ -20,12 +20,23 @@ const createEventFeedPosts = ({ teamIds, eventId, action, eventTitle, eventDate,
         eventDate ? `Zeit: ${eventDate}` : null,
         details || null,
     ].filter(Boolean);
-    const insertPost = init_1.default.prepare(`INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by, event_id, event_action)
-     VALUES (?, 'announcement', ?, ?, NULL, ?, ?, ?)`);
+    const existingPost = init_1.default.prepare(`SELECT id FROM team_posts
+     WHERE team_id = ?
+       AND event_id = ?
+       AND event_action = ?
+       AND is_active = 1
+       AND datetime(created_at) >= datetime('now', '-2 minutes')
+     LIMIT 1`);
+    const insertPost = init_1.default.prepare(`INSERT INTO team_posts (team_id, type, title, content, poll_options, is_important, created_by, event_id, event_action)
+     VALUES (?, 'announcement', ?, ?, NULL, ?, ?, ?, ?)`);
+    const isImportant = action === 'updated' || action === 'cancelled' ? 1 : 0;
     try {
         init_1.default.transaction(() => {
             for (const teamId of uniqueTeamIds) {
-                insertPost.run(teamId, actionTitle[action], contentParts.join('\n'), createdBy, eventId, action);
+                if (eventId && existingPost.get(teamId, eventId, action)) {
+                    continue;
+                }
+                insertPost.run(teamId, actionTitle[action], contentParts.join('\n'), isImportant, createdBy, eventId, action);
             }
         })();
     }

@@ -34,6 +34,7 @@ export default function TeamSettingsPage() {
   const [defaultDurationMinutesOther, setDefaultDurationMinutesOther] = useState('');
   const [homeVenues, setHomeVenues] = useState<Array<{ name: string; street: string; zip_city: string; pitch_type: string }>>([]);
   const [defaultHomeVenueName, setDefaultHomeVenueName] = useState('');
+  const [feedRetentionDays, setFeedRetentionDays] = useState(0);
   const [expandedHomeVenueIndex, setExpandedHomeVenueIndex] = useState<number | null>(null);
   const [customTeamName, setCustomTeamName] = useState('');
   const [showDeleteTeamConfirm, setShowDeleteTeamConfirm] = useState(false);
@@ -43,6 +44,12 @@ export default function TeamSettingsPage() {
     { value: 'Kunstrasen', label: 'Kunstrasen' },
     { value: 'Halle', label: 'Halle' },
     { value: 'Sonstiges', label: 'Sonstiges' },
+  ];
+  const feedRetentionOptions = [
+    { value: 0, label: 'Unbegrenzt', description: 'Alle Feed-Beiträge bleiben in der normalen Historie sichtbar.' },
+    { value: 90, label: '3 Monate', description: 'Ältere nicht angepinnte Beiträge wandern automatisch ins Archiv.' },
+    { value: 180, label: '6 Monate', description: 'Empfohlen für laufende Saisoninformationen.' },
+    { value: 365, label: '12 Monate', description: 'Lange Historie ohne dauerhaft volle Hauptansicht.' },
   ];
 
   const { data: settings, isLoading, error } = useQuery({
@@ -156,6 +163,7 @@ export default function TeamSettingsPage() {
         : []
     );
     setDefaultHomeVenueName(String(settings.default_home_venue_name || ''));
+    setFeedRetentionDays(Number(settings.feed_retention_days || 0));
   }, [settings]);
 
   const invalidateSettingsQueries = () => {
@@ -178,6 +186,7 @@ export default function TeamSettingsPage() {
       default_duration_minutes_training?: number | null;
       default_duration_minutes_match?: number | null;
       default_duration_minutes_other?: number | null;
+      feed_retention_days?: number;
     }) => teamsAPI.updateSettings(teamId, payload),
     onSuccess: () => {
       invalidateSettingsQueries();
@@ -267,6 +276,18 @@ export default function TeamSettingsPage() {
     onSuccess: () => {
       invalidateSettingsQueries();
       showToast('Heimspiel-Plätze gespeichert', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern', 'error');
+    },
+  });
+
+  const updateFeedRetentionMutation = useMutation({
+    mutationFn: (payload: { feed_retention_days: number }) => teamsAPI.updateSettings(teamId, payload),
+    onSuccess: () => {
+      invalidateSettingsQueries();
+      queryClient.invalidateQueries({ queryKey: ['team-posts', teamId] });
+      showToast('Feed-Aufbewahrung gespeichert', 'success');
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern', 'error');
@@ -1515,6 +1536,47 @@ export default function TeamSettingsPage() {
               className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
             >
               {updateHomeVenuesMutation.isPending ? 'Speichert...' : 'Heimspiel-Plätze speichern'}
+            </button>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white sm:text-xl">
+              <Shield className="h-5 w-5 text-primary-400" />
+              Team Feed Aufbewahrung
+            </h2>
+            <p className="text-sm text-gray-300">
+              Lege fest, wie lange nicht angepinnte Beiträge in der normalen Feed-Historie bleiben. Ältere Beiträge werden nicht gelöscht, sondern ins Archiv verschoben.
+            </p>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="group" aria-label="Feed-Aufbewahrung">
+              {feedRetentionOptions.map((option) => {
+                const isActive = feedRetentionDays === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setFeedRetentionDays(option.value)}
+                    className={`rounded-xl border p-3 text-left transition-colors ${
+                      isActive
+                        ? 'border-primary-500 bg-primary-900/30 text-white'
+                        : 'border-gray-700 bg-gray-900/60 text-gray-200 hover:border-gray-500'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="block font-semibold">{option.label}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-gray-400">{option.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => updateFeedRetentionMutation.mutate({ feed_retention_days: feedRetentionDays })}
+              disabled={updateFeedRetentionMutation.isPending}
+              className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
+            >
+              {updateFeedRetentionMutation.isPending ? 'Speichert...' : 'Aufbewahrung speichern'}
             </button>
           </div>
 

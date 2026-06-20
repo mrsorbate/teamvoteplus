@@ -94,6 +94,7 @@ export const teamsAPI = {
     default_arrival_minutes_other?: number | null;
     home_venues?: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
     default_home_venue_name?: string | null;
+    feed_retention_days?: number;
   }) => api.put(`/teams/${id}/settings`, data),
   
   addMember: (id: number, data: { user_id: number; role: string; jersey_number?: number; position?: string }) =>
@@ -379,6 +380,7 @@ export const postsAPI = {
       title: string;
       content?: string;
       options?: string[];
+      is_important?: boolean;
     }
   ) => api.post(`/teams/${teamId}/posts`, data),
 
@@ -391,6 +393,7 @@ export const postsAPI = {
   updateTeamPost: (teamId: number, postId: number, data: {
     is_pinned?: boolean;
     is_archived?: boolean;
+    is_important?: boolean;
     title?: string;
     content?: string;
     options?: string[];

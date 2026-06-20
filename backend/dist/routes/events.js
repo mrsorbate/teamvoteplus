@@ -537,7 +537,7 @@ router.post('/', async (req, res) => {
     }
 });
 // Update event
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         const eventId = parseInt(req.params.id, 10);
         const updateSeries = req.query.update_series === 'true';
@@ -559,6 +559,7 @@ router.put('/:id', (req, res) => {
             : [];
         const resolvedInviteAll = !(invite_all === false || invite_all === 0);
         const resolvedInvitedUserIds = resolvedInviteAll ? teamMemberIds : normalizedInvitedUserIds;
+        const updateNotifyUserIds = resolvedInvitedUserIds.filter((uid) => uid !== req.user.id);
         if (!resolvedInviteAll && resolvedInvitedUserIds.length === 0) {
             return res.status(400).json({ error: 'Bitte mindestens einen Teilnehmer einladen' });
         }
@@ -680,6 +681,16 @@ router.put('/:id', (req, res) => {
                 createdBy: req.user.id,
                 details: 'Terminserie wurde aktualisiert.',
             });
+            if (updateNotifyUserIds.length > 0) {
+                await (0, pushNotifications_1.sendPushToUsers)(updateNotifyUserIds, {
+                    title: 'Terminserie geändert',
+                    body: `${title} wurde aktualisiert.`,
+                    url: `/events/${eventId}`,
+                }, {
+                    teamIds: eventTeamIds,
+                    category: 'important',
+                });
+            }
             return res.json({ success: true });
         }
         const eventsToUpdate = updateSeries && event.series_id
@@ -706,6 +717,16 @@ router.put('/:id', (req, res) => {
             createdBy: req.user.id,
             details: updateSeries && event.series_id ? 'Terminserie wurde aktualisiert.' : null,
         });
+        if (updateNotifyUserIds.length > 0) {
+            await (0, pushNotifications_1.sendPushToUsers)(updateNotifyUserIds, {
+                title: updateSeries && event.series_id ? 'Terminserie geändert' : 'Termin geändert',
+                body: `${title} am ${(0, eventHelpers_1.formatEventDateTime)(start_time)} wurde aktualisiert.`,
+                url: `/events/${eventId}`,
+            }, {
+                teamIds: eventTeamIds,
+                category: 'important',
+            });
+        }
         return res.json({ success: true });
     }
     catch (error) {

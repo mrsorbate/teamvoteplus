@@ -101,6 +101,46 @@ window.addEventListener('orientationchange', () => {
   window.setTimeout(() => logPwaRuntimeDebug('orientationchange'), 100)
 })
 
+const isAndroidRuntime = () => /Android/i.test(window.navigator.userAgent)
+
+const resetDocumentScrollLocks = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const root = document.getElementById('root')
+  const elements = [document.documentElement, document.body, root].filter(Boolean) as HTMLElement[]
+  const lockedStyleProps = [
+    'position',
+    'top',
+    'right',
+    'bottom',
+    'left',
+    'height',
+    'maxHeight',
+    'overflow',
+    'overflowY',
+    'touchAction',
+  ]
+
+  for (const element of elements) {
+    for (const property of lockedStyleProps) {
+      element.style.removeProperty(property)
+    }
+  }
+
+  document.documentElement.style.setProperty('min-height', '100%')
+  document.body.style.setProperty('min-height', '100%')
+  root?.style.setProperty('min-height', '100dvh')
+}
+
+resetDocumentScrollLocks()
+window.addEventListener('pageshow', resetDocumentScrollLocks)
+window.addEventListener('resize', resetDocumentScrollLocks)
+window.addEventListener('orientationchange', () => {
+  window.setTimeout(resetDocumentScrollLocks, 100)
+})
+
 type OrientationLockType = 'portrait' | 'portrait-primary'
 
 interface ScreenOrientationWithLock {
@@ -144,9 +184,11 @@ const installPullToRefreshGuard = () => {
     return
   }
 
+  if (isAndroidRuntime()) {
+    return
+  }
+
   let startY = 0
-  const isAndroidStandalone = /Android/i.test(window.navigator.userAgent)
-    && window.matchMedia('(display-mode: standalone)').matches
 
   const getScrollableAncestor = (target: EventTarget | null): HTMLElement => {
     let node = target instanceof HTMLElement ? target : null
@@ -169,10 +211,6 @@ const installPullToRefreshGuard = () => {
 
   const onTouchMove = (event: TouchEvent) => {
     if (event.touches.length !== 1) {
-      return
-    }
-
-    if (isAndroidStandalone) {
       return
     }
 

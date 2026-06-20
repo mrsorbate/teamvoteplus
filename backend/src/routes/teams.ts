@@ -719,6 +719,7 @@ type TeamSettingsRow = {
   default_duration_minutes_other: number | null;
   home_venues: string | null;
   default_home_venue_name: string | null;
+  feed_retention_days: number | null;
   calendar_token: string | null;
 };
 
@@ -740,7 +741,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
-              home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
+              home_venues, default_home_venue_name, feed_retention_days, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`
     ).get(teamId) as TeamSettingsRow | undefined;
 
@@ -788,6 +789,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     const hasDefaultDurationMinutesOther = Object.prototype.hasOwnProperty.call(req.body, 'default_duration_minutes_other');
     const hasHomeVenues = Object.prototype.hasOwnProperty.call(req.body, 'home_venues');
     const hasDefaultHomeVenueName = Object.prototype.hasOwnProperty.call(req.body, 'default_home_venue_name');
+    const hasFeedRetentionDays = Object.prototype.hasOwnProperty.call(req.body, 'feed_retention_days');
 
     const {
       fussballde_id,
@@ -809,6 +811,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_duration_minutes_other,
       home_venues,
       default_home_venue_name,
+      feed_retention_days,
     } = req.body as {
       fussballde_id?: string;
       fussballde_ids?: string[];
@@ -829,6 +832,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_duration_minutes_other?: number | string | null;
       home_venues?: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
       default_home_venue_name?: string | null;
+      feed_retention_days?: number | string | null;
     };
 
     const membership = db.prepare(
@@ -844,7 +848,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
-              home_venues, default_home_venue_name
+              home_venues, default_home_venue_name, feed_retention_days
        FROM teams WHERE id = ?`
     ).get(teamId) as TeamSettingsRow | undefined;
     if (!team) {
@@ -1053,6 +1057,16 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultHomeVenueName = nextHomeVenues[0].name;
     }
 
+    const allowedRetentionDays = new Set([0, 90, 180, 365]);
+    let nextFeedRetentionDays = Number(team.feed_retention_days || 0);
+    if (hasFeedRetentionDays) {
+      const normalizedFeedRetentionDays = Number(feed_retention_days ?? 0);
+      if (!Number.isInteger(normalizedFeedRetentionDays) || !allowedRetentionDays.has(normalizedFeedRetentionDays)) {
+        return res.status(400).json({ error: 'Ungültige Feed-Aufbewahrung' });
+      }
+      nextFeedRetentionDays = normalizedFeedRetentionDays;
+    }
+
     db.prepare(
       `UPDATE teams
        SET fussballde_id = ?,
@@ -1072,6 +1086,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
              default_duration_minutes_other = ?,
            home_venues = ?,
            default_home_venue_name = ?,
+           feed_retention_days = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).run(
@@ -1092,6 +1107,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultDurationMinutesOther,
       JSON.stringify(nextHomeVenues),
       nextDefaultHomeVenueName,
+      nextFeedRetentionDays,
       teamId
     );
 
@@ -1100,7 +1116,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
-              home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
+              home_venues, default_home_venue_name, feed_retention_days, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`
     ).get(teamId) as TeamSettingsRow | undefined;
 

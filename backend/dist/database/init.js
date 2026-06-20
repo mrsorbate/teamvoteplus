@@ -74,6 +74,7 @@ db.exec(`
     default_duration_minutes_other INTEGER,
     home_venues TEXT,
     default_home_venue_name TEXT,
+    feed_retention_days INTEGER NOT NULL DEFAULT 0,
     created_by INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -236,6 +237,7 @@ db.exec(`
     poll_options TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     is_pinned INTEGER NOT NULL DEFAULT 0,
+    is_important INTEGER NOT NULL DEFAULT 0,
     archived_at TEXT,
     deleted_at TEXT,
     deleted_by INTEGER,
@@ -454,7 +456,9 @@ try {
     addPostColumn('deleted_by', 'INTEGER');
     addPostColumn('event_id', 'INTEGER');
     addPostColumn('event_action', 'TEXT');
+    addPostColumn('is_important', 'INTEGER NOT NULL DEFAULT 0');
     db.exec('CREATE INDEX IF NOT EXISTS idx_team_posts_archived_at ON team_posts(archived_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_team_posts_event ON team_posts(team_id, event_id, event_action)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_team_post_attachments_post ON team_post_attachments(post_id)');
     // Add series_id to events for recurring events
     const eventColumns = db.pragma('table_info(events)');
@@ -637,6 +641,11 @@ try {
     if (!hasFussballdeTeamName) {
         db.exec('ALTER TABLE teams ADD COLUMN fussballde_team_name TEXT');
         logger_1.logger.info('✅ Added fussballde_team_name column to teams table');
+    }
+    const hasFeedRetentionDays = teamColumns.some((col) => col.name === 'feed_retention_days');
+    if (!hasFeedRetentionDays) {
+        db.exec('ALTER TABLE teams ADD COLUMN feed_retention_days INTEGER NOT NULL DEFAULT 0');
+        logger_1.logger.info('✅ Added feed_retention_days column to teams table');
     }
     const trainerInviteColumns = db.pragma('table_info(trainer_invites)');
     const hasInvitedUserId = trainerInviteColumns.some((col) => col.name === 'invited_user_id');

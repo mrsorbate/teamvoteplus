@@ -605,7 +605,7 @@ router.get('/:id/settings', (req, res) => {
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
-              home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
+              home_venues, default_home_venue_name, feed_retention_days, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`).get(teamId);
         const calendarUrls = getCalendarUrls(req, teamId, settings?.calendar_token);
         if (!settings) {
@@ -649,7 +649,8 @@ router.put('/:id/settings', (req, res) => {
         const hasDefaultDurationMinutesOther = Object.prototype.hasOwnProperty.call(req.body, 'default_duration_minutes_other');
         const hasHomeVenues = Object.prototype.hasOwnProperty.call(req.body, 'home_venues');
         const hasDefaultHomeVenueName = Object.prototype.hasOwnProperty.call(req.body, 'default_home_venue_name');
-        const { fussballde_id, fussballde_ids, fussballde_team_name, fussballde_team_names, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other, default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other, default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other, home_venues, default_home_venue_name, } = req.body;
+        const hasFeedRetentionDays = Object.prototype.hasOwnProperty.call(req.body, 'feed_retention_days');
+        const { fussballde_id, fussballde_ids, fussballde_team_name, fussballde_team_names, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other, default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other, default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other, home_venues, default_home_venue_name, feed_retention_days, } = req.body;
         const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
         if (!membership || membership.role !== 'trainer') {
             return res.status(403).json({ error: 'Only trainers can update team settings' });
@@ -658,7 +659,7 @@ router.put('/:id/settings', (req, res) => {
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
-              home_venues, default_home_venue_name
+              home_venues, default_home_venue_name, feed_retention_days
        FROM teams WHERE id = ?`).get(teamId);
         if (!team) {
             return res.status(404).json({ error: 'Team not found' });
@@ -841,6 +842,15 @@ router.put('/:id/settings', (req, res) => {
         if (!nextDefaultHomeVenueName && nextHomeVenues.length > 0) {
             nextDefaultHomeVenueName = nextHomeVenues[0].name;
         }
+        const allowedRetentionDays = new Set([0, 90, 180, 365]);
+        let nextFeedRetentionDays = Number(team.feed_retention_days || 0);
+        if (hasFeedRetentionDays) {
+            const normalizedFeedRetentionDays = Number(feed_retention_days ?? 0);
+            if (!Number.isInteger(normalizedFeedRetentionDays) || !allowedRetentionDays.has(normalizedFeedRetentionDays)) {
+                return res.status(400).json({ error: 'Ungültige Feed-Aufbewahrung' });
+            }
+            nextFeedRetentionDays = normalizedFeedRetentionDays;
+        }
         init_1.default.prepare(`UPDATE teams
        SET fussballde_id = ?,
            fussballde_team_name = ?,
@@ -859,13 +869,14 @@ router.put('/:id/settings', (req, res) => {
              default_duration_minutes_other = ?,
            home_venues = ?,
            default_home_venue_name = ?,
+           feed_retention_days = ?,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`).run(nextFussballId, nextFussballTeamName, nextDefaultResponse || 'pending', nextDefaultRsvpDeadlineHours, nextDefaultRsvpDeadlineHoursTraining, nextDefaultRsvpDeadlineHoursMatch, nextDefaultRsvpDeadlineHoursOther, nextDefaultArrivalMinutes, nextDefaultArrivalMinutesTraining, nextDefaultArrivalMinutesMatch, nextDefaultArrivalMinutesOther, nextDefaultDurationMinutes, nextDefaultDurationMinutesTraining, nextDefaultDurationMinutesMatch, nextDefaultDurationMinutesOther, JSON.stringify(nextHomeVenues), nextDefaultHomeVenueName, teamId);
+       WHERE id = ?`).run(nextFussballId, nextFussballTeamName, nextDefaultResponse || 'pending', nextDefaultRsvpDeadlineHours, nextDefaultRsvpDeadlineHoursTraining, nextDefaultRsvpDeadlineHoursMatch, nextDefaultRsvpDeadlineHoursOther, nextDefaultArrivalMinutes, nextDefaultArrivalMinutesTraining, nextDefaultArrivalMinutesMatch, nextDefaultArrivalMinutesOther, nextDefaultDurationMinutes, nextDefaultDurationMinutesTraining, nextDefaultDurationMinutesMatch, nextDefaultDurationMinutesOther, JSON.stringify(nextHomeVenues), nextDefaultHomeVenueName, nextFeedRetentionDays, teamId);
         const updatedSettings = init_1.default.prepare(`SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
-              home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
+              home_venues, default_home_venue_name, feed_retention_days, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`).get(teamId);
         if (!updatedSettings) {
             return res.status(500).json({ error: 'Failed to retrieve updated settings' });

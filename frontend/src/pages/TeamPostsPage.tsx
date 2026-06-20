@@ -20,6 +20,7 @@ import {
   PinOff,
   Search,
   Send,
+  Star,
   Trash2,
   Users,
   Vote,
@@ -51,6 +52,7 @@ type PostItem = {
   reaction_counts?: Record<FeedReaction, number>;
   my_reactions?: FeedReaction[];
   is_pinned?: number;
+  is_important?: number;
   archived_at?: string | null;
   event_action?: string | null;
   created_at: string;
@@ -95,6 +97,7 @@ export default function TeamPostsPage() {
   const [content, setContent] = useState('');
   const [optionsText, setOptionsText] = useState('Ja\nNein');
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isImportant, setIsImportant] = useState(false);
   const [search, setSearch] = useState('');
   const [feedType, setFeedType] = useState<'all' | 'announcement' | 'poll' | 'document'>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -102,6 +105,7 @@ export default function TeamPostsPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editOptionsText, setEditOptionsText] = useState('');
+  const [editIsImportant, setEditIsImportant] = useState(false);
   const [readerPost, setReaderPost] = useState<PostItem | null>(null);
 
   const getSegmentButtonClass = (isActive: boolean) =>
@@ -259,6 +263,7 @@ export default function TeamPostsPage() {
         const formData = new FormData();
         formData.append('type', postType);
         formData.append('title', normalizedTitle);
+        formData.append('is_important', isImportant ? 'true' : 'false');
         if (normalizedContent) formData.append('content', normalizedContent);
         if (postType === 'poll') formData.append('options', JSON.stringify(options));
         attachments.forEach((file) => formData.append('attachments', file));
@@ -270,6 +275,7 @@ export default function TeamPostsPage() {
         title: normalizedTitle,
         content: postType === 'announcement' ? normalizedContent : undefined,
         options: postType === 'poll' ? options : undefined,
+        is_important: isImportant,
       });
     },
     onSuccess: async () => {
@@ -277,6 +283,7 @@ export default function TeamPostsPage() {
       setContent('');
       setOptionsText('Ja\nNein');
       setAttachments([]);
+      setIsImportant(false);
       setErrorMessage(null);
       await invalidatePostQueries();
     },
@@ -315,6 +322,7 @@ export default function TeamPostsPage() {
     setEditTitle(post.title);
     setEditContent(post.content || '');
     setEditOptionsText((post.poll_options || []).join('\n'));
+    setEditIsImportant(Boolean(post.is_important));
   };
 
   const saveEdit = () => {
@@ -322,6 +330,7 @@ export default function TeamPostsPage() {
     const data: Parameters<typeof postsAPI.updateTeamPost>[2] = {
       title: editTitle.trim(),
       content: editContent.trim(),
+      is_important: editIsImportant,
     };
     if (editingPost.type === 'poll') {
       data.options = editOptionsText.split('\n').map((line) => line.trim()).filter(Boolean);
@@ -464,6 +473,12 @@ export default function TeamPostsPage() {
                           Angepinnt
                         </span>
                       ) : null}
+                      {post.is_important ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-900/25 px-2.5 py-1 text-xs font-semibold text-amber-100">
+                          <Star className="h-3.5 w-3.5" />
+                          Wichtig
+                        </span>
+                      ) : null}
                     </div>
                     <h3 className="break-words text-lg font-bold leading-tight text-white sm:text-xl">{post.title}</h3>
                     <p className="mt-1 text-xs text-gray-400">
@@ -503,6 +518,16 @@ export default function TeamPostsPage() {
                         title={post.archived_at ? 'Aus Archiv holen' : 'Archivieren'}
                       >
                         <Archive className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updatePostMutation.mutate({ postId: post.id, data: { is_important: !post.is_important } })}
+                        disabled={updatePostMutation.isPending}
+                        className="icon-button h-10 w-10 rounded-full"
+                        aria-label={post.is_important ? 'Nicht mehr wichtig markieren' : 'Als wichtig markieren'}
+                        title={post.is_important ? 'Nicht mehr wichtig' : 'Wichtig'}
+                      >
+                        <Star className={`h-4 w-4 ${post.is_important ? 'fill-amber-300 text-amber-300' : ''}`} />
                       </button>
                       <button
                         type="button"
@@ -756,6 +781,19 @@ export default function TeamPostsPage() {
             )}
           </div>
 
+          <label className="flex items-start gap-3 rounded-xl border border-gray-700 bg-gray-950/40 p-3 text-sm text-gray-200">
+            <input
+              type="checkbox"
+              checked={isImportant}
+              onChange={(event) => setIsImportant(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-900 text-primary-600 focus:ring-primary-500"
+            />
+            <span>
+              <span className="block font-semibold text-white">Als wichtig markieren</span>
+              <span className="text-gray-400">Nutzer mit “Nur Wichtiges” erhalten hierfür eine Push-Benachrichtigung.</span>
+            </span>
+          </label>
+
           <button
             type="button"
             onClick={() => {
@@ -824,6 +862,18 @@ export default function TeamPostsPage() {
                 />
               </div>
             )}
+            <label className="flex items-start gap-3 rounded-xl border border-gray-700 bg-gray-950/40 p-3 text-sm text-gray-200">
+              <input
+                type="checkbox"
+                checked={editIsImportant}
+                onChange={(event) => setEditIsImportant(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-900 text-primary-600 focus:ring-primary-500"
+              />
+              <span>
+                <span className="block font-semibold text-white">Wichtig</span>
+                <span className="text-gray-400">Steuert die Sichtbarkeit für Push-Einstellung “Nur Wichtiges”.</span>
+              </span>
+            </label>
             <button
               type="button"
               onClick={saveEdit}

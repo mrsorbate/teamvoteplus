@@ -156,6 +156,32 @@
       max-width: 100%;
     }
   }
+
+  @media (pointer: coarse), (hover: none) {
+    html,
+    body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      overscroll-behavior-y: auto !important;
+      position: static !important;
+      touch-action: pan-y pinch-zoom;
+    }
+
+    #root {
+      height: auto !important;
+      min-height: 100dvh !important;
+      overflow: visible !important;
+      overscroll-behavior-y: auto !important;
+      position: static !important;
+      touch-action: pan-y pinch-zoom;
+    }
+
+    main {
+      touch-action: pan-y pinch-zoom;
+    }
+  }
 }
 
 @layer components {

@@ -17,7 +17,7 @@ type PostRow = {
   id: number; team_id: number; type: PostType; title: string;
   content: string | null; poll_options: string | null; created_at: string;
   team_name?: string; created_by_name: string; created_by?: number;
-  updated_at?: string; is_pinned?: number; archived_at?: string | null; event_id?: number | null; event_action?: string | null; my_seen_at: string | null;
+  updated_at?: string; is_pinned?: number; is_important?: number; archived_at?: string | null; event_id?: number | null; event_action?: string | null; my_seen_at: string | null;
   my_answer_option: number | null; my_answered_at: string | null;
 };
 
@@ -118,6 +118,28 @@ const getTeamMemberIds = (teamId: number): number[] => {
   return rows.map((row) => Number(row.user_id)).filter((id) => Number.isInteger(id) && id > 0);
 };
 
+const archiveExpiredTeamPosts = (teamId: number) => {
+  const settings = db.prepare(
+    'SELECT feed_retention_days FROM teams WHERE id = ?'
+  ).get(teamId) as { feed_retention_days?: number | null } | undefined;
+  const retentionDays = Number(settings?.feed_retention_days || 0);
+
+  if (!Number.isInteger(retentionDays) || retentionDays <= 0) {
+    return;
+  }
+
+  db.prepare(`
+    UPDATE team_posts
+    SET archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE team_id = ?
+      AND is_active = 1
+      AND archived_at IS NULL
+      AND is_pinned = 0
+      AND datetime(created_at) < datetime('now', ?)
+  `).run(teamId, `-${retentionDays} days`);
+};
+
 const getPostStats = (postId: number, teamId: number, userId: number, pollOptions: string[]) => {
   const memberCountRow = db.prepare(
     'SELECT COUNT(*) as count FROM team_members WHERE team_id = ?'
@@ -214,6 +236,7 @@ router.get('/posts/open', (req: AuthRequest, res) => {
              p.poll_options,
              p.created_at,
              p.is_pinned,
+             p.is_important,
              p.archived_at,
              p.event_id,
              p.event_action,
@@ -257,6 +280,8 @@ router.get('/teams/:id/posts', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
+    archiveExpiredTeamPosts(teamId);
+
     const rows = db.prepare(`
       SELECT p.id,
              p.team_id,
@@ -267,6 +292,7 @@ router.get('/teams/:id/posts', (req: AuthRequest, res) => {
              p.created_at,
              p.updated_at,
              p.is_pinned,
+             p.is_important,
              p.archived_at,
              p.event_id,
              p.event_action,
@@ -314,6 +340,7 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
     const type = String(req.body?.type || '').trim().toLowerCase() as PostType;
     const title = String(req.body?.title || '').trim();
     const content = String(req.body?.content || '').trim();
+    const isImportant = String(req.body?.is_important || '').trim() === 'true' || req.body?.is_important === true || req.body?.is_important === 1;
     const options = parseOptions(req.body?.options);
     const files = (req.files || []) as Express.Multer.File[];
 
@@ -345,8 +372,8 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
     const storedType: PostType = type === 'document' && !supportsExtendedPostTypes() ? 'announcement' : type;
 
     const result = db.prepare(
-      'INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(teamId, storedType, title, content || null, type === 'poll' ? JSON.stringify(options) : null, userId);
+      'INSERT INTO team_posts (team_id, type, title, content, poll_options, is_important, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(teamId, storedType, title, content || null, type === 'poll' ? JSON.stringify(options) : null, isImportant ? 1 : 0, userId);
 
     const createdPostId = Number(result.lastInsertRowid);
     insertAttachments(createdPostId, files);
@@ -361,12 +388,12 @@ router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async
         url: `/teams/${teamId}/posts?scope=all`,
       }, {
         teamId,
-        category: type === 'poll' ? 'poll' : 'post',
+        category: isImportant ? 'important' : type === 'poll' ? 'poll' : 'post',
       });
     }
 
     const created = db.prepare(
-      `SELECT p.id, p.team_id, p.type, p.title, p.content, p.poll_options, p.created_at, p.updated_at, p.is_pinned, p.archived_at, p.event_id, p.event_action, p.created_by, u.name as created_by_name,
+      `SELECT p.id, p.team_id, p.type, p.title, p.content, p.poll_options, p.created_at, p.updated_at, p.is_pinned, p.is_important, p.archived_at, p.event_id, p.event_action, p.created_by, u.name as created_by_name,
               NULL as my_seen_at, NULL as my_answer_option, NULL as my_answered_at
        FROM team_posts p
        INNER JOIN users u ON u.id = p.created_by
@@ -387,8 +414,10 @@ router.patch('/teams/:teamId/posts/:postId', (req: AuthRequest, res) => {
     const userId = req.user!.id;
     const hasPinned = Object.prototype.hasOwnProperty.call(req.body || {}, 'is_pinned');
     const hasArchived = Object.prototype.hasOwnProperty.call(req.body || {}, 'is_archived');
+    const hasImportant = Object.prototype.hasOwnProperty.call(req.body || {}, 'is_important');
     const isPinned = Boolean(req.body?.is_pinned);
     const isArchived = Boolean(req.body?.is_archived);
+    const isImportant = Boolean(req.body?.is_important);
     const nextTitle = typeof req.body?.title === 'string' ? req.body.title.trim() : undefined;
     const nextContent = typeof req.body?.content === 'string' ? req.body.content.trim() : undefined;
     const nextOptions = Object.prototype.hasOwnProperty.call(req.body || {}, 'options')
@@ -431,6 +460,10 @@ router.patch('/teams/:teamId/posts/:postId', (req: AuthRequest, res) => {
     if (hasArchived) {
       updates.push('archived_at = ?');
       params.push(isArchived ? new Date().toISOString() : null);
+    }
+    if (hasImportant) {
+      updates.push('is_important = ?');
+      params.push(isImportant ? 1 : 0);
     }
     if (nextTitle !== undefined) {
       updates.push('title = ?');

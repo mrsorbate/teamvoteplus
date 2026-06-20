@@ -686,7 +686,7 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // Update event
-router.put('/:id', (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const eventId = parseInt(req.params.id, 10);
     const updateSeries = req.query.update_series === 'true';
@@ -752,6 +752,7 @@ router.put('/:id', (req: AuthRequest, res) => {
 
     const resolvedInviteAll = !(invite_all === false || invite_all === 0);
     const resolvedInvitedUserIds = resolvedInviteAll ? teamMemberIds : normalizedInvitedUserIds;
+    const updateNotifyUserIds = resolvedInvitedUserIds.filter((uid) => uid !== req.user!.id);
 
     if (!resolvedInviteAll && resolvedInvitedUserIds.length === 0) {
       return res.status(400).json({ error: 'Bitte mindestens einen Teilnehmer einladen' });
@@ -918,6 +919,17 @@ router.put('/:id', (req: AuthRequest, res) => {
         details: 'Terminserie wurde aktualisiert.',
       });
 
+      if (updateNotifyUserIds.length > 0) {
+        await sendPushToUsers(updateNotifyUserIds, {
+          title: 'Terminserie geändert',
+          body: `${title} wurde aktualisiert.`,
+          url: `/events/${eventId}`,
+        }, {
+          teamIds: eventTeamIds,
+          category: 'important',
+        });
+      }
+
       return res.json({ success: true });
     }
 
@@ -956,6 +968,17 @@ router.put('/:id', (req: AuthRequest, res) => {
       createdBy: req.user!.id,
       details: updateSeries && event.series_id ? 'Terminserie wurde aktualisiert.' : null,
     });
+
+    if (updateNotifyUserIds.length > 0) {
+      await sendPushToUsers(updateNotifyUserIds, {
+        title: updateSeries && event.series_id ? 'Terminserie geändert' : 'Termin geändert',
+        body: `${title} am ${formatEventDateTime(start_time)} wurde aktualisiert.`,
+        url: `/events/${eventId}`,
+      }, {
+        teamIds: eventTeamIds,
+        category: 'important',
+      });
+    }
 
     return res.json({ success: true });
   } catch (error) {
