@@ -630,7 +630,7 @@ export default function EventDetailPage() {
               {isTrainer ? (
                 <Link
                   to={`/events/${eventId}/squad`}
-                  state={{ from: resolvedFrom || location.pathname }}
+                  state={{ from: location.pathname }}
                   className="w-full btn btn-primary inline-flex items-center justify-center"
                 >
                   Zur Kaderseite

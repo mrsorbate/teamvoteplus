@@ -1011,6 +1011,43 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
     const normalizeTeamName = (v) => String(v || '').toLowerCase()
         .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const normalizeSquadLabel = (value) => {
+        const normalized = value.trim().toUpperCase();
+        if (normalized === '1')
+            return 'I';
+        if (normalized === '2')
+            return 'II';
+        if (/^(I|II|III|IV|V|VI)$/.test(normalized))
+            return normalized;
+        return null;
+    };
+    const parseTeamIdentity = (value) => {
+        const raw = String(value || '').trim();
+        const suffixMatch = raw.match(/\b(IV|III|II|I|VI|V|[0-9]+)\.?\s*$/i);
+        const squad = suffixMatch ? normalizeSquadLabel(suffixMatch[1]) : null;
+        const baseRaw = suffixMatch ? raw.slice(0, suffixMatch.index).trim() : raw;
+        return {
+            normalized: normalizeTeamName(raw),
+            base: normalizeTeamName(baseRaw || raw),
+            squad,
+        };
+    };
+    const isConfiguredOwnTeam = (candidateName, configuredNorm) => {
+        const candidate = parseTeamIdentity(candidateName);
+        const configured = parseTeamIdentity(configuredNorm);
+        if (!candidate.normalized || !configured.normalized)
+            return false;
+        if (candidate.normalized === configured.normalized)
+            return true;
+        if (!candidate.base || !configured.base)
+            return false;
+        if (candidate.base !== configured.base)
+            return false;
+        if (configured.squad) {
+            return candidate.squad === configured.squad;
+        }
+        return !candidate.squad || candidate.squad === configured.squad;
+    };
     const configuredTeamNames = parseFussballDeTeamNames(team.fussballde_team_name);
     if (configuredTeamNames.length === 0 && String(team.name || '').trim()) {
         configuredTeamNames.push(String(team.name || '').trim());
@@ -1022,18 +1059,8 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
     // When multiple sources are configured, derive a short label per source from the
     // configured team names so that imports from different sources stay distinguishable.
     const sourceLabelMap = new Map();
-    // Per-source own-team norms for accurate home/away detection.
-    const sourceOwnTeamNormsMap = new Map();
-    const normalizeSquadLabel = (value) => {
-        const normalized = value.trim().toUpperCase();
-        if (normalized === '1')
-            return 'I';
-        if (normalized === '2')
-            return 'II';
-        if (/^(I|II|III|IV|V|VI)$/.test(normalized))
-            return normalized;
-        return null;
-    };
+    // Per-source own-team names for accurate home/away and crest detection.
+    const sourceOwnTeamNamesMap = new Map();
     fussballdeSources.forEach((sourceId, idx) => {
         // Try to use the configured team name for this source index as label.
         const configuredName = configuredTeamNames[idx] || configuredTeamNames[0] || '';
@@ -1046,9 +1073,9 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
         else if (fussballdeSources.length > 1) {
             sourceLabelMap.set(sourceId, idx === 0 ? 'I' : idx === 1 ? 'II' : String(idx + 1));
         }
-        // Compute own-team norms specifically for this source.
-        const sourceNorms = configuredName ? [normalizeTeamName(configuredName)].filter(Boolean) : ownTeamNorms;
-        sourceOwnTeamNormsMap.set(sourceId, sourceNorms);
+        // Compute own-team names specifically for this source.
+        const sourceNames = configuredName ? [configuredName].filter(Boolean) : configuredTeamNames;
+        sourceOwnTeamNamesMap.set(sourceId, sourceNames);
     });
     const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
     const defaultArrivalMinutes = parseArrivalMinutes(team.default_arrival_minutes_match) ?? parseArrivalMinutes(team.default_arrival_minutes);
@@ -1094,17 +1121,11 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
             skipped.push(`${match.homeTeam} - ${match.awayTeam}: Kein Datum`);
             continue;
         }
-        const homeNorm = normalizeTeamName(match.homeTeam);
-        const awayNorm = normalizeTeamName(match.awayTeam);
         // Use source-specific norms when available for accurate crest assignment.
         const sourceId = String(match.__sourceId || '');
-        const activeOwnTeamNorms = sourceOwnTeamNormsMap.get(sourceId) || ownTeamNorms;
-        const isHome = activeOwnTeamNorms.some((ownTeamNorm) => (ownTeamNorm.length >= 4
-            ? homeNorm.includes(ownTeamNorm) || ownTeamNorm.includes(homeNorm)
-            : homeNorm === ownTeamNorm));
-        const isAway = activeOwnTeamNorms.some((ownTeamNorm) => (ownTeamNorm.length >= 4
-            ? awayNorm.includes(ownTeamNorm) || ownTeamNorm.includes(awayNorm)
-            : awayNorm === ownTeamNorm));
+        const activeOwnTeamNames = sourceOwnTeamNamesMap.get(sourceId) || configuredTeamNames;
+        const isHome = activeOwnTeamNames.some((ownTeamName) => isConfiguredOwnTeam(match.homeTeam, ownTeamName));
+        const isAway = activeOwnTeamNames.some((ownTeamName) => isConfiguredOwnTeam(match.awayTeam, ownTeamName));
         const hasIdentifiedOwnTeam = isHome || isAway;
         const sourceLabel = sourceLabelMap.get(sourceId) || '';
         const titlePrefix = sourceLabel ? `[${sourceLabel}] ` : '';
@@ -1118,12 +1139,25 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
         const statusSignals = `${String(match.statusText || '')} ${String(match.competition || '')}`.toLowerCase();
         const isCancelledMatch = hasAnyKeyword(normalizeStatusText(statusSignals), cancelledKeywords);
         const isPostponedMatch = hasAnyKeyword(normalizeStatusText(statusSignals), postponedKeywords);
+        const normalizeBadgeUrl = (url) => {
+            if (!url)
+                return null;
+            const s = String(url).trim();
+            if (!s)
+                return null;
+            return s.startsWith('//') ? `https:${s}` : s;
+        };
+        // Opponent crest = away team badge when home, home team badge when away.
+        // If the own team cannot be identified reliably, do not guess a crest.
+        const opponentCrestUrl = hasIdentifiedOwnTeam
+            ? (isHome ? normalizeBadgeUrl(match.awayBadge) : normalizeBadgeUrl(match.homeBadge))
+            : null;
         // Check if event already exists by date proximity + team names
-        const existing = init_1.default.prepare(`SELECT id, title, start_time, end_time, ${eventScoreSelectExpression} FROM events
+        const existing = init_1.default.prepare(`SELECT id, title, start_time, end_time, is_home_match, opponent_crest_url, ${eventScoreSelectExpression} FROM events
        WHERE team_id = ? AND type = 'match'
          AND abs(strftime('%s', start_time) - strftime('%s', ?)) < 86400
          AND (title LIKE ? OR title LIKE ?)`).get(teamId, startTime, `%${match.homeTeam}%`, `%${match.awayTeam}%`);
-        const titleCandidates = init_1.default.prepare(`SELECT id, title, start_time, end_time, ${eventScoreSelectExpression} FROM events
+        const titleCandidates = init_1.default.prepare(`SELECT id, title, start_time, end_time, is_home_match, opponent_crest_url, ${eventScoreSelectExpression} FROM events
        WHERE team_id = ?
          AND type = 'match'
          AND title = ?
@@ -1154,6 +1188,16 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
             const timeDiffMinutes = hasValidExistingStart
                 ? Math.abs(existingStartDate.getTime() - gameDate.getTime()) / 60000
                 : 0;
+            const nextIsHomeMatch = hasIdentifiedOwnTeam ? (isHome ? 1 : 0) : null;
+            const shouldUpdateMatchMeta = (hasIdentifiedOwnTeam && existingOrFallback.is_home_match !== nextIsHomeMatch) ||
+                (opponentCrestUrl !== null && existingOrFallback.opponent_crest_url !== opponentCrestUrl);
+            if (shouldUpdateMatchMeta) {
+                init_1.default.prepare(`UPDATE events
+           SET is_home_match = COALESCE(?, is_home_match),
+               opponent_crest_url = COALESCE(?, opponent_crest_url),
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`).run(nextIsHomeMatch, opponentCrestUrl, existingOrFallback.id);
+            }
             if (match.result && hasEventScoreColumns && (existingOrFallback.home_goals === null || existingOrFallback.away_goals === null)) {
                 init_1.default.prepare('UPDATE events SET home_goals = ?, away_goals = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
                     .run(match.result.home ?? null, match.result.away ?? null, existingOrFallback.id);
@@ -1207,18 +1251,6 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
         const locationZipCity = isHome && defaultHomeVenue ? defaultHomeVenue.zip_city || null : null;
         const pitchType = isHome && defaultHomeVenue ? defaultHomeVenue.pitch_type || null : null;
         const location = [locationVenue, locationStreet, locationZipCity].filter(Boolean).join(', ') || null;
-        const normalizeBadgeUrl = (url) => {
-            if (!url)
-                return null;
-            const s = String(url).trim();
-            if (!s)
-                return null;
-            return s.startsWith('//') ? `https:${s}` : s;
-        };
-        // Opponent crest = away team badge when home, home team badge when away
-        const opponentCrestUrl = hasIdentifiedOwnTeam
-            ? (isHome ? normalizeBadgeUrl(match.awayBadge) : normalizeBadgeUrl(match.homeBadge))
-            : normalizeBadgeUrl(match.awayBadge) || normalizeBadgeUrl(match.homeBadge);
         const insertResult = insertEventStmt.run(teamId, title, 'match', description, location, locationVenue, locationStreet, locationZipCity, pitchType, null, // meeting_point
         importedMatchArrivalMinutes, startTime, endTime, rsvpDeadline, 105, // duration_minutes
         1, // visibility_all

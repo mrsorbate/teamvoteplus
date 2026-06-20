@@ -33,10 +33,9 @@ const parseMatches = (html, source) => {
             const badges = clubCells
                 .map((_i, club) => {
                 const imgSpan = $(club).find('[data-responsive-image]');
-                return imgSpan.attr('data-responsive-image') || undefined;
+                return imgSpan.attr('data-responsive-image') || '';
             })
-                .get()
-                .filter((badge) => Boolean(badge));
+                .get();
             if (clubs.length >= 2) {
                 const scoreText = clean(rowNode.find('td.column-score').text());
                 const [leftRaw, rightRaw] = scoreText.includes(':') ? scoreText.split(':', 2) : ['', ''];
