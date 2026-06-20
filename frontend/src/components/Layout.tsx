@@ -127,7 +127,7 @@ export default function Layout({ organization }: LayoutProps) {
             </div>
 
             {/* Right side */}
-            <div className="hidden md:flex items-center gap-1 shrink-0">
+            <div className="hidden lg:flex items-center gap-1 shrink-0">
 
               {/* Desktop nav links */}
               <div className="flex items-center gap-0.5">
@@ -230,7 +230,7 @@ export default function Layout({ organization }: LayoutProps) {
       <PushInstallPrompt userId={user?.id} />
 
       {/* ── Mobile bottom tab bar ── */}
-      <nav className="bottom-nav md:hidden" aria-label="Hauptnavigation">
+      <nav className="bottom-nav lg:hidden" aria-label="Hauptnavigation">
         {user?.role !== 'admin' ? (
           <>
             <Link

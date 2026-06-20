@@ -90,6 +90,7 @@ export default function EventCard({
   const meetingPointMapsUrl = event?.meeting_point ? getMapsUrl(event.meeting_point) : getMapsUrl(locationText);
   const meetingTimeDisplay = meetingTimeLabel ? `${meetingTimeLabel} Uhr Treffpunkt` : 'Treffpunkt offen';
   const canChooseTentative = (() => {
+    if (event?.type === 'training') return true;
     if (!event?.rsvp_deadline) return true;
     const deadlineDate = new Date(event.rsvp_deadline);
     if (Number.isNaN(deadlineDate.getTime())) return true;

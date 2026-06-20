@@ -120,6 +120,7 @@ export default function EventDetailPage() {
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
   const canChooseTentative = (() => {
+    if (event?.type === 'training') return true;
     if (!event?.rsvp_deadline) return true;
     const deadlineDate = new Date(event.rsvp_deadline);
     if (Number.isNaN(deadlineDate.getTime())) return true;

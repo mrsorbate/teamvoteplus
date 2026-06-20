@@ -437,7 +437,7 @@
     padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .pwa-main-safe {
       padding-bottom: 2rem;
     }
