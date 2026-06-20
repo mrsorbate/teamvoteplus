@@ -1039,6 +1039,7 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
     }
     const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
     const defaultArrivalMinutes = parseArrivalMinutes(team.default_arrival_minutes_match) ?? parseArrivalMinutes(team.default_arrival_minutes);
+    const importedMatchArrivalMinutes = defaultArrivalMinutes ?? 15;
     const defaultHomeVenue = resolveDefaultHomeVenue(parseHomeVenuesFromDb(team.home_venues), team.default_home_venue_name);
     const members = init_1.default.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(teamId);
     const memberIds = members.map((m) => m.user_id);
@@ -1154,11 +1155,22 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
                 init_1.default.prepare(`UPDATE events
            SET start_time = ?, end_time = ?, rsvp_deadline = ?, updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`).run(startTime, endTime, rsvpDeadline, existingOrFallback.id);
-                rescheduled.push(title);
+                const trigger = isPostponedMatch ? 'postponedKeyword' : `timeDiff(${Math.round(timeDiffMinutes)}min)`;
+                const isFutureGame = gameDate > now;
+                if (isFutureGame) {
+                    logger_1.logger.info(`[Import] Rescheduled future game: event=${existingOrFallback.id} "${title}" ${existingOrFallback.start_time} → ${startTime} trigger=${trigger}`);
+                    rescheduled.push(title);
+                }
+                else {
+                    // Past game: update stored time silently, never send a push notification
+                    logger_1.logger.info(`[Import] Silent time update for past game (no notification): event=${existingOrFallback.id} "${title}" ${existingOrFallback.start_time} → ${startTime} trigger=${trigger}`);
+                    updated.push(title);
+                }
             }
             else {
                 skippedExisting += 1;
                 skipped.push(`${title}: Bereits vorhanden`);
+                logger_1.logger.debug(`[Import] Skipped unchanged game: event=${existingOrFallback.id} "${title}" start=${existingOrFallback.start_time} timeDiffMin=${Math.round(timeDiffMinutes)}`);
             }
             continue;
         }
@@ -1195,7 +1207,7 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
             ? (isHome ? normalizeBadgeUrl(match.awayBadge) : normalizeBadgeUrl(match.homeBadge))
             : normalizeBadgeUrl(match.awayBadge) || normalizeBadgeUrl(match.homeBadge);
         const insertResult = insertEventStmt.run(teamId, title, 'match', description, location, locationVenue, locationStreet, locationZipCity, pitchType, null, // meeting_point
-        defaultArrivalMinutes, startTime, endTime, rsvpDeadline, 105, // duration_minutes
+        importedMatchArrivalMinutes, startTime, endTime, rsvpDeadline, 105, // duration_minutes
         1, // visibility_all
         1, // invite_all
         createdByUserId, null, // external_game_id

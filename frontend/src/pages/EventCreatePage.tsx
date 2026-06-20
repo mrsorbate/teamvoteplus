@@ -488,6 +488,7 @@ export default function EventCreatePage() {
       if (effectiveTeamId !== null) {
         queryClient.invalidateQueries({ queryKey: ['events', effectiveTeamId] });
       }
+      queryClient.invalidateQueries({ queryKey: ['upcoming-events'] });
       queryClient.invalidateQueries({ queryKey: ['all-events'] });
       navigate(effectiveTeamId ? `/teams/${effectiveTeamId}/events?created=1` : '/events?created=1');
     },

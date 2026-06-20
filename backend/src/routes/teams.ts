@@ -1298,6 +1298,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
 
   const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
   const defaultArrivalMinutes = parseArrivalMinutes(team.default_arrival_minutes_match) ?? parseArrivalMinutes(team.default_arrival_minutes);
+  const importedMatchArrivalMinutes = defaultArrivalMinutes ?? 15;
   const defaultHomeVenue = resolveDefaultHomeVenue(parseHomeVenuesFromDb(team.home_venues), team.default_home_venue_name);
 
   const members = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(teamId) as Array<{ user_id: number }>;
@@ -1527,7 +1528,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       locationZipCity,
       pitchType,
       null, // meeting_point
-      defaultArrivalMinutes,
+      importedMatchArrivalMinutes,
       startTime,
       endTime,
       rsvpDeadline,
