@@ -42,6 +42,11 @@ db.exec(`
     jersey_number INTEGER,
     footedness TEXT,
     position TEXT,
+    parent_contact_name TEXT,
+    parent_contact_phone TEXT,
+    parent_contact_email TEXT,
+    emergency_contact TEXT,
+    medical_notes TEXT,
     stats_visible_to_team INTEGER NOT NULL DEFAULT 1,
     role TEXT NOT NULL CHECK(role IN ('admin', 'trainer', 'player')),
     is_registered INTEGER NOT NULL DEFAULT 1,
@@ -396,6 +401,11 @@ try {
     addUserColumn('jersey_number', 'INTEGER');
     addUserColumn('footedness', 'TEXT');
     addUserColumn('position', 'TEXT');
+    addUserColumn('parent_contact_name', 'TEXT');
+    addUserColumn('parent_contact_phone', 'TEXT');
+    addUserColumn('parent_contact_email', 'TEXT');
+    addUserColumn('emergency_contact', 'TEXT');
+    addUserColumn('medical_notes', 'TEXT');
     addUserColumn('stats_visible_to_team', 'INTEGER NOT NULL DEFAULT 1');
     const hasIsRegistered = columns.some((col) => col.name === 'is_registered');
     if (!hasIsRegistered) {

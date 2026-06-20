@@ -103,8 +103,30 @@ export const teamsAPI = {
   removeMember: (id: number, userId: number) =>
     api.delete(`/teams/${id}/members/${userId}`),
   
-  createPlayer: (id: number, data: { name: string; birth_date?: string; jersey_number?: number | null; position?: string }) =>
+  createPlayer: (id: number, data: {
+    name: string;
+    birth_date?: string;
+    jersey_number?: number | null;
+    position?: string;
+    parent_contact_name?: string;
+    parent_contact_phone?: string;
+    parent_contact_email?: string;
+    emergency_contact?: string;
+    medical_notes?: string;
+  }) =>
     api.post(`/teams/${id}/players`, data),
+
+  updatePlayer: (id: number, userId: number, data: {
+    name: string;
+    birth_date?: string;
+    jersey_number?: number | null;
+    position?: string;
+    parent_contact_name?: string;
+    parent_contact_phone?: string;
+    parent_contact_email?: string;
+    emergency_contact?: string;
+    medical_notes?: string;
+  }) => api.put(`/teams/${id}/players/${userId}`, data),
 
   uploadTeamPicture: (id: number, file: File) => {
     const formData = new FormData();

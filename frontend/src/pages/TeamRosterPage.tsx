@@ -1,10 +1,10 @@
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { invitesAPI, teamsAPI } from '../lib/api';
-import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw, Shield, User, Plus, Loader2 } from 'lucide-react';
+import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw, Shield, User, Plus, Loader2, Edit3, Save } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import PlayerInviteManager from '../components/PlayerInviteManager';
-import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
@@ -23,13 +23,43 @@ export default function TeamRosterPage() {
   const [newPlayerBirthDate, setNewPlayerBirthDate] = useState('');
   const [newPlayerJerseyNumber, setNewPlayerJerseyNumber] = useState('');
   const [newPlayerPosition, setNewPlayerPosition] = useState('');
+  const [newPlayerParentName, setNewPlayerParentName] = useState('');
+  const [newPlayerParentPhone, setNewPlayerParentPhone] = useState('');
+  const [newPlayerParentEmail, setNewPlayerParentEmail] = useState('');
+  const [newPlayerEmergencyContact, setNewPlayerEmergencyContact] = useState('');
+  const [newPlayerMedicalNotes, setNewPlayerMedicalNotes] = useState('');
+  const [isEditingPlayer, setIsEditingPlayer] = useState(false);
+  const [editPlayerName, setEditPlayerName] = useState('');
+  const [editPlayerBirthDate, setEditPlayerBirthDate] = useState('');
+  const [editPlayerJerseyNumber, setEditPlayerJerseyNumber] = useState('');
+  const [editPlayerPosition, setEditPlayerPosition] = useState('');
+  const [editPlayerParentName, setEditPlayerParentName] = useState('');
+  const [editPlayerParentPhone, setEditPlayerParentPhone] = useState('');
+  const [editPlayerParentEmail, setEditPlayerParentEmail] = useState('');
+  const [editPlayerEmergencyContact, setEditPlayerEmergencyContact] = useState('');
+  const [editPlayerMedicalNotes, setEditPlayerMedicalNotes] = useState('');
   const { user } = useAuthStore();
   const goBack = useSmartBack();
   const { showToast } = useToast();
   const closeMemberModal = () => {
     setSelectedMember(null);
     setConfirmRemove(false);
+    setIsEditingPlayer(false);
   };
+
+  useEffect(() => {
+    if (!selectedMember) return;
+    setEditPlayerName(String(selectedMember.name || ''));
+    setEditPlayerBirthDate(String(selectedMember.birth_date || '').slice(0, 10));
+    setEditPlayerJerseyNumber(selectedMember.jersey_number == null ? '' : String(selectedMember.jersey_number));
+    setEditPlayerPosition(String(selectedMember.position || ''));
+    setEditPlayerParentName(String(selectedMember.parent_contact_name || ''));
+    setEditPlayerParentPhone(String(selectedMember.parent_contact_phone || ''));
+    setEditPlayerParentEmail(String(selectedMember.parent_contact_email || ''));
+    setEditPlayerEmergencyContact(String(selectedMember.emergency_contact || ''));
+    setEditPlayerMedicalNotes(String(selectedMember.medical_notes || ''));
+    setIsEditingPlayer(false);
+  }, [selectedMember?.id]);
 
   const { isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
@@ -94,6 +124,11 @@ export default function TeamRosterPage() {
       birth_date: newPlayerBirthDate || undefined,
       jersey_number: newPlayerJerseyNumber.trim() === '' ? null : Number(newPlayerJerseyNumber),
       position: newPlayerPosition.trim() || undefined,
+      parent_contact_name: newPlayerParentName.trim() || undefined,
+      parent_contact_phone: newPlayerParentPhone.trim() || undefined,
+      parent_contact_email: newPlayerParentEmail.trim() || undefined,
+      emergency_contact: newPlayerEmergencyContact.trim() || undefined,
+      medical_notes: newPlayerMedicalNotes.trim() || undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
@@ -104,10 +139,49 @@ export default function TeamRosterPage() {
       setNewPlayerBirthDate('');
       setNewPlayerJerseyNumber('');
       setNewPlayerPosition('');
+      setNewPlayerParentName('');
+      setNewPlayerParentPhone('');
+      setNewPlayerParentEmail('');
+      setNewPlayerEmergencyContact('');
+      setNewPlayerMedicalNotes('');
       showToast('Spieler wurde angelegt', 'success');
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Spieler konnte nicht angelegt werden', 'error');
+    },
+  });
+
+  const updatePlayerMutation = useMutation({
+    mutationFn: () => teamsAPI.updatePlayer(teamId, Number(selectedMember?.id), {
+      name: editPlayerName.trim(),
+      birth_date: editPlayerBirthDate || undefined,
+      jersey_number: editPlayerJerseyNumber.trim() === '' ? null : Number(editPlayerJerseyNumber),
+      position: editPlayerPosition.trim() || undefined,
+      parent_contact_name: editPlayerParentName.trim() || undefined,
+      parent_contact_phone: editPlayerParentPhone.trim() || undefined,
+      parent_contact_email: editPlayerParentEmail.trim() || undefined,
+      emergency_contact: editPlayerEmergencyContact.trim() || undefined,
+      medical_notes: editPlayerMedicalNotes.trim() || undefined,
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+      setSelectedMember((prev: any) => prev ? {
+        ...prev,
+        name: editPlayerName.trim(),
+        birth_date: editPlayerBirthDate || null,
+        jersey_number: editPlayerJerseyNumber.trim() === '' ? null : Number(editPlayerJerseyNumber),
+        position: editPlayerPosition.trim() || null,
+        parent_contact_name: editPlayerParentName.trim() || null,
+        parent_contact_phone: editPlayerParentPhone.trim() || null,
+        parent_contact_email: editPlayerParentEmail.trim() || null,
+        emergency_contact: editPlayerEmergencyContact.trim() || null,
+        medical_notes: editPlayerMedicalNotes.trim() || null,
+      } : prev);
+      setIsEditingPlayer(false);
+      showToast('Spielerprofil gespeichert', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Spielerprofil konnte nicht gespeichert werden', 'error');
     },
   });
 
@@ -182,6 +256,22 @@ export default function TeamRosterPage() {
     }
 
     createManagedPlayerMutation.mutate();
+  };
+
+  const savePlayerProfile = () => {
+    if (!selectedMember || selectedMember.role === 'trainer') return;
+    if (!editPlayerName.trim()) {
+      showToast('Bitte einen Spielernamen eingeben', 'warning');
+      return;
+    }
+    if (editPlayerJerseyNumber.trim() !== '') {
+      const parsed = Number(editPlayerJerseyNumber);
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 999) {
+        showToast('Trikotnummer muss zwischen 0 und 999 liegen', 'warning');
+        return;
+      }
+    }
+    updatePlayerMutation.mutate();
   };
 
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
@@ -344,7 +434,7 @@ export default function TeamRosterPage() {
             {players.length === 0 && (
               <div className="col-span-full empty-state">
                 <Users className="empty-state-icon" />
-                <p>Noch keine registrierten Spieler im Team</p>
+                <p>Noch keine Spieler im Team</p>
               </div>
             )}
           </div>
@@ -500,6 +590,81 @@ export default function TeamRosterPage() {
               />
             </div>
 
+            <div className="space-y-3 rounded-xl border border-gray-700/60 bg-gray-900/40 p-3">
+              <p className="text-sm font-heading font-semibold text-white">Eltern & Kontakt</p>
+
+              <div>
+                <label htmlFor="managed-player-parent-name" className="mb-1 block text-sm font-medium text-gray-300">
+                  Ansprechpartner / Elternteil
+                </label>
+                <input
+                  id="managed-player-parent-name"
+                  type="text"
+                  value={newPlayerParentName}
+                  onChange={(event) => setNewPlayerParentName(event.target.value)}
+                  className="input"
+                  placeholder="z. B. Erika Mustermann"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="managed-player-parent-phone" className="mb-1 block text-sm font-medium text-gray-300">
+                    Telefon
+                  </label>
+                  <input
+                    id="managed-player-parent-phone"
+                    type="tel"
+                    value={newPlayerParentPhone}
+                    onChange={(event) => setNewPlayerParentPhone(event.target.value)}
+                    className="input"
+                    placeholder="Telefonnummer"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="managed-player-parent-email" className="mb-1 block text-sm font-medium text-gray-300">
+                    E-Mail
+                  </label>
+                  <input
+                    id="managed-player-parent-email"
+                    type="email"
+                    value={newPlayerParentEmail}
+                    onChange={(event) => setNewPlayerParentEmail(event.target.value)}
+                    className="input"
+                    placeholder="E-Mail-Adresse"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="managed-player-emergency" className="mb-1 block text-sm font-medium text-gray-300">
+                  Notfallkontakt
+                </label>
+                <input
+                  id="managed-player-emergency"
+                  type="text"
+                  value={newPlayerEmergencyContact}
+                  onChange={(event) => setNewPlayerEmergencyContact(event.target.value)}
+                  className="input"
+                  placeholder="Name und Telefonnummer"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="managed-player-medical" className="mb-1 block text-sm font-medium text-gray-300">
+                  Medizinische Hinweise
+                </label>
+                <textarea
+                  id="managed-player-medical"
+                  value={newPlayerMedicalNotes}
+                  onChange={(event) => setNewPlayerMedicalNotes(event.target.value)}
+                  className="input min-h-[88px] resize-y"
+                  placeholder="Optional, z. B. Allergien oder wichtige Hinweise"
+                />
+              </div>
+            </div>
+
             <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-3 text-sm text-gray-300">
               Der Spieler bekommt zunächst keinen Login. Rückmeldungen können Trainer für ihn verwalten.
             </div>
@@ -600,32 +765,220 @@ export default function TeamRosterPage() {
 
             {/* Info grid */}
             <div className="p-5 space-y-4">
-              {selectedMember.role !== 'trainer' && (() => {
-                const hasJerseyNumber = selectedMember.jersey_number != null && selectedMember.jersey_number !== '';
-                const hasPosition = Boolean(selectedMember.position);
-                const hasHeight = Boolean(selectedMember.height_cm);
-                const hasWeight = Boolean(selectedMember.weight_kg);
-                const hasClothingSize = Boolean(selectedMember.clothing_size);
-                const hasShoeSize = Boolean(selectedMember.shoe_size);
-                const hasFootedness = Boolean(selectedMember.footedness);
-                const hasAnyPlayerInfo = hasJerseyNumber || hasPosition || hasHeight || hasWeight || hasClothingSize || hasShoeSize || hasFootedness;
+              {selectedMember.role !== 'trainer' && (
+                isEditingPlayer ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="edit-player-name" className="mb-1 block text-sm font-medium text-gray-300">
+                        Name *
+                      </label>
+                      <input
+                        id="edit-player-name"
+                        type="text"
+                        required
+                        value={editPlayerName}
+                        onChange={(event) => setEditPlayerName(event.target.value)}
+                        className="input"
+                      />
+                    </div>
 
-                if (!hasAnyPlayerInfo) {
-                  return <p className="text-center text-sm text-gray-400 py-2">Keine Daten hinterlegt.</p>;
-                }
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="edit-player-birth-date" className="mb-1 block text-sm font-medium text-gray-300">
+                          Geburtsdatum
+                        </label>
+                        <input
+                          id="edit-player-birth-date"
+                          type="date"
+                          value={editPlayerBirthDate}
+                          onChange={(event) => setEditPlayerBirthDate(event.target.value)}
+                          className="input"
+                        />
+                      </div>
 
-                return (
-                  <div className="grid grid-cols-2 gap-2">
-                    {hasJerseyNumber && renderInfoCard('Trikotnummer', `#${selectedMember.jersey_number}`)}
-                    {hasPosition && renderInfoCard('Position', selectedMember.position)}
-                    {hasHeight && renderInfoCard('Größe', `${selectedMember.height_cm} cm`)}
-                    {hasWeight && renderInfoCard('Gewicht', `${selectedMember.weight_kg} kg`)}
-                    {hasClothingSize && renderInfoCard('Kleidergröße', selectedMember.clothing_size)}
-                    {hasShoeSize && renderInfoCard('Schuhgröße', selectedMember.shoe_size)}
-                    {hasFootedness && renderInfoCard('Füßigkeit', selectedMember.footedness, 'col-span-2 capitalize')}
+                      <div>
+                        <label htmlFor="edit-player-jersey" className="mb-1 block text-sm font-medium text-gray-300">
+                          Trikotnummer
+                        </label>
+                        <input
+                          id="edit-player-jersey"
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={999}
+                          value={editPlayerJerseyNumber}
+                          onChange={(event) => setEditPlayerJerseyNumber(event.target.value)}
+                          className="input"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="edit-player-position" className="mb-1 block text-sm font-medium text-gray-300">
+                        Position
+                      </label>
+                      <input
+                        id="edit-player-position"
+                        type="text"
+                        value={editPlayerPosition}
+                        onChange={(event) => setEditPlayerPosition(event.target.value)}
+                        className="input"
+                      />
+                    </div>
+
+                    <div className="space-y-3 rounded-xl border border-gray-700/60 bg-gray-900/40 p-3">
+                      <p className="text-sm font-heading font-semibold text-white">Eltern & Kontakt</p>
+                      <div>
+                        <label htmlFor="edit-player-parent-name" className="mb-1 block text-sm font-medium text-gray-300">
+                          Ansprechpartner / Elternteil
+                        </label>
+                        <input
+                          id="edit-player-parent-name"
+                          type="text"
+                          value={editPlayerParentName}
+                          onChange={(event) => setEditPlayerParentName(event.target.value)}
+                          className="input"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label htmlFor="edit-player-parent-phone" className="mb-1 block text-sm font-medium text-gray-300">
+                            Telefon
+                          </label>
+                          <input
+                            id="edit-player-parent-phone"
+                            type="tel"
+                            value={editPlayerParentPhone}
+                            onChange={(event) => setEditPlayerParentPhone(event.target.value)}
+                            className="input"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="edit-player-parent-email" className="mb-1 block text-sm font-medium text-gray-300">
+                            E-Mail
+                          </label>
+                          <input
+                            id="edit-player-parent-email"
+                            type="email"
+                            value={editPlayerParentEmail}
+                            onChange={(event) => setEditPlayerParentEmail(event.target.value)}
+                            className="input"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="edit-player-emergency" className="mb-1 block text-sm font-medium text-gray-300">
+                          Notfallkontakt
+                        </label>
+                        <input
+                          id="edit-player-emergency"
+                          type="text"
+                          value={editPlayerEmergencyContact}
+                          onChange={(event) => setEditPlayerEmergencyContact(event.target.value)}
+                          className="input"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="edit-player-medical" className="mb-1 block text-sm font-medium text-gray-300">
+                          Medizinische Hinweise
+                        </label>
+                        <textarea
+                          id="edit-player-medical"
+                          value={editPlayerMedicalNotes}
+                          onChange={(event) => setEditPlayerMedicalNotes(event.target.value)}
+                          className="input min-h-[88px] resize-y"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={savePlayerProfile}
+                        disabled={updatePlayerMutation.isPending}
+                        className="btn btn-primary flex-1 disabled:opacity-50"
+                      >
+                        {updatePlayerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {updatePlayerMutation.isPending ? 'Speichert...' : 'Speichern'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPlayer(false)}
+                        className="btn btn-secondary flex-1"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
                   </div>
-                );
-              })()}
+                ) : (() => {
+                  const hasJerseyNumber = selectedMember.jersey_number != null && selectedMember.jersey_number !== '';
+                  const hasPosition = Boolean(selectedMember.position);
+                  const hasBirthDate = Boolean(selectedMember.birth_date);
+                  const hasHeight = Boolean(selectedMember.height_cm);
+                  const hasWeight = Boolean(selectedMember.weight_kg);
+                  const hasClothingSize = Boolean(selectedMember.clothing_size);
+                  const hasShoeSize = Boolean(selectedMember.shoe_size);
+                  const hasFootedness = Boolean(selectedMember.footedness);
+                  const isManagedPlayer = Number(selectedMember.is_registered) === 0;
+                  const hasParentName = Boolean(selectedMember.parent_contact_name);
+                  const hasParentPhone = Boolean(selectedMember.parent_contact_phone);
+                  const hasParentEmail = Boolean(selectedMember.parent_contact_email);
+                  const hasEmergencyContact = Boolean(selectedMember.emergency_contact);
+                  const hasMedicalNotes = Boolean(selectedMember.medical_notes);
+                  const hasAnyContactInfo = hasParentName || hasParentPhone || hasParentEmail || hasEmergencyContact || hasMedicalNotes;
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        {hasJerseyNumber && renderInfoCard('Trikotnummer', `#${selectedMember.jersey_number}`)}
+                        {hasPosition && renderInfoCard('Position', selectedMember.position)}
+                        {hasBirthDate && renderInfoCard('Geburtsdatum', String(selectedMember.birth_date).slice(0, 10).split('-').reverse().join('.'))}
+                        {renderInfoCard('Status', isManagedPlayer ? 'Trainerverwaltet' : 'Registriert')}
+                        {hasHeight && renderInfoCard('Größe', `${selectedMember.height_cm} cm`)}
+                        {hasWeight && renderInfoCard('Gewicht', `${selectedMember.weight_kg} kg`)}
+                        {hasClothingSize && renderInfoCard('Kleidergröße', selectedMember.clothing_size)}
+                        {hasShoeSize && renderInfoCard('Schuhgröße', selectedMember.shoe_size)}
+                        {hasFootedness && renderInfoCard('Füßigkeit', selectedMember.footedness, 'col-span-2 capitalize')}
+                      </div>
+
+                      <div className="rounded-xl border border-gray-700/60 bg-gray-900/40 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-sm font-heading font-semibold text-white">Eltern & Kontakt</p>
+                          {!hasAnyContactInfo && (
+                            <span className="text-xs text-gray-500">Nicht hinterlegt</span>
+                          )}
+                        </div>
+                        {hasAnyContactInfo ? (
+                          <div className="grid grid-cols-1 gap-2">
+                            {hasParentName && renderInfoCard('Ansprechpartner', selectedMember.parent_contact_name)}
+                            {hasParentPhone && renderInfoCard('Telefon', selectedMember.parent_contact_phone)}
+                            {hasParentEmail && renderInfoCard('E-Mail', selectedMember.parent_contact_email)}
+                            {hasEmergencyContact && renderInfoCard('Notfallkontakt', selectedMember.emergency_contact)}
+                            {hasMedicalNotes && renderInfoCard('Medizinische Hinweise', selectedMember.medical_notes)}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">Noch keine Kontaktinformationen gepflegt.</p>
+                        )}
+                      </div>
+
+                      {user?.role === 'trainer' && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingPlayer(true)}
+                          className="btn btn-secondary w-full"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                          Spielerprofil bearbeiten
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
 
               {selectedMember.role === 'trainer' && (() => {
                 const hasPhoneNumber = Boolean(selectedMember.phone_number);

@@ -56,6 +56,7 @@ export default function EventSquadPage() {
   const originFrom = locationStateFrom && locationStateFrom !== location.pathname
     ? locationStateFrom
     : '';
+  const backTarget = originFrom || `/events/${eventId}`;
 
   const isTrainer = user?.role === 'trainer';
 
@@ -525,8 +526,7 @@ export default function EventSquadPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              const target = originFrom || `/events/${eventId}`;
-              navigate(target, { replace: true });
+              navigate(backTarget, { replace: true });
             }}
             aria-label="Zurück zum Termin"
             title="Zurück zum Termin"
@@ -547,8 +547,7 @@ export default function EventSquadPage() {
         <button
           type="button"
           onClick={() => {
-            const target = originFrom || `/events/${eventId}`;
-            navigate(target, { replace: true });
+            navigate(backTarget, { replace: true });
           }}
           className="text-gray-300 hover:text-white"
           aria-label="Zurück"

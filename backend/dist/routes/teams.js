@@ -1964,6 +1964,12 @@ router.get('/:id/members', (req, res) => {
         COALESCE(tm.jersey_number, ${availableUserColumns.has('jersey_number') ? 'u.jersey_number' : 'NULL'}) as jersey_number,
         ${userColumnOrNull('footedness')},
         COALESCE(tm.position, ${availableUserColumns.has('position') ? 'u.position' : 'NULL'}) as position,
+        ${userColumnOrNull('parent_contact_name')},
+        ${userColumnOrNull('parent_contact_phone')},
+        ${userColumnOrNull('parent_contact_email')},
+        ${userColumnOrNull('emergency_contact')},
+        ${userColumnOrNull('medical_notes')},
+        ${userColumnOrNull('is_registered')},
         tm.role,
         tm.joined_at
       FROM team_members tm
@@ -2045,9 +2051,13 @@ router.delete('/:id/members/:userId', (req, res) => {
 router.post('/:id/players', async (req, res) => {
     try {
         const teamId = parseInt(req.params.id, 10);
-        const { name, birth_date, jersey_number, position } = req.body;
+        const { name, birth_date, jersey_number, position, parent_contact_name, parent_contact_phone, parent_contact_email, emergency_contact, medical_notes, } = req.body;
         const normalizedName = String(name || '').trim();
         const normalizedPosition = String(position || '').trim();
+        const normalizeOptionalText = (value, maxLength) => {
+            const normalized = String(value || '').trim();
+            return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized || null;
+        };
         const parsedJerseyNumber = jersey_number === null || jersey_number === undefined || String(jersey_number).trim() === ''
             ? null
             : Number(jersey_number);
@@ -2079,8 +2089,11 @@ router.post('/:id/players', async (req, res) => {
             const username = `managed-player-${teamId}-${seed}`;
             const email = `${username}@managed.teamvoteplus.local`;
             const password = (0, crypto_1.randomBytes)(24).toString('hex');
-            const userResult = init_1.default.prepare(`INSERT INTO users (username, email, password, name, role, is_registered, birth_date, jersey_number, position)
-         VALUES (?, ?, ?, ?, 'player', 0, ?, ?, ?)`).run(username, email, password, normalizedName, birth_date || null, parsedJerseyNumber, normalizedPosition || null);
+            const userResult = init_1.default.prepare(`INSERT INTO users (
+          username, email, password, name, role, is_registered, birth_date, jersey_number, position,
+          parent_contact_name, parent_contact_phone, parent_contact_email, emergency_contact, medical_notes
+        )
+         VALUES (?, ?, ?, ?, 'player', 0, ?, ?, ?, ?, ?, ?, ?, ?)`).run(username, email, password, normalizedName, birth_date || null, parsedJerseyNumber, normalizedPosition || null, normalizeOptionalText(parent_contact_name, 120), normalizeOptionalText(parent_contact_phone, 80), normalizeOptionalText(parent_contact_email, 160), normalizeOptionalText(emergency_contact, 240), normalizeOptionalText(medical_notes, 1000));
             const userId = Number(userResult.lastInsertRowid);
             init_1.default.prepare('INSERT INTO team_members (team_id, user_id, role, jersey_number, position) VALUES (?, ?, ?, ?, ?)').run(teamId, userId, 'player', parsedJerseyNumber, normalizedPosition || null);
             const upcomingEvents = init_1.default.prepare(`
@@ -2103,6 +2116,11 @@ router.post('/:id/players', async (req, res) => {
                 birth_date: birth_date || null,
                 jersey_number: parsedJerseyNumber,
                 position: normalizedPosition || null,
+                parent_contact_name: normalizeOptionalText(parent_contact_name, 120),
+                parent_contact_phone: normalizeOptionalText(parent_contact_phone, 80),
+                parent_contact_email: normalizeOptionalText(parent_contact_email, 160),
+                emergency_contact: normalizeOptionalText(emergency_contact, 240),
+                medical_notes: normalizeOptionalText(medical_notes, 1000),
                 role: 'player',
                 is_registered: 0,
             };
@@ -2112,6 +2130,61 @@ router.post('/:id/players', async (req, res) => {
     catch (error) {
         logger_1.logger.error('Create player error:', error);
         return res.status(500).json({ error: 'Failed to create player' });
+    }
+});
+router.put('/:id/players/:userId', (req, res) => {
+    try {
+        const teamId = parseInt(req.params.id, 10);
+        const userId = parseInt(req.params.userId, 10);
+        if (!Number.isFinite(teamId) || !Number.isFinite(userId)) {
+            return res.status(400).json({ error: 'Invalid request' });
+        }
+        const trainerMembership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
+        if (!trainerMembership || trainerMembership.role !== 'trainer') {
+            return res.status(403).json({ error: 'Only trainers can update players' });
+        }
+        const targetMembership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, userId);
+        if (!targetMembership || targetMembership.role === 'trainer') {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+        const { name, birth_date, jersey_number, position, parent_contact_name, parent_contact_phone, parent_contact_email, emergency_contact, medical_notes, } = req.body;
+        const normalizedName = String(name || '').trim();
+        if (!normalizedName) {
+            return res.status(400).json({ error: 'Player name is required' });
+        }
+        const parsedJerseyNumber = jersey_number === null || jersey_number === undefined || String(jersey_number).trim() === ''
+            ? null
+            : Number(jersey_number);
+        if (parsedJerseyNumber !== null && (!Number.isInteger(parsedJerseyNumber) || parsedJerseyNumber < 0 || parsedJerseyNumber > 999)) {
+            return res.status(400).json({ error: 'Invalid jersey number' });
+        }
+        const normalizeOptionalText = (value, maxLength) => {
+            const normalized = String(value || '').trim();
+            return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized || null;
+        };
+        const normalizedPosition = normalizeOptionalText(position, 40);
+        init_1.default.transaction(() => {
+            init_1.default.prepare(`
+        UPDATE users
+        SET name = ?,
+            birth_date = ?,
+            jersey_number = ?,
+            position = ?,
+            parent_contact_name = ?,
+            parent_contact_phone = ?,
+            parent_contact_email = ?,
+            emergency_contact = ?,
+            medical_notes = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(normalizedName, birth_date || null, parsedJerseyNumber, normalizedPosition, normalizeOptionalText(parent_contact_name, 120), normalizeOptionalText(parent_contact_phone, 80), normalizeOptionalText(parent_contact_email, 160), normalizeOptionalText(emergency_contact, 240), normalizeOptionalText(medical_notes, 1000), userId);
+            init_1.default.prepare('UPDATE team_members SET jersey_number = ?, position = ? WHERE team_id = ? AND user_id = ?').run(parsedJerseyNumber, normalizedPosition, teamId, userId);
+        })();
+        return res.json({ success: true });
+    }
+    catch (error) {
+        logger_1.logger.error('Update player profile error:', error);
+        return res.status(500).json({ error: 'Failed to update player' });
     }
 });
 // Upload team picture (trainers only)
