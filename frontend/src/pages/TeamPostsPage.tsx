@@ -3,46 +3,75 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
+  Archive,
   ArrowLeft,
   BarChart3,
   CheckCircle2,
+  Download,
+  Edit3,
   Eye,
   EyeOff,
+  FileText,
   Loader2,
   Megaphone,
   MessageSquare,
+  Paperclip,
   Pin,
   PinOff,
   Search,
   Send,
+  Trash2,
   Users,
   Vote,
+  X,
 } from 'lucide-react';
 import { postsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
+import AccessibleModal from '../components/AccessibleModal';
+import { resolveAssetUrl } from '../lib/utils';
 
 type FeedReaction = 'thumbs_up' | 'heart' | 'football' | 'check';
 
 type PostItem = {
   id: number;
   team_id: number;
-  type: 'announcement' | 'poll';
+  type: 'announcement' | 'poll' | 'event' | 'document';
   title: string;
   content?: string | null;
   poll_options?: string[];
   poll_results?: Array<{ option: string; count: number }>;
+  attachments?: Array<{
+    id: number;
+    file_name: string;
+    file_url: string;
+    mime_type: string;
+    file_size: number;
+  }>;
   reaction_counts?: Record<FeedReaction, number>;
   my_reactions?: FeedReaction[];
   is_pinned?: number;
+  archived_at?: string | null;
+  event_action?: string | null;
   created_at: string;
   created_by_name?: string;
+  created_by?: number;
   my_seen_at?: string | null;
   my_answer_option?: number | null;
   my_answered_at?: string | null;
   read_count?: number;
   unread_count?: number;
   member_count?: number;
+};
+
+type ReaderItem = {
+  id: number;
+  name: string;
+  role: string;
+  profile_picture?: string | null;
+  seen_at?: string | null;
+  answer_option?: number | null;
+  answered_at?: string | null;
 };
 
 const reactions: Array<{ key: FeedReaction; label: string; title: string }> = [
@@ -60,14 +89,20 @@ export default function TeamPostsPage() {
   const queryClient = useQueryClient();
   const goBack = useSmartBack();
 
-  const [scope, setScope] = useState<'open' | 'all'>(searchParams.get('scope') === 'open' ? 'open' : 'all');
-  const [postType, setPostType] = useState<'announcement' | 'poll'>('announcement');
+  const [scope, setScope] = useState<'open' | 'all' | 'archived'>(searchParams.get('scope') === 'open' ? 'open' : searchParams.get('scope') === 'archived' ? 'archived' : 'all');
+  const [postType, setPostType] = useState<'announcement' | 'poll' | 'document'>('announcement');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [optionsText, setOptionsText] = useState('Ja\nNein');
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [search, setSearch] = useState('');
-  const [feedType, setFeedType] = useState<'all' | 'announcement' | 'poll'>('all');
+  const [feedType, setFeedType] = useState<'all' | 'announcement' | 'poll' | 'document'>('all');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<PostItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editOptionsText, setEditOptionsText] = useState('');
+  const [readerPost, setReaderPost] = useState<PostItem | null>(null);
 
   const getSegmentButtonClass = (isActive: boolean) =>
     `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
@@ -100,7 +135,11 @@ export default function TeamPostsPage() {
   });
 
   useEffect(() => {
-    const queryScope = searchParams.get('scope') === 'open' ? 'open' : 'all';
+    const queryScope = searchParams.get('scope') === 'open'
+      ? 'open'
+      : searchParams.get('scope') === 'archived'
+        ? 'archived'
+        : 'all';
     if (queryScope !== scope) {
       setScope(queryScope);
     }
@@ -123,11 +162,11 @@ export default function TeamPostsPage() {
       });
   }, [feedType, posts, search]);
 
-  const handleScopeChange = (nextScope: 'open' | 'all') => {
+  const handleScopeChange = (nextScope: 'open' | 'all' | 'archived') => {
     setScope(nextScope);
     const nextParams = new URLSearchParams(searchParams);
-    if (nextScope === 'open') {
-      nextParams.set('scope', 'open');
+    if (nextScope !== 'all') {
+      nextParams.set('scope', nextScope);
     } else {
       nextParams.delete('scope');
     }
@@ -166,6 +205,31 @@ export default function TeamPostsPage() {
     onError: () => setErrorMessage('Konnte die Reaktion nicht speichern.'),
   });
 
+  const updatePostMutation = useMutation({
+    mutationFn: ({ postId, data }: { postId: number; data: Parameters<typeof postsAPI.updateTeamPost>[2] }) =>
+      postsAPI.updateTeamPost(teamId, postId, data),
+    onSuccess: async () => {
+      setEditingPost(null);
+      await invalidatePostQueries();
+    },
+    onError: () => setErrorMessage('Konnte den Beitrag nicht aktualisieren.'),
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: (postId: number) => postsAPI.deleteTeamPost(teamId, postId),
+    onSuccess: invalidatePostQueries,
+    onError: () => setErrorMessage('Konnte den Beitrag nicht löschen.'),
+  });
+
+  const { data: readers, isLoading: readersLoading } = useQuery({
+    queryKey: ['team-post-readers', teamId, readerPost?.id],
+    queryFn: async () => {
+      const response = await postsAPI.getPostReaders(teamId, readerPost!.id);
+      return response.data as ReaderItem[];
+    },
+    enabled: Boolean(readerPost && isTrainer),
+  });
+
   const createPostMutation = useMutation({
     mutationFn: async () => {
       const normalizedTitle = title.trim();
@@ -187,6 +251,20 @@ export default function TeamPostsPage() {
         throw new Error('Bitte mindestens 2 Antwortoptionen angeben.');
       }
 
+      if (postType === 'document' && attachments.length === 0) {
+        throw new Error('Bitte mindestens eine Datei anhängen.');
+      }
+
+      if (attachments.length > 0 || postType === 'document') {
+        const formData = new FormData();
+        formData.append('type', postType);
+        formData.append('title', normalizedTitle);
+        if (normalizedContent) formData.append('content', normalizedContent);
+        if (postType === 'poll') formData.append('options', JSON.stringify(options));
+        attachments.forEach((file) => formData.append('attachments', file));
+        return postsAPI.createTeamPost(teamId, formData);
+      }
+
       return postsAPI.createTeamPost(teamId, {
         type: postType,
         title: normalizedTitle,
@@ -198,6 +276,7 @@ export default function TeamPostsPage() {
       setTitle('');
       setContent('');
       setOptionsText('Ja\nNein');
+      setAttachments([]);
       setErrorMessage(null);
       await invalidatePostQueries();
     },
@@ -217,6 +296,38 @@ export default function TeamPostsPage() {
 
   const getPollTotal = (post: PostItem) =>
     (post.poll_results || []).reduce((total, result) => total + Number(result.count || 0), 0);
+
+  const getPostTypeMeta = (post: PostItem) => {
+    if (post.type === 'poll') return { label: 'Umfrage', icon: <BarChart3 className="h-3.5 w-3.5 text-primary-300" /> };
+    if (post.type === 'document') return { label: 'Dokument', icon: <FileText className="h-3.5 w-3.5 text-primary-300" /> };
+    if (post.type === 'event') return { label: 'Termin', icon: <MessageSquare className="h-3.5 w-3.5 text-primary-300" /> };
+    return { label: 'Nachricht', icon: <Megaphone className="h-3.5 w-3.5 text-primary-300" /> };
+  };
+
+  const formatFileSize = (size: number) => {
+    if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    if (size >= 1024) return `${Math.round(size / 1024)} KB`;
+    return `${size} B`;
+  };
+
+  const startEditing = (post: PostItem) => {
+    setEditingPost(post);
+    setEditTitle(post.title);
+    setEditContent(post.content || '');
+    setEditOptionsText((post.poll_options || []).join('\n'));
+  };
+
+  const saveEdit = () => {
+    if (!editingPost) return;
+    const data: Parameters<typeof postsAPI.updateTeamPost>[2] = {
+      title: editTitle.trim(),
+      content: editContent.trim(),
+    };
+    if (editingPost.type === 'poll') {
+      data.options = editOptionsText.split('\n').map((line) => line.trim()).filter(Boolean);
+    }
+    updatePostMutation.mutate({ postId: editingPost.id, data });
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 sm:space-y-6">
@@ -259,6 +370,16 @@ export default function TeamPostsPage() {
             >
               Offen
             </button>
+            {isTrainer && (
+              <button
+                type="button"
+                onClick={() => handleScopeChange('archived')}
+                className={getSegmentButtonClass(scope === 'archived')}
+                aria-pressed={scope === 'archived'}
+              >
+                Archiv
+              </button>
+            )}
           <button
             type="button"
             onClick={() => setFeedType('announcement')}
@@ -274,6 +395,14 @@ export default function TeamPostsPage() {
             aria-pressed={feedType === 'poll'}
           >
             Umfragen
+          </button>
+          <button
+            type="button"
+            onClick={() => setFeedType('document')}
+            className={getSegmentButtonClass(feedType === 'document')}
+            aria-pressed={feedType === 'document'}
+          >
+            Dokumente
           </button>
         </div>
 
@@ -313,6 +442,7 @@ export default function TeamPostsPage() {
             const isAnnouncementDone = Boolean(post.my_seen_at);
             const isPollDone = typeof post.my_answer_option === 'number' || Boolean(post.my_answered_at);
             const pollTotal = getPollTotal(post);
+            const postMeta = getPostTypeMeta(post);
 
             return (
               <article
@@ -325,8 +455,8 @@ export default function TeamPostsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 rounded-full border border-gray-700 bg-gray-950/60 px-2.5 py-1 text-xs font-semibold text-gray-200">
-                        {post.type === 'poll' ? <BarChart3 className="h-3.5 w-3.5 text-primary-300" /> : <Megaphone className="h-3.5 w-3.5 text-primary-300" />}
-                        {post.type === 'poll' ? 'Umfrage' : 'Nachricht'}
+                        {postMeta.icon}
+                        {postMeta.label}
                       </span>
                       {post.is_pinned ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-primary-500/60 bg-primary-900/30 px-2.5 py-1 text-xs font-semibold text-primary-100">
@@ -342,21 +472,77 @@ export default function TeamPostsPage() {
                   </div>
 
                   {isTrainer && (
-                    <button
-                      type="button"
-                      onClick={() => pinMutation.mutate({ postId: post.id, isPinned: !post.is_pinned })}
-                      disabled={pinMutation.isPending}
-                      className="icon-button h-11 w-11 shrink-0 rounded-full"
-                      aria-label={post.is_pinned ? 'Beitrag loslösen' : 'Beitrag anpinnen'}
-                      title={post.is_pinned ? 'Loslösen' : 'Anpinnen'}
-                    >
-                      {post.is_pinned ? <PinOff className="h-5 w-5" /> : <Pin className="h-5 w-5" />}
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {post.type !== 'event' && (
+                        <button
+                          type="button"
+                          onClick={() => startEditing(post)}
+                          className="icon-button h-10 w-10 rounded-full"
+                          aria-label="Beitrag bearbeiten"
+                          title="Bearbeiten"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => pinMutation.mutate({ postId: post.id, isPinned: !post.is_pinned })}
+                        disabled={pinMutation.isPending}
+                        className="icon-button h-10 w-10 rounded-full"
+                        aria-label={post.is_pinned ? 'Beitrag loslösen' : 'Beitrag anpinnen'}
+                        title={post.is_pinned ? 'Loslösen' : 'Anpinnen'}
+                      >
+                        {post.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updatePostMutation.mutate({ postId: post.id, data: { is_archived: !post.archived_at } })}
+                        disabled={updatePostMutation.isPending}
+                        className="icon-button h-10 w-10 rounded-full"
+                        aria-label={post.archived_at ? 'Beitrag aus Archiv holen' : 'Beitrag archivieren'}
+                        title={post.archived_at ? 'Aus Archiv holen' : 'Archivieren'}
+                      >
+                        <Archive className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Beitrag wirklich löschen? Er wird aus dem Feed entfernt, bleibt aber intern nachvollziehbar.')) {
+                            deletePostMutation.mutate(post.id);
+                          }
+                        }}
+                        disabled={deletePostMutation.isPending}
+                        className="icon-button h-10 w-10 rounded-full text-red-200"
+                        aria-label="Beitrag löschen"
+                        title="Löschen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
 
                 {post.content && (
                   <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed text-gray-100">{post.content}</p>
+                )}
+
+                {Array.isArray(post.attachments) && post.attachments.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {post.attachments.map((attachment) => (
+                      <a
+                        key={attachment.id}
+                        href={resolveAssetUrl(attachment.file_url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-700 bg-gray-950/50 px-3 py-2 text-gray-100 transition-colors hover:border-gray-500"
+                      >
+                        <FileText className="h-5 w-5 shrink-0 text-primary-300" />
+                        <span className="min-w-0 flex-1 truncate font-semibold">{attachment.file_name}</span>
+                        <span className="shrink-0 text-xs text-gray-400">{formatFileSize(Number(attachment.file_size || 0))}</span>
+                        <Download className="h-4 w-4 shrink-0 text-gray-300" />
+                      </a>
+                    ))}
+                  </div>
                 )}
 
                 {post.type === 'poll' && Array.isArray(post.poll_options) && post.poll_options.length > 0 && (
@@ -412,6 +598,16 @@ export default function TeamPostsPage() {
                       {post.type === 'poll' ? 'Beantwortet' : 'Gelesen'}
                     </span>
                   )}
+                  {isTrainer && (
+                    <button
+                      type="button"
+                      onClick={() => setReaderPost(post)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray-700 bg-gray-950/40 px-2.5 py-2 text-left text-gray-200 transition-colors hover:border-gray-500"
+                    >
+                      <Users className="h-4 w-4 text-primary-300" />
+                      Leseliste
+                    </button>
+                  )}
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -437,7 +633,7 @@ export default function TeamPostsPage() {
                     );
                   })}
 
-                  {post.type === 'announcement' && !isAnnouncementDone && (
+                  {post.type !== 'poll' && !isAnnouncementDone && (
                     <button
                       type="button"
                       onClick={() => markSeenMutation.mutate(post.id)}
@@ -486,6 +682,15 @@ export default function TeamPostsPage() {
                 <Vote className="h-4 w-4" />
                 Umfrage
               </button>
+              <button
+                type="button"
+                onClick={() => setPostType('document')}
+                className={getSegmentButtonClass(postType === 'document')}
+                aria-pressed={postType === 'document'}
+              >
+                <FileText className="h-4 w-4" />
+                Dokument
+              </button>
             </div>
           </div>
 
@@ -501,15 +706,17 @@ export default function TeamPostsPage() {
             />
           </div>
 
-          {postType === 'announcement' ? (
+          {postType === 'announcement' || postType === 'document' ? (
             <div>
-              <label htmlFor="team-post-content" className="mb-1 block text-sm font-medium text-gray-300">Nachricht</label>
+              <label htmlFor="team-post-content" className="mb-1 block text-sm font-medium text-gray-300">
+                {postType === 'document' ? 'Beschreibung' : 'Nachricht'}
+              </label>
               <textarea
                 id="team-post-content"
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 className="input min-h-[120px]"
-                placeholder="Information für das Team"
+                placeholder={postType === 'document' ? 'Kurzer Hinweis zur Datei' : 'Information für das Team'}
               />
             </div>
           ) : (
@@ -524,6 +731,30 @@ export default function TeamPostsPage() {
               />
             </div>
           )}
+
+          <div>
+            <label htmlFor="team-post-attachments" className="mb-1 block text-sm font-medium text-gray-300">
+              Anhänge {postType === 'document' ? '' : '(optional)'}
+            </label>
+            <input
+              id="team-post-attachments"
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.txt,.csv,.doc,.docx,.xls,.xlsx"
+              onChange={(event) => setAttachments(Array.from(event.target.files || []).slice(0, 5))}
+              className="block w-full text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-2 file:font-semibold file:text-white hover:file:bg-primary-700"
+            />
+            {attachments.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {attachments.map((file) => (
+                  <span key={`${file.name}-${file.size}`} className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-950/50 px-2.5 py-1.5 text-xs text-gray-200">
+                    <Paperclip className="h-3.5 w-3.5 text-primary-300" />
+                    {file.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
@@ -547,6 +778,105 @@ export default function TeamPostsPage() {
             )}
           </button>
         </section>
+      )}
+
+      {editingPost && (
+        <AccessibleModal
+          labelledBy="edit-feed-post-title"
+          onClose={() => setEditingPost(null)}
+          panelClassName="w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-2xl"
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 id="edit-feed-post-title" className="text-lg font-bold text-white">Beitrag bearbeiten</h2>
+            <button type="button" className="icon-button h-10 w-10 rounded-full" onClick={() => setEditingPost(null)} aria-label="Schließen">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="edit-post-title" className="mb-1 block text-sm font-medium text-gray-300">Titel</label>
+              <input
+                id="edit-post-title"
+                type="text"
+                value={editTitle}
+                onChange={(event) => setEditTitle(event.target.value)}
+                className="input"
+              />
+            </div>
+            {editingPost.type === 'poll' ? (
+              <div>
+                <label htmlFor="edit-post-options" className="mb-1 block text-sm font-medium text-gray-300">Antwortoptionen</label>
+                <textarea
+                  id="edit-post-options"
+                  value={editOptionsText}
+                  onChange={(event) => setEditOptionsText(event.target.value)}
+                  className="input min-h-[120px]"
+                />
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="edit-post-content" className="mb-1 block text-sm font-medium text-gray-300">Text</label>
+                <textarea
+                  id="edit-post-content"
+                  value={editContent}
+                  onChange={(event) => setEditContent(event.target.value)}
+                  className="input min-h-[120px]"
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={saveEdit}
+              disabled={updatePostMutation.isPending}
+              className="btn btn-primary w-full"
+            >
+              {updatePostMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Speichern
+            </button>
+          </div>
+        </AccessibleModal>
+      )}
+
+      {readerPost && (
+        <AccessibleModal
+          labelledBy="post-readers-title"
+          onClose={() => setReaderPost(null)}
+          panelClassName="w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-2xl"
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 id="post-readers-title" className="text-lg font-bold text-white">Leseliste</h2>
+              <p className="mt-1 text-sm text-gray-400">{readerPost.title}</p>
+            </div>
+            <button type="button" className="icon-button h-10 w-10 rounded-full" onClick={() => setReaderPost(null)} aria-label="Schließen">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {readersLoading ? (
+            <div className="flex items-center gap-2 text-gray-300">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Lädt...
+            </div>
+          ) : (
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+              {(readers || []).map((reader) => {
+                const done = readerPost.type === 'poll' ? Boolean(reader.answered_at) : Boolean(reader.seen_at);
+                const option = typeof reader.answer_option === 'number' ? readerPost.poll_options?.[reader.answer_option] : null;
+                return (
+                  <div key={reader.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-950/40 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white">{reader.name}</p>
+                      <p className="text-xs text-gray-400">{reader.role}{option ? ` · ${option}` : ''}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${done ? 'bg-green-900/40 text-green-200' : 'bg-yellow-900/40 text-yellow-200'}`}>
+                      {done ? (readerPost.type === 'poll' ? 'Beantwortet' : 'Gelesen') : 'Offen'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </AccessibleModal>
       )}
     </div>
   );

@@ -160,11 +160,17 @@ export interface TrainerInvite {
 export interface TeamPost {
     id: number;
     team_id: number;
-    type: 'announcement' | 'poll';
+    type: 'announcement' | 'poll' | 'event' | 'document';
     title: string;
     content: string | null;
     poll_options: string | null;
     is_active: number;
+    is_pinned: number;
+    archived_at: string | null;
+    deleted_at: string | null;
+    deleted_by: number | null;
+    event_id: number | null;
+    event_action: string | null;
     created_by: number;
     created_at: string;
     updated_at: string;

@@ -4,14 +4,69 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const fs_1 = __importDefault(require("fs"));
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
 const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
 const pushNotifications_1 = require("../services/pushNotifications");
 const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
+const uploadsDir = path_1.default.join(process.cwd(), 'uploads');
+if (!fs_1.default.existsSync(uploadsDir)) {
+    fs_1.default.mkdirSync(uploadsDir, { recursive: true });
+}
+const storage = multer_1.default.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(null, `feed-${uniqueSuffix}${path_1.default.extname(file.originalname).toLowerCase()}`);
+    },
+});
+const ALLOWED_ATTACHMENT_MIMES = new Set([
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'text/plain',
+    'text/csv',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+const ALLOWED_ATTACHMENT_EXTS = new Set([
+    '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.gif',
+    '.txt', '.csv', '.doc', '.docx', '.xls', '.xlsx',
+]);
+const uploadAttachments = (0, multer_1.default)({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+    fileFilter: (_req, file, cb) => {
+        const ext = path_1.default.extname(file.originalname).toLowerCase();
+        if (ALLOWED_ATTACHMENT_MIMES.has(file.mimetype) && ALLOWED_ATTACHMENT_EXTS.has(ext)) {
+            return cb(null, true);
+        }
+        cb(new Error('Dieser Dateityp wird im Team Feed nicht unterstützt'));
+    },
+});
 const FEED_REACTIONS = ['thumbs_up', 'heart', 'football', 'check'];
 const parseOptions = (value) => {
+    if (typeof value === 'string') {
+        const parsed = value.trim().startsWith('[')
+            ? (() => {
+                try {
+                    return JSON.parse(value);
+                }
+                catch {
+                    return value.split('\n');
+                }
+            })()
+            : value.split('\n');
+        return parseOptions(parsed);
+    }
     if (!Array.isArray(value))
         return [];
     return value
@@ -24,7 +79,7 @@ const getTeamMembership = (teamId, userId) => {
     return membership || null;
 };
 const getPostWithTeam = (teamId, postId) => {
-    return init_1.default.prepare('SELECT id, team_id, type, poll_options, title FROM team_posts WHERE id = ? AND team_id = ?').get(postId, teamId);
+    return init_1.default.prepare('SELECT id, team_id, type, poll_options, title, is_active FROM team_posts WHERE id = ? AND team_id = ?').get(postId, teamId);
 };
 const getTeamMemberIds = (teamId) => {
     const rows = init_1.default.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(teamId);
@@ -73,12 +128,23 @@ const getPostStats = (postId, teamId, userId, pollOptions) => {
 };
 const serializePost = (row, userId) => {
     const pollOptions = row.poll_options ? JSON.parse(row.poll_options) : [];
+    const attachments = init_1.default.prepare('SELECT id, post_id, file_name, file_url, mime_type, file_size, created_at FROM team_post_attachments WHERE post_id = ? ORDER BY id ASC').all(row.id);
     return {
         ...row,
         is_pinned: Number(row.is_pinned || 0),
         poll_options: pollOptions,
+        attachments,
         ...getPostStats(row.id, row.team_id, userId, pollOptions),
     };
+};
+const insertAttachments = (postId, files = []) => {
+    if (files.length === 0)
+        return;
+    const stmt = init_1.default.prepare(`INSERT INTO team_post_attachments (post_id, file_name, file_url, mime_type, file_size)
+     VALUES (?, ?, ?, ?, ?)`);
+    for (const file of files) {
+        stmt.run(postId, file.originalname, `/uploads/${file.filename}`, file.mimetype, file.size);
+    }
 };
 router.get('/posts/open', (req, res) => {
     try {
@@ -92,6 +158,9 @@ router.get('/posts/open', (req, res) => {
              p.poll_options,
              p.created_at,
              p.is_pinned,
+             p.archived_at,
+             p.event_id,
+             p.event_action,
              t.name as team_name,
              u.name as created_by_name,
              pr.seen_at as my_seen_at,
@@ -103,8 +172,9 @@ router.get('/posts/open', (req, res) => {
       INNER JOIN team_members tm ON tm.team_id = p.team_id AND tm.user_id = ?
       LEFT JOIN team_post_reads pr ON pr.post_id = p.id AND pr.user_id = ?
       WHERE p.is_active = 1
+        AND p.archived_at IS NULL
         AND (
-          (p.type = 'announcement' AND pr.seen_at IS NULL)
+          (p.type IN ('announcement', 'document', 'event') AND pr.seen_at IS NULL)
           OR (p.type = 'poll' AND pr.answered_at IS NULL)
         )
       ORDER BY p.is_pinned DESC, datetime(p.created_at) DESC
@@ -137,6 +207,9 @@ router.get('/teams/:id/posts', (req, res) => {
              p.created_at,
              p.updated_at,
              p.is_pinned,
+             p.archived_at,
+             p.event_id,
+             p.event_action,
              p.created_by,
              u.name as created_by_name,
              pr.seen_at as my_seen_at,
@@ -147,14 +220,18 @@ router.get('/teams/:id/posts', (req, res) => {
       LEFT JOIN team_post_reads pr ON pr.post_id = p.id AND pr.user_id = ?
       WHERE p.team_id = ?
         AND p.is_active = 1
+        AND (
+          (? = 'archived' AND p.archived_at IS NOT NULL)
+          OR (? != 'archived' AND p.archived_at IS NULL)
+        )
       ORDER BY p.is_pinned DESC, datetime(p.created_at) DESC
-    `).all(userId, teamId);
+    `).all(userId, teamId, scope, scope);
         const payload = rows
             .map((row) => serializePost(row, userId))
             .filter((row) => {
             if (scope !== 'open')
                 return true;
-            if (row.type === 'announcement') {
+            if (['announcement', 'document', 'event'].includes(row.type)) {
                 return !row.my_seen_at;
             }
             if (row.type === 'poll') {
@@ -169,7 +246,7 @@ router.get('/teams/:id/posts', (req, res) => {
         return res.status(500).json({ error: 'Failed to fetch team posts' });
     }
 });
-router.post('/teams/:id/posts', async (req, res) => {
+router.post('/teams/:id/posts', uploadAttachments.array('attachments', 5), async (req, res) => {
     try {
         const teamId = parseInt(req.params.id, 10);
         const userId = req.user.id;
@@ -177,11 +254,12 @@ router.post('/teams/:id/posts', async (req, res) => {
         const title = String(req.body?.title || '').trim();
         const content = String(req.body?.content || '').trim();
         const options = parseOptions(req.body?.options);
+        const files = (req.files || []);
         const membership = getTeamMembership(teamId, userId);
         if (!membership || membership.role !== 'trainer') {
             return res.status(403).json({ error: 'Only trainers can create posts' });
         }
-        if (!['announcement', 'poll'].includes(type)) {
+        if (!['announcement', 'poll', 'document'].includes(type)) {
             return res.status(400).json({ error: 'Invalid post type' });
         }
         if (!title) {
@@ -193,18 +271,22 @@ router.post('/teams/:id/posts', async (req, res) => {
         if (type === 'poll' && options.length < 2) {
             return res.status(400).json({ error: 'Poll needs at least two options' });
         }
+        if (type === 'document' && files.length === 0) {
+            return res.status(400).json({ error: 'Bitte mindestens eine Datei anhängen' });
+        }
         const result = init_1.default.prepare('INSERT INTO team_posts (team_id, type, title, content, poll_options, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(teamId, type, title, content || null, type === 'poll' ? JSON.stringify(options) : null, userId);
         const createdPostId = Number(result.lastInsertRowid);
+        insertAttachments(createdPostId, files);
         const memberIds = getTeamMemberIds(teamId).filter((id) => id !== userId);
         const team = init_1.default.prepare('SELECT name FROM teams WHERE id = ?').get(teamId);
         if (memberIds.length > 0) {
             await (0, pushNotifications_1.sendPushToUsers)(memberIds, {
-                title: type === 'poll' ? 'Neue Umfrage' : 'Neue Nachricht',
+                title: type === 'poll' ? 'Neue Umfrage' : type === 'document' ? 'Neue Datei' : 'Neue Nachricht',
                 body: `${team?.name ? `${team.name}: ` : ''}${title}`,
                 url: `/teams/${teamId}/posts?scope=all`,
             });
         }
-        const created = init_1.default.prepare(`SELECT p.id, p.team_id, p.type, p.title, p.content, p.poll_options, p.created_at, p.updated_at, p.is_pinned, p.created_by, u.name as created_by_name,
+        const created = init_1.default.prepare(`SELECT p.id, p.team_id, p.type, p.title, p.content, p.poll_options, p.created_at, p.updated_at, p.is_pinned, p.archived_at, p.event_id, p.event_action, p.created_by, u.name as created_by_name,
               NULL as my_seen_at, NULL as my_answer_option, NULL as my_answered_at
        FROM team_posts p
        INNER JOIN users u ON u.id = p.created_by
@@ -221,7 +303,15 @@ router.patch('/teams/:teamId/posts/:postId', (req, res) => {
         const teamId = parseInt(req.params.teamId, 10);
         const postId = parseInt(req.params.postId, 10);
         const userId = req.user.id;
+        const hasPinned = Object.prototype.hasOwnProperty.call(req.body || {}, 'is_pinned');
+        const hasArchived = Object.prototype.hasOwnProperty.call(req.body || {}, 'is_archived');
         const isPinned = Boolean(req.body?.is_pinned);
+        const isArchived = Boolean(req.body?.is_archived);
+        const nextTitle = typeof req.body?.title === 'string' ? req.body.title.trim() : undefined;
+        const nextContent = typeof req.body?.content === 'string' ? req.body.content.trim() : undefined;
+        const nextOptions = Object.prototype.hasOwnProperty.call(req.body || {}, 'options')
+            ? parseOptions(req.body?.options)
+            : undefined;
         const membership = getTeamMembership(teamId, userId);
         if (!membership || membership.role !== 'trainer') {
             return res.status(403).json({ error: 'Only trainers can update posts' });
@@ -230,12 +320,106 @@ router.patch('/teams/:teamId/posts/:postId', (req, res) => {
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        init_1.default.prepare('UPDATE team_posts SET is_pinned = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND team_id = ?').run(isPinned ? 1 : 0, postId, teamId);
-        return res.json({ success: true, is_pinned: isPinned ? 1 : 0 });
+        if (post.is_active !== 1) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+        if (nextTitle !== undefined && !nextTitle) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+        if (post.type === 'announcement' && nextContent !== undefined && !nextContent) {
+            return res.status(400).json({ error: 'Content is required for announcements' });
+        }
+        if (post.type === 'poll' && nextOptions !== undefined && nextOptions.length < 2) {
+            return res.status(400).json({ error: 'Poll needs at least two options' });
+        }
+        const updates = [];
+        const params = [];
+        if (hasPinned) {
+            updates.push('is_pinned = ?');
+            params.push(isPinned ? 1 : 0);
+        }
+        if (hasArchived) {
+            updates.push('archived_at = ?');
+            params.push(isArchived ? new Date().toISOString() : null);
+        }
+        if (nextTitle !== undefined) {
+            updates.push('title = ?');
+            params.push(nextTitle);
+        }
+        if (nextContent !== undefined) {
+            updates.push('content = ?');
+            params.push(nextContent || null);
+        }
+        if (post.type === 'poll' && nextOptions !== undefined) {
+            updates.push('poll_options = ?');
+            params.push(JSON.stringify(nextOptions));
+            init_1.default.prepare('UPDATE team_post_reads SET answer_option = NULL, answered_at = NULL WHERE post_id = ?').run(postId);
+        }
+        if (updates.length > 0) {
+            init_1.default.prepare(`UPDATE team_posts SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND team_id = ?`).run(...params, postId, teamId);
+        }
+        return res.json({ success: true });
     }
     catch (error) {
         logger_1.logger.error('Update team post error:', error);
         return res.status(500).json({ error: 'Failed to update post' });
+    }
+});
+router.delete('/teams/:teamId/posts/:postId', (req, res) => {
+    try {
+        const teamId = parseInt(req.params.teamId, 10);
+        const postId = parseInt(req.params.postId, 10);
+        const userId = req.user.id;
+        const membership = getTeamMembership(teamId, userId);
+        if (!membership || membership.role !== 'trainer') {
+            return res.status(403).json({ error: 'Only trainers can delete posts' });
+        }
+        const post = getPostWithTeam(teamId, postId);
+        if (!post || post.is_active !== 1) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+        init_1.default.prepare(`UPDATE team_posts
+       SET is_active = 0, deleted_at = CURRENT_TIMESTAMP, deleted_by = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND team_id = ?`).run(userId, postId, teamId);
+        return res.json({ success: true });
+    }
+    catch (error) {
+        logger_1.logger.error('Delete team post error:', error);
+        return res.status(500).json({ error: 'Failed to delete post' });
+    }
+});
+router.get('/teams/:teamId/posts/:postId/readers', (req, res) => {
+    try {
+        const teamId = parseInt(req.params.teamId, 10);
+        const postId = parseInt(req.params.postId, 10);
+        const userId = req.user.id;
+        const membership = getTeamMembership(teamId, userId);
+        if (!membership || membership.role !== 'trainer') {
+            return res.status(403).json({ error: 'Only trainers can view read lists' });
+        }
+        const post = getPostWithTeam(teamId, postId);
+        if (!post || post.is_active !== 1) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+        const rows = init_1.default.prepare(`
+      SELECT u.id,
+             u.name,
+             u.profile_picture,
+             tm.role,
+             pr.seen_at,
+             pr.answer_option,
+             pr.answered_at
+      FROM team_members tm
+      INNER JOIN users u ON u.id = tm.user_id
+      LEFT JOIN team_post_reads pr ON pr.post_id = ? AND pr.user_id = u.id
+      WHERE tm.team_id = ?
+      ORDER BY u.name COLLATE NOCASE ASC
+    `).all(postId, teamId);
+        return res.json(rows);
+    }
+    catch (error) {
+        logger_1.logger.error('Get post readers error:', error);
+        return res.status(500).json({ error: 'Failed to fetch read list' });
     }
 });
 router.post('/teams/:teamId/posts/:postId/reactions', (req, res) => {

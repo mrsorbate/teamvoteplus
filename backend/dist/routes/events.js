@@ -8,6 +8,7 @@ const init_1 = __importDefault(require("../database/init"));
 const auth_1 = require("../middleware/auth");
 const crypto_1 = require("crypto");
 const pushNotifications_1 = require("../services/pushNotifications");
+const teamFeed_1 = require("../services/teamFeed");
 const validation_1 = require("../utils/validation");
 const logger_1 = require("../utils/logger");
 const eventHelpers_1 = require("../services/eventHelpers");
@@ -469,6 +470,15 @@ router.post('/', async (req, res) => {
                     url: first?.id ? `/events/${first.id}` : `/teams/${team_id}/events`,
                 });
             }
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds: targetTeamIds,
+                eventId: Number(createdEvents[0]?.id || 0) || null,
+                action: 'created',
+                eventTitle: title,
+                eventDate: (0, eventHelpers_1.formatEventDateTime)(String(createdEvents[0]?.start_time || start_time)),
+                createdBy: req.user.id,
+                details: createdEvents.length > 1 ? `${createdEvents.length} Termine in Serie erstellt.` : null,
+            });
             return res.status(201).json({
                 message: `Created ${createdEvents.length} events in series`,
                 series_id: seriesId,
@@ -489,6 +499,14 @@ router.post('/', async (req, res) => {
                     url: `/events/${result.lastInsertRowid}`,
                 });
             }
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds: targetTeamIds,
+                eventId: Number(result.lastInsertRowid),
+                action: 'created',
+                eventTitle: title,
+                eventDate: (0, eventHelpers_1.formatEventDateTime)(start_time),
+                createdBy: req.user.id,
+            });
             return res.status(201).json({
                 id: result.lastInsertRowid,
                 team_id,
@@ -647,6 +665,15 @@ router.put('/:id', (req, res) => {
                     }
                 }
             })();
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds: eventTeamIds,
+                eventId,
+                action: 'updated',
+                eventTitle: title,
+                eventDate: (0, eventHelpers_1.formatEventDateTime)(start_time),
+                createdBy: req.user.id,
+                details: 'Terminserie wurde aktualisiert.',
+            });
             return res.json({ success: true });
         }
         const eventsToUpdate = updateSeries && event.series_id
@@ -664,6 +691,15 @@ router.put('/:id', (req, res) => {
             updateStmt.run(title, type, description || null, resolvedLocation, location_venue || null, location_street || null, location_zip_city || null, pitch_type || null, meeting_point || null, arrivalVal(arrival_minutes), nextStart.toISOString(), nextEnd.toISOString(), nextRsvp, durationVal(duration_minutes), visibilityVal(visibility_all), resolvedInviteAll ? 1 : 0, updateSeries && event.series_id ? event.series_id : null, targetEvent.id);
             syncInvitesForEvent(targetEvent.id);
         }
+        (0, teamFeed_1.createEventFeedPosts)({
+            teamIds: eventTeamIds,
+            eventId,
+            action: 'updated',
+            eventTitle: title,
+            eventDate: (0, eventHelpers_1.formatEventDateTime)(start_time),
+            createdBy: req.user.id,
+            details: updateSeries && event.series_id ? 'Terminserie wurde aktualisiert.' : null,
+        });
         return res.json({ success: true });
     }
     catch (error) {
@@ -796,6 +832,15 @@ router.delete('/:id', async (req, res) => {
                     url: `/teams/${event.team_id}/events`,
                 });
             }
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds,
+                eventId: null,
+                action: 'cancelled',
+                eventTitle: event.title || 'Terminserie',
+                eventDate: (0, eventHelpers_1.formatEventDateTime)(event.start_time),
+                createdBy: req.user.id,
+                details: deleteNote || 'Terminserie wurde abgesagt.',
+            });
             res.json({ success: true, deleted_count: result.changes });
         }
         else {
@@ -818,6 +863,15 @@ router.delete('/:id', async (req, res) => {
                     url: `/teams/${eventToDelete.team_id}/events`,
                 });
             }
+            (0, teamFeed_1.createEventFeedPosts)({
+                teamIds,
+                eventId: null,
+                action: 'cancelled',
+                eventTitle: eventToDelete.title || 'Termin',
+                eventDate: (0, eventHelpers_1.formatEventDateTime)(eventToDelete.start_time),
+                createdBy: req.user.id,
+                details: deleteNote || 'Termin wurde abgesagt.',
+            });
             res.json({ success: true, deleted_count: 1 });
         }
     }

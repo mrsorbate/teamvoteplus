@@ -215,21 +215,39 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
-  -- Team posts (announcements + polls)
+  -- Team posts (announcements, polls, event entries, documents)
   CREATE TABLE IF NOT EXISTS team_posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     team_id INTEGER NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('announcement', 'poll')),
+    type TEXT NOT NULL CHECK(type IN ('announcement', 'poll', 'event', 'document')),
     title TEXT NOT NULL,
     content TEXT,
     poll_options TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     is_pinned INTEGER NOT NULL DEFAULT 0,
+    archived_at DATETIME,
+    deleted_at DATETIME,
+    deleted_by INTEGER,
+    event_id INTEGER,
+    event_action TEXT,
     created_by INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (deleted_by) REFERENCES users(id),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS team_post_attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    file_name TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES team_posts(id) ON DELETE CASCADE
   );
 
   -- Per-user post state: seen for announcements, answer for polls
@@ -280,6 +298,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_team_posts_team_active_created ON team_posts(team_id, is_active, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_team_posts_team_created ON team_posts(team_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_team_posts_active ON team_posts(is_active);
+  CREATE INDEX IF NOT EXISTS idx_team_posts_archived_at ON team_posts(archived_at);
+  CREATE INDEX IF NOT EXISTS idx_team_post_attachments_post ON team_post_attachments(post_id);
   CREATE INDEX IF NOT EXISTS idx_team_post_reads_post_user ON team_post_reads(post_id, user_id);
   CREATE INDEX IF NOT EXISTS idx_team_post_reads_user ON team_post_reads(user_id);
   CREATE INDEX IF NOT EXISTS idx_team_post_reactions_post ON team_post_reactions(post_id);
@@ -382,11 +402,75 @@ try {
     addInviteColumn('player_birth_date', 'DATE');
     addInviteColumn('player_jersey_number', 'INTEGER');
     const postColumns = db.pragma('table_info(team_posts)');
-    const hasPostPinned = postColumns.some((col) => col.name === 'is_pinned');
-    if (!hasPostPinned) {
+    if (!postColumns.some((col) => col.name === 'is_pinned')) {
         db.exec('ALTER TABLE team_posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0');
         logger_1.logger.info('Added is_pinned column to team_posts table');
     }
+    const postTable = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'team_posts'").get();
+    if (postTable?.sql && !postTable.sql.includes("'event'")) {
+        db.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE IF NOT EXISTS team_posts_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        team_id INTEGER NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('announcement', 'poll', 'event', 'document')),
+        title TEXT NOT NULL,
+        content TEXT,
+        poll_options TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        is_pinned INTEGER NOT NULL DEFAULT 0,
+        archived_at DATETIME,
+        deleted_at DATETIME,
+        deleted_by INTEGER,
+        event_id INTEGER,
+        event_action TEXT,
+        created_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id),
+        FOREIGN KEY (deleted_by) REFERENCES users(id),
+        FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL
+      );
+      INSERT INTO team_posts_new (
+        id, team_id, type, title, content, poll_options, is_active, is_pinned,
+        created_by, created_at, updated_at
+      )
+      SELECT id, team_id, type, title, content, poll_options, is_active, is_pinned,
+             created_by, created_at, updated_at
+      FROM team_posts;
+      DROP TABLE team_posts;
+      ALTER TABLE team_posts_new RENAME TO team_posts;
+      PRAGMA foreign_keys = ON;
+    `);
+        logger_1.logger.info('Recreated team_posts table with extended feed post types');
+    }
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS team_post_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      file_name TEXT NOT NULL,
+      file_url TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      file_size INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (post_id) REFERENCES team_posts(id) ON DELETE CASCADE
+    );
+  `);
+    const refreshedPostColumns = db.pragma('table_info(team_posts)');
+    const addPostColumn = (name, sqlType) => {
+        if (!refreshedPostColumns.some((col) => col.name === name)) {
+            db.exec(`ALTER TABLE team_posts ADD COLUMN ${name} ${sqlType}`);
+            logger_1.logger.info(`Added ${name} column to team_posts table`);
+        }
+    };
+    addPostColumn('archived_at', 'DATETIME');
+    addPostColumn('deleted_at', 'DATETIME');
+    addPostColumn('deleted_by', 'INTEGER');
+    addPostColumn('event_id', 'INTEGER');
+    addPostColumn('event_action', 'TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_team_posts_archived_at ON team_posts(archived_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_team_post_attachments_post ON team_post_attachments(post_id)');
     // Add series_id to events for recurring events
     const eventColumns = db.pragma('table_info(events)');
     const hasSeriesId = eventColumns.some((col) => col.name === 'series_id');

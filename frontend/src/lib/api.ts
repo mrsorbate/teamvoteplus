@@ -364,13 +364,13 @@ export const notificationsAPI = {
 export const postsAPI = {
   getOpen: () => api.get('/posts/open'),
 
-  getTeamPosts: (teamId: number, scope: 'open' | 'all' = 'all') =>
+  getTeamPosts: (teamId: number, scope: 'open' | 'all' | 'archived' = 'all') =>
     api.get(`/teams/${teamId}/posts?scope=${scope}`),
 
   createTeamPost: (
     teamId: number,
-    data: {
-      type: 'announcement' | 'poll';
+    data: FormData | {
+      type: 'announcement' | 'poll' | 'document';
       title: string;
       content?: string;
       options?: string[];
@@ -383,8 +383,20 @@ export const postsAPI = {
   answerPoll: (teamId: number, postId: number, optionIndex: number) =>
     api.post(`/teams/${teamId}/posts/${postId}/answer`, { optionIndex }),
 
-  updateTeamPost: (teamId: number, postId: number, data: { is_pinned?: boolean }) =>
+  updateTeamPost: (teamId: number, postId: number, data: {
+    is_pinned?: boolean;
+    is_archived?: boolean;
+    title?: string;
+    content?: string;
+    options?: string[];
+  }) =>
     api.patch(`/teams/${teamId}/posts/${postId}`, data),
+
+  deleteTeamPost: (teamId: number, postId: number) =>
+    api.delete(`/teams/${teamId}/posts/${postId}`),
+
+  getPostReaders: (teamId: number, postId: number) =>
+    api.get(`/teams/${teamId}/posts/${postId}/readers`),
 
   toggleReaction: (teamId: number, postId: number, reaction: string) =>
     api.post(`/teams/${teamId}/posts/${postId}/reactions`, { reaction }),
