@@ -14,7 +14,6 @@ const auth_1 = require("../middleware/auth");
 const client_1 = require("../services/fussballDe/client");
 const pushNotifications_1 = require("../services/pushNotifications");
 const teamFeed_1 = require("../services/teamFeed");
-const publicUrl_1 = require("../utils/publicUrl");
 const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 const hasTeamsCalendarTokenColumn = (() => {
@@ -1987,35 +1986,74 @@ router.delete('/:id/members/:userId', (req, res) => {
 // Create new player (trainer only)
 router.post('/:id/players', async (req, res) => {
     try {
-        const teamId = parseInt(req.params.id);
-        const { name, birth_date, jersey_number } = req.body;
-        if (!name) {
+        const teamId = parseInt(req.params.id, 10);
+        const { name, birth_date, jersey_number, position } = req.body;
+        const normalizedName = String(name || '').trim();
+        const normalizedPosition = String(position || '').trim();
+        const parsedJerseyNumber = jersey_number === null || jersey_number === undefined || String(jersey_number).trim() === ''
+            ? null
+            : Number(jersey_number);
+        if (!normalizedName) {
             return res.status(400).json({ error: 'Player name is required' });
+        }
+        if (parsedJerseyNumber !== null && (!Number.isInteger(parsedJerseyNumber) || parsedJerseyNumber < 0 || parsedJerseyNumber > 999)) {
+            return res.status(400).json({ error: 'Invalid jersey number' });
         }
         // Check if user is trainer of this team
         const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
         if (!membership || membership.role !== 'trainer') {
             return res.status(403).json({ error: 'Only trainers can create players' });
         }
-        // Generate unique token
-        const token = (0, crypto_1.randomBytes)(16).toString('hex');
-        // Create invite with player info
-        const stmt = init_1.default.prepare('INSERT INTO team_invites (team_id, token, role, created_by, player_name, player_birth_date, player_jersey_number, max_uses) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        const result = stmt.run(teamId, token, 'player', req.user.id, name, birth_date || null, jersey_number || null, 1);
-        const frontendUrl = (0, publicUrl_1.getPublicFrontendBaseUrl)(req);
-        const inviteUrl = `${frontendUrl}/invite/${token}`;
-        res.status(201).json({
-            id: result.lastInsertRowid,
-            name,
-            birth_date,
-            jersey_number,
-            token,
-            invite_url: inviteUrl
-        });
+        const existingPlayer = init_1.default.prepare(`
+      SELECT u.id
+      FROM users u
+      INNER JOIN team_members tm ON tm.user_id = u.id
+      WHERE tm.team_id = ?
+        AND LOWER(u.name) = LOWER(?)
+        AND tm.role = 'player'
+      LIMIT 1
+    `).get(teamId, normalizedName);
+        if (existingPlayer) {
+            return res.status(409).json({ error: 'Ein Spieler mit diesem Namen ist bereits im Team' });
+        }
+        const created = init_1.default.transaction(() => {
+            const seed = `${Date.now()}-${(0, crypto_1.randomBytes)(6).toString('hex')}`;
+            const username = `managed-player-${teamId}-${seed}`;
+            const email = `${username}@managed.teamvoteplus.local`;
+            const password = (0, crypto_1.randomBytes)(24).toString('hex');
+            const userResult = init_1.default.prepare(`INSERT INTO users (username, email, password, name, role, is_registered, birth_date, jersey_number, position)
+         VALUES (?, ?, ?, ?, 'player', 0, ?, ?, ?)`).run(username, email, password, normalizedName, birth_date || null, parsedJerseyNumber, normalizedPosition || null);
+            const userId = Number(userResult.lastInsertRowid);
+            init_1.default.prepare('INSERT INTO team_members (team_id, user_id, role, jersey_number, position) VALUES (?, ?, ?, ?, ?)').run(teamId, userId, 'player', parsedJerseyNumber, normalizedPosition || null);
+            const upcomingEvents = init_1.default.prepare(`
+        SELECT DISTINCT e.id
+        FROM events e
+        LEFT JOIN event_teams et ON et.event_id = e.id
+        WHERE (e.team_id = ? OR et.team_id = ?)
+          AND datetime(e.start_time) >= datetime('now')
+      `).all(teamId, teamId);
+            const responseStmt = init_1.default.prepare(`
+        INSERT OR IGNORE INTO event_responses (event_id, user_id, status)
+        VALUES (?, ?, 'pending')
+      `);
+            for (const event of upcomingEvents) {
+                responseStmt.run(event.id, userId);
+            }
+            return {
+                id: userId,
+                name: normalizedName,
+                birth_date: birth_date || null,
+                jersey_number: parsedJerseyNumber,
+                position: normalizedPosition || null,
+                role: 'player',
+                is_registered: 0,
+            };
+        })();
+        return res.status(201).json(created);
     }
     catch (error) {
         logger_1.logger.error('Create player error:', error);
-        res.status(500).json({ error: 'Failed to create player' });
+        return res.status(500).json({ error: 'Failed to create player' });
     }
 });
 // Upload team picture (trainers only)

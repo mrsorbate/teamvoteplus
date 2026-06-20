@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { invitesAPI, teamsAPI } from '../lib/api';
-import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw, Shield, User } from 'lucide-react';
+import { ArrowLeft, Users, X, Link as LinkIcon, Copy, RotateCcw, Shield, User, Plus, Loader2 } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 import PlayerInviteManager from '../components/PlayerInviteManager';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useSmartBack } from '../hooks/useSmartBack';
 import { useToast } from '../lib/useToast';
@@ -17,6 +18,11 @@ export default function TeamRosterPage() {
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [joinLinkCopied, setJoinLinkCopied] = useState(false);
+  const [showCreatePlayerModal, setShowCreatePlayerModal] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerBirthDate, setNewPlayerBirthDate] = useState('');
+  const [newPlayerJerseyNumber, setNewPlayerJerseyNumber] = useState('');
+  const [newPlayerPosition, setNewPlayerPosition] = useState('');
   const { user } = useAuthStore();
   const goBack = useSmartBack();
   const { showToast } = useToast();
@@ -82,6 +88,29 @@ export default function TeamRosterPage() {
     },
   });
 
+  const createManagedPlayerMutation = useMutation({
+    mutationFn: () => teamsAPI.createPlayer(teamId, {
+      name: newPlayerName.trim(),
+      birth_date: newPlayerBirthDate || undefined,
+      jersey_number: newPlayerJerseyNumber.trim() === '' ? null : Number(newPlayerJerseyNumber),
+      position: newPlayerPosition.trim() || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['all-events'] });
+      setShowCreatePlayerModal(false);
+      setNewPlayerName('');
+      setNewPlayerBirthDate('');
+      setNewPlayerJerseyNumber('');
+      setNewPlayerPosition('');
+      showToast('Spieler wurde angelegt', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Spieler konnte nicht angelegt werden', 'error');
+    },
+  });
+
   const copyTextToClipboard = async (value: string): Promise<boolean> => {
     // Prefer modern clipboard API when available (requires secure context).
     if (navigator.clipboard && window.isSecureContext) {
@@ -129,6 +158,30 @@ export default function TeamRosterPage() {
     } catch {
       showToast('Beitrittslink konnte nicht kopiert werden', 'error');
     }
+  };
+
+  const closeCreatePlayerModal = () => {
+    if (createManagedPlayerMutation.isPending) return;
+    setShowCreatePlayerModal(false);
+  };
+
+  const handleCreatePlayer = (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!newPlayerName.trim()) {
+      showToast('Bitte einen Spielernamen eingeben', 'warning');
+      return;
+    }
+
+    if (newPlayerJerseyNumber.trim() !== '') {
+      const parsed = Number(newPlayerJerseyNumber);
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 999) {
+        showToast('Trikotnummer muss zwischen 0 und 999 liegen', 'warning');
+        return;
+      }
+    }
+
+    createManagedPlayerMutation.mutate();
   };
 
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
@@ -223,13 +276,25 @@ export default function TeamRosterPage() {
         </div>
 
         <div className="card">
-          <h2 className="section-heading mb-4">
-            <User className="w-5 h-5 text-green-400" />
-            Spieler
-            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-700/40">
-              {players.length}
-            </span>
-          </h2>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="section-heading">
+              <User className="w-5 h-5 text-green-400" />
+              Spieler
+              <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-700/40 sm:ml-2">
+                {players.length}
+              </span>
+            </h2>
+            {user?.role === 'trainer' && (
+              <button
+                type="button"
+                onClick={() => setShowCreatePlayerModal(true)}
+                className="btn btn-primary w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Spieler hinzufügen
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
             {players.map((player: any) => {
               const hasJersey = player.jersey_number != null && player.jersey_number !== '';
@@ -346,6 +411,119 @@ export default function TeamRosterPage() {
 
         {user?.role === 'trainer' && <PlayerInviteManager teamId={teamId} />}
       </div>
+
+      {showCreatePlayerModal && (
+        <AccessibleModal
+          labelledBy="create-managed-player-title"
+          onClose={closeCreatePlayerModal}
+          bottomSheet
+          panelClassName="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal p-5"
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h3 id="create-managed-player-title" className="text-xl font-heading font-bold text-white">
+                Spieler hinzufügen
+              </h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Dieser Spieler wird direkt im Kader angelegt und vom Trainer verwaltet.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={closeCreatePlayerModal}
+              className="compact-icon-button rounded-full bg-gray-700/60"
+              aria-label="Modal schließen"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <form onSubmit={handleCreatePlayer} className="space-y-4">
+            <div>
+              <label htmlFor="managed-player-name" className="mb-1 block text-sm font-medium text-gray-300">
+                Name *
+              </label>
+              <input
+                id="managed-player-name"
+                type="text"
+                required
+                value={newPlayerName}
+                onChange={(event) => setNewPlayerName(event.target.value)}
+                className="input"
+                placeholder="z. B. Max Mustermann"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="managed-player-birth-date" className="mb-1 block text-sm font-medium text-gray-300">
+                  Geburtsdatum
+                </label>
+                <input
+                  id="managed-player-birth-date"
+                  type="date"
+                  value={newPlayerBirthDate}
+                  onChange={(event) => setNewPlayerBirthDate(event.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="managed-player-jersey" className="mb-1 block text-sm font-medium text-gray-300">
+                  Trikotnummer
+                </label>
+                <input
+                  id="managed-player-jersey"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={999}
+                  value={newPlayerJerseyNumber}
+                  onChange={(event) => setNewPlayerJerseyNumber(event.target.value)}
+                  className="input"
+                  placeholder="z. B. 10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="managed-player-position" className="mb-1 block text-sm font-medium text-gray-300">
+                Position
+              </label>
+              <input
+                id="managed-player-position"
+                type="text"
+                value={newPlayerPosition}
+                onChange={(event) => setNewPlayerPosition(event.target.value)}
+                className="input"
+                placeholder="z. B. Sturm"
+              />
+            </div>
+
+            <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-3 text-sm text-gray-300">
+              Der Spieler bekommt zunächst keinen Login. Rückmeldungen können Trainer für ihn verwalten.
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="submit"
+                disabled={createManagedPlayerMutation.isPending}
+                className="btn btn-primary flex-1 disabled:opacity-50"
+              >
+                {createManagedPlayerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {createManagedPlayerMutation.isPending ? 'Speichert...' : 'Spieler anlegen'}
+              </button>
+              <button
+                type="button"
+                onClick={closeCreatePlayerModal}
+                className="btn btn-secondary flex-1"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </form>
+        </AccessibleModal>
+      )}
 
       {/* Member Profile Modal */}
 	      {selectedMember && (

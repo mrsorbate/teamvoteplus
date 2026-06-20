@@ -103,7 +103,7 @@ export const teamsAPI = {
   removeMember: (id: number, userId: number) =>
     api.delete(`/teams/${id}/members/${userId}`),
   
-  createPlayer: (id: number, data: { name: string; birth_date?: string; jersey_number?: number }) =>
+  createPlayer: (id: number, data: { name: string; birth_date?: string; jersey_number?: number | null; position?: string }) =>
     api.post(`/teams/${id}/players`, data),
 
   uploadTeamPicture: (id: number, file: File) => {
