@@ -1024,19 +1024,32 @@ const runTeamGameImport = async (teamId, createdByUserId) => {
     const sourceLabelMap = new Map();
     // Per-source own-team norms for accurate home/away detection.
     const sourceOwnTeamNormsMap = new Map();
-    if (fussballdeSources.length > 1) {
-        fussballdeSources.forEach((sourceId, idx) => {
-            // Try to use the configured team name for this source index as label.
-            const configuredName = configuredTeamNames[idx] || configuredTeamNames[0] || '';
-            // Extract Roman numeral or simple suffix (II, III, 2, 3 …) from the name, or fall back to "I", "II" etc.
-            const romanMatch = configuredName.match(/\b(IV|III|II|I|VI|V|[0-9]+)\.?\s*$/i);
-            const label = romanMatch ? romanMatch[1].toUpperCase() : String(idx + 1);
+    const normalizeSquadLabel = (value) => {
+        const normalized = value.trim().toUpperCase();
+        if (normalized === '1')
+            return 'I';
+        if (normalized === '2')
+            return 'II';
+        if (/^(I|II|III|IV|V|VI)$/.test(normalized))
+            return normalized;
+        return null;
+    };
+    fussballdeSources.forEach((sourceId, idx) => {
+        // Try to use the configured team name for this source index as label.
+        const configuredName = configuredTeamNames[idx] || configuredTeamNames[0] || '';
+        // Extract Roman numeral or simple suffix (II, III, 2, 3 ...) from the configured name.
+        const romanMatch = configuredName.match(/\b(IV|III|II|I|VI|V|[0-9]+)\.?\s*$/i);
+        const label = romanMatch ? normalizeSquadLabel(romanMatch[1]) : null;
+        if (label) {
             sourceLabelMap.set(sourceId, label);
-            // Compute own-team norms specifically for this source.
-            const sourceNorms = configuredName ? [normalizeTeamName(configuredName)].filter(Boolean) : ownTeamNorms;
-            sourceOwnTeamNormsMap.set(sourceId, sourceNorms);
-        });
-    }
+        }
+        else if (fussballdeSources.length > 1) {
+            sourceLabelMap.set(sourceId, idx === 0 ? 'I' : idx === 1 ? 'II' : String(idx + 1));
+        }
+        // Compute own-team norms specifically for this source.
+        const sourceNorms = configuredName ? [normalizeTeamName(configuredName)].filter(Boolean) : ownTeamNorms;
+        sourceOwnTeamNormsMap.set(sourceId, sourceNorms);
+    });
     const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
     const defaultArrivalMinutes = parseArrivalMinutes(team.default_arrival_minutes_match) ?? parseArrivalMinutes(team.default_arrival_minutes);
     const importedMatchArrivalMinutes = defaultArrivalMinutes ?? 15;

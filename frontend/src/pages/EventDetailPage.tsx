@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ArrowLeft, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords, Check, X, HelpCircle, Clock, Users, Loader2 } from 'lucide-react';
 import AccessibleModal from '../components/AccessibleModal';
+import { alwaysAllowTentativeForEventType } from '../components/EventCard';
 import ResponseReasonModal from '../components/ResponseReasonModal';
 import { useToast } from '../lib/useToast';
 
@@ -120,7 +121,7 @@ export default function EventDetailPage() {
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
   const canChooseTentative = (() => {
-    if (event?.type === 'training') return true;
+    if (alwaysAllowTentativeForEventType(event?.type)) return true;
     if (!event?.rsvp_deadline) return true;
     const deadlineDate = new Date(event.rsvp_deadline);
     if (Number.isNaN(deadlineDate.getTime())) return true;

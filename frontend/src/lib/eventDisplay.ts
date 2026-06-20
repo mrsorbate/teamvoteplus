@@ -26,10 +26,35 @@ export const getEventOpponentName = (event: any): string => {
 export const getEventSquadIndicator = (event: any): 'I' | 'II' | null => {
   const title = String(event?.title || '').trim();
   const teamName = String(event?.team_name || '').trim();
-  if (/^\[(?:II|2)\]\s*/i.test(title) || /^\((?:II|2)\)\s*/i.test(title) || /\bII\b/i.test(teamName)) {
+  const description = String(event?.description || '').trim();
+  const explicitSquadLabel = description.match(/^Mannschaft:\s*(II|I|2|1)\s*$/im)?.[1] || '';
+
+  const ownTitlePart = (() => {
+    const parts = title.replace(/^\[(?:I{1,3}|\d+)\]\s*/i, '').split(' - ');
+    if (parts.length !== 2 || event?.type !== 'match') return '';
+    const isHomeMatch = normalizeMatchFlag(event?.is_home_match, true);
+    const isAwayMatch = normalizeMatchFlag(event?.is_home_match, false);
+    if (isHomeMatch) return parts[0].trim();
+    if (isAwayMatch) return parts[1].trim();
+    return '';
+  })();
+
+  if (
+    /^\[(?:II|2)\]\s*/i.test(title) ||
+    /^\((?:II|2)\)\s*/i.test(title) ||
+    /^(?:II|2)$/i.test(explicitSquadLabel) ||
+    /\bII\b/i.test(teamName) ||
+    /\bII\b/i.test(ownTitlePart)
+  ) {
     return 'II';
   }
-  if (/^\[(?:I|1)\]\s*/i.test(title) || /^\((?:I|1)\)\s*/i.test(title) || /\bI\b/i.test(teamName)) {
+  if (
+    /^\[(?:I|1)\]\s*/i.test(title) ||
+    /^\((?:I|1)\)\s*/i.test(title) ||
+    /^(?:I|1)$/i.test(explicitSquadLabel) ||
+    /\bI\b/i.test(teamName) ||
+    /\bI\b/i.test(ownTitlePart)
+  ) {
     return 'I';
   }
   return null;

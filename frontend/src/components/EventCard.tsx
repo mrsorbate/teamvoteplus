@@ -51,6 +51,10 @@ const getStatusIcon = (status: EventStatus) => {
   return <X className="w-5 h-5 sm:w-6 sm:h-6" />;
 };
 
+export const alwaysAllowTentativeForEventType = (eventType: string | undefined | null): boolean => (
+  eventType === 'training' || eventType === 'other'
+);
+
 export default function EventCard({
   event,
   activeQuickActionsEventId,
@@ -90,7 +94,7 @@ export default function EventCard({
   const meetingPointMapsUrl = event?.meeting_point ? getMapsUrl(event.meeting_point) : getMapsUrl(locationText);
   const meetingTimeDisplay = meetingTimeLabel ? `${meetingTimeLabel} Uhr Treffpunkt` : 'Treffpunkt offen';
   const canChooseTentative = (() => {
-    if (event?.type === 'training') return true;
+    if (alwaysAllowTentativeForEventType(event?.type)) return true;
     if (!event?.rsvp_deadline) return true;
     const deadlineDate = new Date(event.rsvp_deadline);
     if (Number.isNaN(deadlineDate.getTime())) return true;
