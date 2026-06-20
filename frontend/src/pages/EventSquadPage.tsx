@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Check, ClipboardList, Swords } from 'lucide-react';
+import { ArrowLeft, Check, ClipboardList, Clock, HelpCircle, Swords, X } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -32,6 +32,8 @@ type SquadPlayer = {
   jersey_number?: number | null;
   response_status?: 'accepted' | 'declined' | 'tentative' | 'pending';
 };
+
+type ResponseStatus = 'accepted' | 'tentative' | 'declined' | 'pending';
 
 type EditableLineupSlot = {
   slot: string;
@@ -114,6 +116,31 @@ export default function EventSquadPage() {
     },
     onError: (error: any) => {
       showToast(error?.response?.data?.error || 'Kader konnte nicht freigegeben werden', 'error');
+    },
+  });
+
+  const updatePlayerResponseMutation = useMutation({
+    mutationFn: (data: { userId: number; status: ResponseStatus }) =>
+      eventsAPI.updatePlayerResponse(eventId, data.userId, { status: data.status }),
+    onSuccess: (_response, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event-match-squad', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['upcoming-events'] });
+
+      if (variables.status !== 'accepted') {
+        setEditableSquadUserIds((prev) => prev.filter((userId) => userId !== variables.userId));
+        setEditableLineupSlots((prev) => prev.map((entry) => (
+          Number(entry.user_id) === variables.userId ? { ...entry, user_id: null } : entry
+        )));
+        setSquadChanged(true);
+      }
+
+      showToast('Rückmeldung aktualisiert', 'success');
+    },
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      showToast(msg || 'Rückmeldung konnte nicht gespeichert werden', 'error');
     },
   });
 
@@ -244,6 +271,48 @@ export default function EventSquadPage() {
   const benchPlayerCount = benchPlayers.length;
 
   const acceptedPlayers = squadCandidatePlayers.filter((player) => player.response_status === 'accepted');
+
+  const responseStatusOptions: Array<{
+    status: ResponseStatus;
+    label: string;
+    Icon: typeof Check;
+    className: string;
+    activeClassName: string;
+  }> = [
+    {
+      status: 'accepted',
+      label: 'Zusage',
+      Icon: Check,
+      className: 'border-green-700/50 bg-green-900/25 text-green-300 hover:bg-green-900/45',
+      activeClassName: 'border-green-500 bg-green-700 text-white',
+    },
+    {
+      status: 'tentative',
+      label: 'Unsicher',
+      Icon: HelpCircle,
+      className: 'border-yellow-700/50 bg-yellow-900/25 text-yellow-300 hover:bg-yellow-900/45',
+      activeClassName: 'border-yellow-500 bg-yellow-600 text-gray-950',
+    },
+    {
+      status: 'declined',
+      label: 'Absage',
+      Icon: X,
+      className: 'border-red-700/50 bg-red-900/25 text-red-300 hover:bg-red-900/45',
+      activeClassName: 'border-red-500 bg-red-700 text-white',
+    },
+    {
+      status: 'pending',
+      label: 'Offen',
+      Icon: Clock,
+      className: 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700',
+      activeClassName: 'border-gray-500 bg-gray-600 text-white',
+    },
+  ];
+
+  const setPlayerResponse = (player: SquadPlayer, status: ResponseStatus) => {
+    if (!isTrainer || updatePlayerResponseMutation.isPending || player.response_status === status) return;
+    updatePlayerResponseMutation.mutate({ userId: player.id, status });
+  };
 
   const getPlayerNameById = (userId: number | null | undefined) => {
     if (!userId) return '';
@@ -614,6 +683,52 @@ export default function EventSquadPage() {
 
           {isTrainer && (
             <div className="xl:col-span-4 space-y-4 sm:space-y-6">
+              <div className="card">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="eyebrow-label">Rückmeldungen ändern</p>
+                    <p className="mt-1 text-sm text-gray-400">Status direkt auf der Kaderseite anpassen.</p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-gray-700 bg-gray-900 px-2.5 py-1 text-xs font-semibold text-gray-300">
+                    {squadCandidatePlayers.length}
+                  </span>
+                </div>
+
+                {squadCandidatePlayers.length > 0 ? (
+                  <div className="space-y-2.5 lg:max-h-[34vh] lg:overflow-y-auto lg:pr-1">
+                    {squadCandidatePlayers.map((player) => (
+                      <div key={player.id} className="rounded-xl border border-gray-700 bg-gray-900/70 p-2.5">
+                        <div className="mb-2 flex min-w-0 items-center gap-2">
+                          {renderAvatar(player.name, player.profile_picture, 'w-8 h-8')}
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-100">{player.name}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-4">
+                          {responseStatusOptions.map(({ status, label, Icon, className, activeClassName }) => {
+                            const isActive = player.response_status === status;
+                            return (
+                              <button
+                                key={status}
+                                type="button"
+                                onClick={() => setPlayerResponse(player, status)}
+                                disabled={updatePlayerResponseMutation.isPending || isActive}
+                                className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:cursor-default disabled:opacity-80 ${isActive ? activeClassName : className}`}
+                                aria-pressed={isActive}
+                                aria-label={`${player.name}: ${label}`}
+                              >
+                                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                <span className="truncate">{label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-300">Keine Spieler verfügbar.</p>
+                )}
+              </div>
+
               <div className="card">
                 <p className="eyebrow-label mb-2">Kader festlegen (nur Zusagen)</p>
                 <div className="mb-3 flex items-center justify-between text-xs text-gray-300">
