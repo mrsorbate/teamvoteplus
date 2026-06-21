@@ -1199,15 +1199,15 @@ export default function SettingsPage() {
         </form>
       </div>
 
-	      {showDeletePictureConfirmModal && (
-	        <AccessibleModal
-	          labelledBy="delete-profile-picture-title"
-	          onClose={() => setShowDeletePictureConfirmModal(false)}
-	          panelClassName="w-full max-w-md rounded-2xl bg-gray-800 p-6 shadow-xl"
-	        >
-	            <h3 id="delete-profile-picture-title" className="text-lg font-semibold text-white">Profilbild löschen?</h3>
-	            <p className="mt-2 text-sm text-gray-300">
-	              Möchtest du dein Profilbild wirklich dauerhaft entfernen?
+        {showDeletePictureConfirmModal && (
+          <AccessibleModal
+            labelledBy="delete-profile-picture-title"
+            onClose={() => setShowDeletePictureConfirmModal(false)}
+            panelClassName="w-full max-w-md rounded-2xl bg-gray-800 p-6 shadow-xl"
+          >
+              <h3 id="delete-profile-picture-title" className="text-lg font-semibold text-white">Profilbild löschen?</h3>
+              <p className="mt-2 text-sm text-gray-300">
+                Möchtest du dein Profilbild wirklich dauerhaft entfernen?
             </p>
 
             <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
@@ -1226,10 +1226,10 @@ export default function SettingsPage() {
                 className="btn bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
               >
                 {deletePictureMutation.isPending ? 'Löscht...' : 'Löschen'}
-	              </button>
-	            </div>
-	        </AccessibleModal>
-	      )}
+                </button>
+              </div>
+          </AccessibleModal>
+        )}
     </div>
   );
 }

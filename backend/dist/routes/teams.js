@@ -14,6 +14,7 @@ const auth_1 = require("../middleware/auth");
 const client_1 = require("../services/fussballDe/client");
 const pushNotifications_1 = require("../services/pushNotifications");
 const teamFeed_1 = require("../services/teamFeed");
+const calendarLinks_1 = require("../services/calendarLinks");
 const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 const hasTeamsCalendarTokenColumn = (() => {
@@ -41,8 +42,6 @@ const eventScoreSelectExpression = hasEventScoreColumns
 const calendarTokenSelectExpression = hasTeamsCalendarTokenColumn
     ? 'calendar_token'
     : 'NULL AS calendar_token';
-const LEGACY_CALENDAR_TOKEN_HEX_REGEX = /^[0-9a-f]{48}$/i;
-const COMPACT_CALENDAR_TOKEN_BASE64URL_REGEX = /^[A-Za-z0-9_-]{32}$/;
 const FUSSBALL_DE_ID_REGEX = /^[A-Z0-9]{16,40}$/;
 const FUSSBALL_DE_URL_REGEX = /^https?:\/\/(?:www\.)?fussball\.de\//i;
 const extractFussballDeTeamId = (source) => {
@@ -85,45 +84,6 @@ const parseFussballDeTeamNames = (value) => {
             .split(/[\n,;|]/)
             .map((entry) => entry.trim())
             .filter(Boolean))];
-};
-const hexTokenToBase64Url = (token) => {
-    if (!LEGACY_CALENDAR_TOKEN_HEX_REGEX.test(token)) {
-        return null;
-    }
-    return Buffer.from(token, 'hex')
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/g, '');
-};
-const base64UrlTokenToHex = (token) => {
-    if (!COMPACT_CALENDAR_TOKEN_BASE64URL_REGEX.test(token)) {
-        return null;
-    }
-    const padded = token + '='.repeat((4 - (token.length % 4)) % 4);
-    const rawBase64 = padded.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = Buffer.from(rawBase64, 'base64');
-    if (decoded.length !== 24) {
-        return null;
-    }
-    return decoded.toString('hex');
-};
-const getCalendarTokenVariants = (token) => {
-    const normalized = String(token || '').trim();
-    const variants = new Set();
-    if (!normalized) {
-        return variants;
-    }
-    variants.add(normalized);
-    const asBase64Url = hexTokenToBase64Url(normalized);
-    if (asBase64Url) {
-        variants.add(asBase64Url);
-    }
-    const asHex = base64UrlTokenToHex(normalized);
-    if (asHex) {
-        variants.add(asHex);
-    }
-    return variants;
 };
 const normalizeTeamNameInternal = (value) => {
     return String(value ?? '')
@@ -401,26 +361,6 @@ const formatICalDate = (value) => {
     }
     return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 };
-const getCalendarUrls = (req, teamId, token) => {
-    const normalizedToken = String(token || '').trim();
-    if (!normalizedToken) {
-        return { calendar_enabled: false, calendar_feed_url: null, calendar_webcal_url: null };
-    }
-    const compactToken = hexTokenToBase64Url(normalizedToken) || normalizedToken;
-    const forwardedProto = String(req.headers?.['x-forwarded-proto'] || '').split(',')[0]?.trim();
-    const protocol = forwardedProto || req.protocol || 'http';
-    const host = String(req.get('host') || '').trim();
-    if (!host) {
-        return { calendar_feed_url: null, calendar_webcal_url: null };
-    }
-    const calendarFeedUrl = `${protocol}://${host}/api/teams/${teamId}/calendar.ics?token=${encodeURIComponent(compactToken)}`;
-    const calendarWebcalUrl = calendarFeedUrl.replace(/^https?:\/\//i, 'webcal://');
-    return {
-        calendar_enabled: true,
-        calendar_feed_url: calendarFeedUrl,
-        calendar_webcal_url: calendarWebcalUrl,
-    };
-};
 const requireTrainerMembership = (teamId, userId) => {
     const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, userId);
     return membership?.role === 'trainer';
@@ -466,8 +406,8 @@ router.get('/:id/calendar.ics', (req, res) => {
             return res.status(400).json({ error: 'Invalid calendar request' });
         }
         const team = init_1.default.prepare(`SELECT id, name, ${calendarTokenSelectExpression} FROM teams WHERE id = ?`).get(teamId);
-        const requestedTokenVariants = getCalendarTokenVariants(token);
-        const storedTokenVariants = getCalendarTokenVariants(String(team?.calendar_token || ''));
+        const requestedTokenVariants = (0, calendarLinks_1.getCalendarTokenVariants)(token);
+        const storedTokenVariants = (0, calendarLinks_1.getCalendarTokenVariants)(String(team?.calendar_token || ''));
         const isTokenValid = Array.from(requestedTokenVariants).some((candidate) => storedTokenVariants.has(candidate));
         if (!team || !isTokenValid) {
             return res.status(403).json({ error: 'Invalid calendar token' });
@@ -611,7 +551,7 @@ router.get('/:id/settings', (req, res) => {
               default_duration_minutes, default_duration_minutes_training, default_duration_minutes_match, default_duration_minutes_other,
               home_venues, default_home_venue_name, feed_retention_days, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`).get(teamId);
-        const calendarUrls = getCalendarUrls(req, teamId, settings?.calendar_token);
+        const calendarUrls = (0, calendarLinks_1.getCalendarUrls)(req, teamId, settings?.calendar_token);
         if (!settings) {
             return res.status(404).json({ error: 'Team not found' });
         }
@@ -649,7 +589,7 @@ router.post('/:id/calendar-token/renew', (req, res) => {
         }
         return res.json({
             success: true,
-            ...getCalendarUrls(req, teamId, nextToken),
+            ...(0, calendarLinks_1.getCalendarUrls)(req, teamId, nextToken),
         });
     }
     catch (error) {
@@ -675,7 +615,7 @@ router.post('/:id/calendar-token/disable', (req, res) => {
         }
         return res.json({
             success: true,
-            ...getCalendarUrls(req, teamId, null),
+            ...(0, calendarLinks_1.getCalendarUrls)(req, teamId, null),
         });
     }
     catch (error) {
@@ -938,7 +878,7 @@ router.put('/:id/settings', (req, res) => {
         if (!updatedSettings) {
             return res.status(500).json({ error: 'Failed to retrieve updated settings' });
         }
-        const calendarUrls = getCalendarUrls(req, teamId, updatedSettings.calendar_token);
+        const calendarUrls = (0, calendarLinks_1.getCalendarUrls)(req, teamId, updatedSettings.calendar_token);
         return res.json({
             ...updatedSettings,
             fussballde_ids: parseFussballDeSources(updatedSettings.fussballde_id),

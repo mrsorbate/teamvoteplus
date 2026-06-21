@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
@@ -51,9 +51,9 @@ export default function EventCreatePage() {
   const [rsvpDeadlineOffsetHours, setRsvpDeadlineOffsetHours] = useState('');
   const [seriesValidationMessage, setSeriesValidationMessage] = useState('');
 
-  const durationConfig = { min: 5, step: 5 } as const;
-  const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
-  const rsvpHoursConfig = { min: 0, max: 168, step: 1 } as const;
+  const durationConfig = useMemo(() => ({ min: 5, step: 5 }) as const, []);
+  const arrivalConfig = useMemo(() => ({ min: 0, max: 240, step: 5 }) as const, []);
+  const rsvpHoursConfig = useMemo(() => ({ min: 0, max: 168, step: 1 }) as const, []);
 
   const categoryOptions: Array<{ value: 'training' | 'match' | 'other'; label: string }> = [
     { value: 'training', label: 'Training' },
@@ -94,7 +94,7 @@ export default function EventCreatePage() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  const applyRsvpDeadlineOffsetHours = (hoursBefore: number) => {
+  const applyRsvpDeadlineOffsetHours = useCallback((hoursBefore: number) => {
     if (!eventData.start_time) {
       return;
     }
@@ -108,7 +108,7 @@ export default function EventCreatePage() {
     const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
     setRsvpDeadlineOffsetHours(String(normalizedHours));
     setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
-  };
+  }, [eventData.start_time, rsvpHoursConfig]);
 
   const getCurrentRsvpDeadlineOffsetHours = (): string => {
     if (rsvpDeadlineOffsetHours !== '') {
@@ -290,7 +290,10 @@ export default function EventCreatePage() {
     enabled: isTrainer && selectedTeamIds.length > 0,
   });
 
-  const allMemberIds = membersForCreate?.map((member: any) => member.id) || [];
+  const allMemberIds = useMemo(
+    () => membersForCreate?.map((member: any) => member.id) || [],
+    [membersForCreate]
+  );
 
   const { data: teamSettings } = useQuery({
     queryKey: ['team-settings', effectiveTeamId],
@@ -382,6 +385,8 @@ export default function EventCreatePage() {
     eventData.rsvp_deadline,
     rsvpDeadlineOffsetHours,
     eventData.type,
+    teamSettings,
+    applyRsvpDeadlineOffsetHours,
     teamSettings?.default_rsvp_deadline_hours,
     teamSettings?.default_rsvp_deadline_hours_training,
     teamSettings?.default_rsvp_deadline_hours_match,
@@ -421,6 +426,7 @@ export default function EventCreatePage() {
     });
   }, [
     teamSettings?.default_arrival_minutes,
+    teamSettings,
     teamSettings?.default_arrival_minutes_training,
     teamSettings?.default_arrival_minutes_match,
     teamSettings?.default_arrival_minutes_other,
@@ -449,6 +455,7 @@ export default function EventCreatePage() {
     });
   }, [
     teamSettings?.default_duration_minutes,
+    teamSettings,
     teamSettings?.default_duration_minutes_training,
     teamSettings?.default_duration_minutes_match,
     teamSettings?.default_duration_minutes_other,

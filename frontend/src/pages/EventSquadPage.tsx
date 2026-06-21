@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Check, ClipboardList, Clock, HelpCircle, Swords, X } from 'lucide-react';
@@ -24,6 +24,8 @@ const DEFAULT_BOARD_POSITIONS: Array<{ x_pct: number; y_pct: number }> = [
   { x_pct: 50, y_pct: 22 },
   { x_pct: 88, y_pct: 26 },
 ];
+
+const clampPercent = (value: number, min = 6, max = 94) => Math.min(max, Math.max(min, value));
 
 type SquadPlayer = {
   id: number;
@@ -145,43 +147,55 @@ export default function EventSquadPage() {
     },
   });
 
-  const teamMembersById = new Map<number, any>(
-    Array.isArray(teamMembers)
-      ? teamMembers
-          .map((member: any) => [Number(member?.id), member] as const)
-          .filter(([memberId]) => Number.isInteger(memberId))
-      : []
+  const teamMembersById = useMemo(
+    () => new Map<number, any>(
+      Array.isArray(teamMembers)
+        ? teamMembers
+            .map((member: any) => [Number(member?.id), member] as const)
+            .filter(([memberId]) => Number.isInteger(memberId))
+        : []
+    ),
+    [teamMembers]
   );
 
-  const playerMemberIds = new Set<number>(
-    Array.isArray(teamMembers)
-      ? teamMembers
-          .filter((member: any) => String(member?.role || '').toLowerCase() !== 'trainer')
-          .map((member: any) => Number(member?.id))
-          .filter((memberId: number) => Number.isInteger(memberId))
-      : []
+  const playerMemberIds = useMemo(
+    () => new Set<number>(
+      Array.isArray(teamMembers)
+        ? teamMembers
+            .filter((member: any) => String(member?.role || '').toLowerCase() !== 'trainer')
+            .map((member: any) => Number(member?.id))
+            .filter((memberId: number) => Number.isInteger(memberId))
+        : []
+    ),
+    [teamMembers]
   );
 
-  const responseByUserId = new Map<number, any>(
-    (event?.responses || [])
-      .map((response: any) => [Number(response?.user_id), response] as const)
-      .filter((entry: readonly [number, any]) => Number.isInteger(entry[0]))
+  const responseByUserId = useMemo(
+    () => new Map<number, any>(
+      (event?.responses || [])
+        .map((response: any) => [Number(response?.user_id), response] as const)
+        .filter((entry: readonly [number, any]) => Number.isInteger(entry[0]))
+    ),
+    [event?.responses]
   );
 
-  const squadCandidatePlayers: SquadPlayer[] = Array.from(playerMemberIds)
-    .map((playerId) => {
-      const member = teamMembersById.get(playerId);
-      const response = responseByUserId.get(playerId);
-      const status = String(response?.status || 'pending').toLowerCase();
+  const squadCandidatePlayers: SquadPlayer[] = useMemo(
+    () => Array.from(playerMemberIds)
+      .map((playerId) => {
+        const member = teamMembersById.get(playerId);
+        const response = responseByUserId.get(playerId);
+        const status = String(response?.status || 'pending').toLowerCase();
 
-      return {
-        id: playerId,
-        name: String(response?.user_name || member?.name || `Spieler ${playerId}`),
-        profile_picture: response?.user_profile_picture || member?.profile_picture || undefined,
-        response_status: status === 'accepted' || status === 'declined' || status === 'tentative' ? status : 'pending',
-      } as SquadPlayer;
-    })
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+        return {
+          id: playerId,
+          name: String(response?.user_name || member?.name || `Spieler ${playerId}`),
+          profile_picture: response?.user_profile_picture || member?.profile_picture || undefined,
+          response_status: status === 'accepted' || status === 'declined' || status === 'tentative' ? status : 'pending',
+        } as SquadPlayer;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'de')),
+    [playerMemberIds, responseByUserId, teamMembersById]
+  );
 
   const squadPlayerMeta: SquadPlayer[] = Array.isArray(matchSquad?.squad_players)
     ? matchSquad.squad_players.map((player: any) => ({
@@ -194,9 +208,7 @@ export default function EventSquadPage() {
 
   const canViewMatchSquad = Boolean(event?.type === 'match' && (isTrainer || matchSquad?.is_released === 1));
 
-  const clampPercent = (value: number, min = 6, max = 94) => Math.min(max, Math.max(min, value));
-
-  const toBoardPercent = (clientX: number, clientY: number) => {
+  const toBoardPercent = useCallback((clientX: number, clientY: number) => {
     const rect = boardRef.current?.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) {
       return null;
@@ -211,7 +223,7 @@ export default function EventSquadPage() {
       y_pct: clampPercent(rawY, 8, 92),
       insideBoard,
     };
-  };
+  }, []);
 
   useEffect(() => {
     if (!matchSquad) return;
@@ -252,7 +264,7 @@ export default function EventSquadPage() {
     setEditableSquadUserIds(safeSquadUserIds);
     setEditableLineupSlots(normalizedLineupSlots);
     setSquadChanged(false);
-  }, [matchSquad?.event_id, matchSquad?.updated_at, playerMemberIds.size]);
+  }, [matchSquad, playerMemberIds]);
 
   const boardPlayers = editableLineupSlots
     .filter((entry) => entry.user_id !== null && entry.user_id !== undefined)
@@ -361,7 +373,7 @@ export default function EventSquadPage() {
     return MATCH_LINEUP_SLOT_ORDER.find((slot) => !usedSlots.has(slot)) || null;
   };
 
-  const placePlayerOnBoard = (playerId: number, xPct: number, yPct: number) => {
+  const placePlayerOnBoard = useCallback((playerId: number, xPct: number, yPct: number) => {
     if (!editableSquadUserIds.includes(playerId)) {
       return;
     }
@@ -393,9 +405,9 @@ export default function EventSquadPage() {
     if (hasChanged) {
       setSquadChanged(true);
     }
-  };
+  }, [editableSquadUserIds, showToast]);
 
-  const movePlayerToBench = (playerId: number) => {
+  const movePlayerToBench = useCallback((playerId: number) => {
     if (benchPlayerCount >= MAX_BENCH_PLAYERS) {
       showToast(`Die Bank ist auf ${MAX_BENCH_PLAYERS} Spieler begrenzt.`, 'warning');
       return;
@@ -412,7 +424,7 @@ export default function EventSquadPage() {
       setSquadChanged(true);
       return next;
     });
-  };
+  }, [benchPlayerCount, showToast]);
 
   const startDrag = (playerId: number, source: 'bench' | 'board', event: React.PointerEvent) => {
     if (!isTrainer) return;
@@ -459,7 +471,7 @@ export default function EventSquadPage() {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [draggingPlayerId, draggingSource]);
+  }, [draggingPlayerId, draggingSource, movePlayerToBench, placePlayerOnBoard, toBoardPercent]);
 
   useEffect(() => {
     const boardElement = boardRef.current;

@@ -8,6 +8,7 @@ exports.sendPushToSubscriptions = sendPushToSubscriptions;
 exports.sendPushToUsers = sendPushToUsers;
 const web_push_1 = __importDefault(require("web-push"));
 const init_1 = __importDefault(require("../database/init"));
+const logger_1 = require("../utils/logger");
 const VAPID_PUBLIC_KEY = String(process.env.VAPID_PUBLIC_KEY || '').trim();
 const VAPID_PRIVATE_KEY = String(process.env.VAPID_PRIVATE_KEY || '').trim();
 const VAPID_SUBJECT = String(process.env.VAPID_SUBJECT || 'mailto:admin@teamvoteplus.app').trim();
@@ -74,7 +75,7 @@ const filterUserIdsByPreference = (userIds, options) => {
 };
 async function sendPushToSubscriptions(subscriptions, payload) {
     if (!isPushConfigured) {
-        console.error('Push delivery skipped: VAPID keys are not configured on server.');
+        logger_1.logger.warn('Push delivery skipped: VAPID keys are not configured on server.');
         return 0;
     }
     if (subscriptions.length === 0) {
@@ -86,7 +87,7 @@ async function sendPushToSubscriptions(subscriptions, payload) {
         try {
             await web_push_1.default.sendNotification(toWebPushSubscription(subscription), serializedPayload);
             sent += 1;
-            console.log(`Push sent to ${subscription.endpoint.substring(0, 50)}...`);
+            logger_1.logger.info(`Push sent to endpoint ${subscription.endpoint.substring(0, 50)}...`);
         }
         catch (error) {
             const statusCode = error != null && typeof error.statusCode === 'number'
@@ -95,9 +96,13 @@ async function sendPushToSubscriptions(subscriptions, payload) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             if (statusCode === 404 || statusCode === 410) {
                 removeSubscriptionByEndpoint.run(subscription.endpoint);
+                logger_1.logger.info(`Removed expired push subscription ${subscription.endpoint.substring(0, 50)}...`);
             }
             else {
-                console.error(`Push send error (status ${statusCode}): ${errorMessage}`, { endpoint: subscription.endpoint.substring(0, 50) });
+                logger_1.logger.error(`Push send error (status ${statusCode}): ${errorMessage}`, {
+                    endpoint: subscription.endpoint.substring(0, 50),
+                    user_id: subscription.user_id,
+                });
             }
         }
     }
@@ -106,6 +111,12 @@ async function sendPushToSubscriptions(subscriptions, payload) {
 async function sendPushToUsers(userIds, payload, options) {
     const allowedUserIds = filterUserIdsByPreference([...new Set(userIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))], options);
     const subscriptions = (0, exports.getStoredSubscriptionsForUsers)(allowedUserIds);
+    if (userIds.length > 0 && allowedUserIds.length === 0) {
+        logger_1.logger.info('Push delivery skipped: all target users disabled this notification category.', {
+            category: options?.category || 'important',
+            teamIds: normalizeTeamIds(options),
+        });
+    }
     return sendPushToSubscriptions(subscriptions, payload);
 }
 //# sourceMappingURL=pushNotifications.js.map

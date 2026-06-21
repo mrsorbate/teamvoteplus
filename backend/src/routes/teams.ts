@@ -10,6 +10,7 @@ import { FussballDeClient, buildTeamPageUrl } from '../services/fussballDe/clien
 import type { TeamMatch } from '../services/fussballDe/types';
 import { sendPushToUsers } from '../services/pushNotifications';
 import { createEventFeedPosts } from '../services/teamFeed';
+import { getCalendarTokenVariants, getCalendarUrls } from '../services/calendarLinks';
 import { getPublicFrontendBaseUrl } from '../utils/publicUrl';
 import { logger } from '../utils/logger';
 
@@ -41,8 +42,6 @@ const calendarTokenSelectExpression = hasTeamsCalendarTokenColumn
   ? 'calendar_token'
   : 'NULL AS calendar_token';
 
-const LEGACY_CALENDAR_TOKEN_HEX_REGEX = /^[0-9a-f]{48}$/i;
-const COMPACT_CALENDAR_TOKEN_BASE64URL_REGEX = /^[A-Za-z0-9_-]{32}$/;
 const FUSSBALL_DE_ID_REGEX = /^[A-Z0-9]{16,40}$/;
 const FUSSBALL_DE_URL_REGEX = /^https?:\/\/(?:www\.)?fussball\.de\//i;
 
@@ -96,54 +95,6 @@ const parseFussballDeTeamNames = (value: unknown): string[] => {
       .map((entry) => entry.trim())
       .filter(Boolean)
   )];
-};
-
-const hexTokenToBase64Url = (token: string): string | null => {
-  if (!LEGACY_CALENDAR_TOKEN_HEX_REGEX.test(token)) {
-    return null;
-  }
-
-  return Buffer.from(token, 'hex')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-};
-
-const base64UrlTokenToHex = (token: string): string | null => {
-  if (!COMPACT_CALENDAR_TOKEN_BASE64URL_REGEX.test(token)) {
-    return null;
-  }
-
-  const padded = token + '='.repeat((4 - (token.length % 4)) % 4);
-  const rawBase64 = padded.replace(/-/g, '+').replace(/_/g, '/');
-  const decoded = Buffer.from(rawBase64, 'base64');
-  if (decoded.length !== 24) {
-    return null;
-  }
-  return decoded.toString('hex');
-};
-
-const getCalendarTokenVariants = (token: string | null | undefined): Set<string> => {
-  const normalized = String(token || '').trim();
-  const variants = new Set<string>();
-  if (!normalized) {
-    return variants;
-  }
-
-  variants.add(normalized);
-
-  const asBase64Url = hexTokenToBase64Url(normalized);
-  if (asBase64Url) {
-    variants.add(asBase64Url);
-  }
-
-  const asHex = base64UrlTokenToHex(normalized);
-  if (asHex) {
-    variants.add(asHex);
-  }
-
-  return variants;
 };
 
 const normalizeTeamNameInternal = (value: unknown): string => {
@@ -472,30 +423,6 @@ const formatICalDate = (value: unknown): string | null => {
     return null;
   }
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-};
-
-const getCalendarUrls = (req: AuthRequest, teamId: number, token: string | null | undefined) => {
-  const normalizedToken = String(token || '').trim();
-  if (!normalizedToken) {
-    return { calendar_enabled: false, calendar_feed_url: null, calendar_webcal_url: null };
-  }
-
-  const compactToken = hexTokenToBase64Url(normalizedToken) || normalizedToken;
-
-  const forwardedProto = String(req.headers?.['x-forwarded-proto'] || '').split(',')[0]?.trim();
-  const protocol = forwardedProto || req.protocol || 'http';
-  const host = String(req.get('host') || '').trim();
-  if (!host) {
-    return { calendar_feed_url: null, calendar_webcal_url: null };
-  }
-
-  const calendarFeedUrl = `${protocol}://${host}/api/teams/${teamId}/calendar.ics?token=${encodeURIComponent(compactToken)}`;
-  const calendarWebcalUrl = calendarFeedUrl.replace(/^https?:\/\//i, 'webcal://');
-  return {
-    calendar_enabled: true,
-    calendar_feed_url: calendarFeedUrl,
-    calendar_webcal_url: calendarWebcalUrl,
-  };
 };
 
 const requireTrainerMembership = (teamId: number, userId: number): boolean => {

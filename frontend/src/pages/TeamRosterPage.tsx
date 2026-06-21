@@ -11,11 +11,36 @@ import { useSmartBack } from '../hooks/useSmartBack';
 import { useToast } from '../lib/useToast';
 import AccessibleModal from '../components/AccessibleModal';
 
+type TeamMember = {
+  id: number;
+  name: string;
+  email?: string | null;
+  phone_number?: string | null;
+  birth_date?: string | null;
+  profile_picture?: string | null;
+  nickname?: string | null;
+  height_cm?: number | string | null;
+  weight_kg?: number | string | null;
+  clothing_size?: string | null;
+  shoe_size?: string | null;
+  jersey_number?: number | string | null;
+  footedness?: string | null;
+  position?: string | null;
+  parent_contact_name?: string | null;
+  parent_contact_phone?: string | null;
+  parent_contact_email?: string | null;
+  emergency_contact?: string | null;
+  medical_notes?: string | null;
+  is_registered?: number | boolean | null;
+  role: 'trainer' | 'player' | string;
+  joined_at?: string | null;
+};
+
 export default function TeamRosterPage() {
   const { id } = useParams<{ id: string }>();
   const teamId = parseInt(id!);
   const queryClient = useQueryClient();
-  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [joinLinkCopied, setJoinLinkCopied] = useState(false);
   const [showCreatePlayerModal, setShowCreatePlayerModal] = useState(false);
@@ -59,7 +84,7 @@ export default function TeamRosterPage() {
     setEditPlayerEmergencyContact(String(selectedMember.emergency_contact || ''));
     setEditPlayerMedicalNotes(String(selectedMember.medical_notes || ''));
     setIsEditingPlayer(false);
-  }, [selectedMember?.id]);
+  }, [selectedMember]);
 
   const { isLoading: teamLoading } = useQuery({
     queryKey: ['team', teamId],
@@ -73,7 +98,7 @@ export default function TeamRosterPage() {
     queryKey: ['team-members', teamId],
     queryFn: async () => {
       const response = await teamsAPI.getMembers(teamId);
-      return response.data;
+      return response.data as TeamMember[];
     },
   });
 
@@ -165,7 +190,7 @@ export default function TeamRosterPage() {
     }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
-      setSelectedMember((prev: any) => prev ? {
+      setSelectedMember((prev: TeamMember | null) => prev ? {
         ...prev,
         name: editPlayerName.trim(),
         birth_date: editPlayerBirthDate || null,
@@ -274,14 +299,14 @@ export default function TeamRosterPage() {
     updatePlayerMutation.mutate();
   };
 
-  const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
-  const players = members?.filter((m: any) => m.role !== 'trainer') || [];
+  const trainers = members?.filter((member) => member.role === 'trainer') || [];
+  const players = members?.filter((member) => member.role !== 'trainer') || [];
   const canOpenPlayerProfiles = user?.role === 'trainer' || user?.role === 'admin';
 
-  const renderInfoCard = (label: string, value: string, extraClassName = '') => (
+  const renderInfoCard = (label: string, value: string | number | null | undefined, extraClassName = '') => (
     <div className={`rounded-xl bg-gray-900/60 border border-gray-700/40 p-3 ${extraClassName}`}>
       <p className="eyebrow-label">{label}</p>
-      <p className="mt-0.5 font-semibold text-white break-words">{value}</p>
+      <p className="mt-0.5 font-semibold text-white break-words">{String(value ?? '')}</p>
     </div>
   );
 
@@ -335,7 +360,7 @@ export default function TeamRosterPage() {
             </span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {trainers.map((trainer: any) => (
+            {trainers.map((trainer) => (
               <button
                 key={trainer.id}
                 onClick={() => { setSelectedMember(trainer); setConfirmRemove(false); }}
@@ -386,7 +411,7 @@ export default function TeamRosterPage() {
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {players.map((player: any) => {
+            {players.map((player) => {
               const hasJersey = player.jersey_number != null && player.jersey_number !== '';
               return (
                 <button
@@ -691,19 +716,19 @@ export default function TeamRosterPage() {
       )}
 
       {/* Member Profile Modal */}
-	      {selectedMember && (
-	        <AccessibleModal
-	          labelledBy="member-profile-title"
-	          onClose={closeMemberModal}
-	          bottomSheet
-	          panelClassName="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal"
-	        >
-	            {/* Hero header */}
-	            <div className="relative px-5 pt-6 pb-5 text-center border-b border-gray-700/50">
-	              <button
-	                onClick={closeMemberModal}
-	                className="absolute top-3 right-3 compact-icon-button rounded-full bg-gray-700/60"
-	                aria-label="Modal schließen"
+        {selectedMember && (
+          <AccessibleModal
+            labelledBy="member-profile-title"
+            onClose={closeMemberModal}
+            bottomSheet
+            panelClassName="bg-gray-800 border border-gray-700/70 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto shadow-modal"
+          >
+              {/* Hero header */}
+              <div className="relative px-5 pt-6 pb-5 text-center border-b border-gray-700/50">
+                <button
+                  onClick={closeMemberModal}
+                  className="absolute top-3 right-3 compact-icon-button rounded-full bg-gray-700/60"
+                  aria-label="Modal schließen"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -994,10 +1019,10 @@ export default function TeamRosterPage() {
                 );
               })()}
 
-	              <button
-	                onClick={closeMemberModal}
-	                className="btn btn-secondary w-full"
-	              >
+                <button
+                  onClick={closeMemberModal}
+                  className="btn btn-secondary w-full"
+                >
                 Schließen
               </button>
 
@@ -1036,8 +1061,8 @@ export default function TeamRosterPage() {
                 )
               )}
             </div>
-	        </AccessibleModal>
-	      )}
+          </AccessibleModal>
+        )}
     </div>
   );
 }

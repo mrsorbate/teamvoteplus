@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import db from '../database/init';
+import { logger } from '../utils/logger';
 
 type StoredPushSubscription = {
   id: number;
@@ -102,7 +103,7 @@ const filterUserIdsByPreference = (userIds: number[], options?: SendPushOptions)
 
 export async function sendPushToSubscriptions(subscriptions: StoredPushSubscription[], payload: PushPayload): Promise<number> {
   if (!isPushConfigured) {
-    console.error('Push delivery skipped: VAPID keys are not configured on server.');
+    logger.warn('Push delivery skipped: VAPID keys are not configured on server.');
     return 0;
   }
 
@@ -117,7 +118,7 @@ export async function sendPushToSubscriptions(subscriptions: StoredPushSubscript
     try {
       await webpush.sendNotification(toWebPushSubscription(subscription), serializedPayload);
       sent += 1;
-      console.log(`Push sent to ${subscription.endpoint.substring(0, 50)}...`);
+      logger.info(`Push sent to endpoint ${subscription.endpoint.substring(0, 50)}...`);
     } catch (error) {
       const statusCode = error != null && typeof (error as { statusCode?: unknown }).statusCode === 'number'
         ? (error as { statusCode: number }).statusCode
@@ -126,8 +127,12 @@ export async function sendPushToSubscriptions(subscriptions: StoredPushSubscript
 
       if (statusCode === 404 || statusCode === 410) {
         removeSubscriptionByEndpoint.run(subscription.endpoint);
+        logger.info(`Removed expired push subscription ${subscription.endpoint.substring(0, 50)}...`);
       } else {
-        console.error(`Push send error (status ${statusCode}): ${errorMessage}`, { endpoint: subscription.endpoint.substring(0, 50) });
+        logger.error(`Push send error (status ${statusCode}): ${errorMessage}`, {
+          endpoint: subscription.endpoint.substring(0, 50),
+          user_id: subscription.user_id,
+        });
       }
     }
   }
@@ -141,5 +146,11 @@ export async function sendPushToUsers(userIds: number[], payload: PushPayload, o
     options
   );
   const subscriptions = getStoredSubscriptionsForUsers(allowedUserIds);
+  if (userIds.length > 0 && allowedUserIds.length === 0) {
+    logger.info('Push delivery skipped: all target users disabled this notification category.', {
+      category: options?.category || 'important',
+      teamIds: normalizeTeamIds(options),
+    });
+  }
   return sendPushToSubscriptions(subscriptions, payload);
 }

@@ -1163,42 +1163,42 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="flex space-x-1.5 sm:space-x-2 ml-2">
-	                  <button
-	                    onClick={() => handleEditTeam(team)}
-	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-indigo-400 hover:bg-indigo-900/30 rounded-lg transition-colors"
-	                    title="Team bearbeiten"
-	                    aria-label={`${team.name} bearbeiten`}
-	                  >
+                    <button
+                      onClick={() => handleEditTeam(team)}
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center text-indigo-400 hover:bg-indigo-900/30 rounded-lg transition-colors"
+                      title="Team bearbeiten"
+                      aria-label={`${team.name} bearbeiten`}
+                    >
                     <Edit2 className="w-4 h-4" />
                   </button>
-	                  <button
+                    <button
                     onClick={() => {
                       setSelectedTeam(team.id);
                       setShowAssignTrainer(true);
                     }}
-	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors"
-	                    title="Trainer zuweisen"
-	                    aria-label={`${team.name} Trainer zuweisen`}
-	                  >
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors"
+                      title="Trainer zuweisen"
+                      aria-label={`${team.name} Trainer zuweisen`}
+                    >
                     <Shield className="w-4 h-4" />
                   </button>
-	                  <button
+                    <button
                     onClick={() => {
                       setSelectedTeam(team.id);
                       setShowRemoveTrainer(true);
                     }}
-	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-orange-400 hover:bg-orange-900/30 rounded-lg transition-colors"
-	                    title="Trainer entfernen"
-	                    aria-label={`${team.name} Trainer entfernen`}
-	                  >
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center text-orange-400 hover:bg-orange-900/30 rounded-lg transition-colors"
+                      title="Trainer entfernen"
+                      aria-label={`${team.name} Trainer entfernen`}
+                    >
                     <UserMinus className="w-4 h-4" />
                   </button>
-	                  <button
-	                    onClick={() => handleDeleteTeam(team)}
-	                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
-	                    title="Team löschen"
-	                    aria-label={`${team.name} löschen`}
-	                  >
+                    <button
+                      onClick={() => handleDeleteTeam(team)}
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
+                      title="Team löschen"
+                      aria-label={`${team.name} löschen`}
+                    >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -1565,32 +1565,32 @@ export default function AdminPage() {
                       <td className={userTableCellClass}>
                         <div className="flex items-center flex-wrap gap-1 sm:gap-2">
                           {user.registration_status === 'pending' && (
-	                            <button
-	                              onClick={() => handleResendTrainerInvite(user)}
-	                              disabled={resendTrainerInviteMutation.isPending}
-	                              className={`${userActionButtonClass} text-blue-400 hover:bg-blue-900/30`}
-	                              title="Link neu versenden"
-	                              aria-label={`Einladungslink für ${user.name} neu versenden`}
-	                            >
+                              <button
+                                onClick={() => handleResendTrainerInvite(user)}
+                                disabled={resendTrainerInviteMutation.isPending}
+                                className={`${userActionButtonClass} text-blue-400 hover:bg-blue-900/30`}
+                                title="Link neu versenden"
+                                aria-label={`Einladungslink für ${user.name} neu versenden`}
+                              >
                               <Share2 className="w-4 h-4" />
                             </button>
                           )}
-	                          <button
-	                            onClick={() => handleResetUserPassword(user)}
-	                            disabled={resetUserPasswordMutation.isPending}
-	                            className={`${userActionButtonClass} text-orange-400 hover:bg-orange-900/30`}
-	                            title="Passwort generieren & zurücksetzen"
-	                            aria-label={`Passwort für ${user.name} zurücksetzen`}
-	                          >
+                            <button
+                              onClick={() => handleResetUserPassword(user)}
+                              disabled={resetUserPasswordMutation.isPending}
+                              className={`${userActionButtonClass} text-orange-400 hover:bg-orange-900/30`}
+                              title="Passwort generieren & zurücksetzen"
+                              aria-label={`Passwort für ${user.name} zurücksetzen`}
+                            >
                             <KeyRound className="w-4 h-4" />
                           </button>
-	                          <button
-	                            onClick={() => handleDeleteUser(user)}
-	                            disabled={deleteUserMutation.isPending}
-	                            className={`${userActionButtonClass} text-red-400 hover:bg-red-900/30`}
-	                            title="Benutzer löschen"
-	                            aria-label={`${user.name} löschen`}
-	                          >
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={deleteUserMutation.isPending}
+                              className={`${userActionButtonClass} text-red-400 hover:bg-red-900/30`}
+                              title="Benutzer löschen"
+                              aria-label={`${user.name} löschen`}
+                            >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -1663,22 +1663,22 @@ export default function AdminPage() {
                       <td className={userTableTextCellClass}>{user.team_names || '-'}</td>
                       <td className={userTableCellClass}>
                         <div className="flex items-center flex-wrap gap-1 sm:gap-2">
-	                          <button
-	                            onClick={() => handleResetUserPassword(user)}
-	                            disabled={resetUserPasswordMutation.isPending}
-	                            className={`${userActionButtonClass} text-orange-400 hover:bg-orange-900/30`}
-	                            title="Passwort generieren & zurücksetzen"
-	                            aria-label={`Passwort für ${user.name} zurücksetzen`}
-	                          >
+                            <button
+                              onClick={() => handleResetUserPassword(user)}
+                              disabled={resetUserPasswordMutation.isPending}
+                              className={`${userActionButtonClass} text-orange-400 hover:bg-orange-900/30`}
+                              title="Passwort generieren & zurücksetzen"
+                              aria-label={`Passwort für ${user.name} zurücksetzen`}
+                            >
                             <KeyRound className="w-4 h-4" />
                           </button>
-	                          <button
-	                            onClick={() => handleDeleteUser(user)}
-	                            disabled={deleteUserMutation.isPending}
-	                            className={`${userActionButtonClass} text-red-400 hover:bg-red-900/30`}
-	                            title="Benutzer löschen"
-	                            aria-label={`${user.name} löschen`}
-	                          >
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={deleteUserMutation.isPending}
+                              className={`${userActionButtonClass} text-red-400 hover:bg-red-900/30`}
+                              title="Benutzer löschen"
+                              aria-label={`${user.name} löschen`}
+                            >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>

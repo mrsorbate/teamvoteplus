@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2, Loader2, Check, Pencil } from 'lucide-react';
@@ -54,9 +54,9 @@ export default function EventEditPage() {
   const [seriesRepeatDays, setSeriesRepeatDays] = useState<number[]>([]);
   const [seriesValidationMessage, setSeriesValidationMessage] = useState('');
 
-  const durationConfig = { min: 5, step: 5 } as const;
-  const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
-  const rsvpHoursConfig = { min: 0, max: 168, step: 1 } as const;
+  const durationConfig = useMemo(() => ({ min: 5, step: 5 }) as const, []);
+  const arrivalConfig = useMemo(() => ({ min: 0, max: 240, step: 5 }) as const, []);
+  const rsvpHoursConfig = useMemo(() => ({ min: 0, max: 168, step: 1 }) as const, []);
 
   const stepDurationMinutes = (delta: number) => {
     setEventData((prev) => {
@@ -122,7 +122,7 @@ export default function EventEditPage() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  const applyRsvpDeadlineOffsetHours = (hoursBefore: number) => {
+  const applyRsvpDeadlineOffsetHours = useCallback((hoursBefore: number) => {
     if (!eventData.start_time) {
       return;
     }
@@ -135,7 +135,7 @@ export default function EventEditPage() {
     const normalizedHours = stepNumberFieldValue(hoursBefore, 0, rsvpHoursConfig);
     const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
     setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
-  };
+  }, [eventData.start_time, rsvpHoursConfig]);
 
   const getCurrentRsvpDeadlineOffsetHours = (): string => {
     if (!eventData.start_time || !eventData.rsvp_deadline) {
@@ -244,23 +244,29 @@ export default function EventEditPage() {
     enabled: Boolean(event?.team_id),
   });
 
-  const allMemberIds = membersForEdit?.map((member: any) => member.id) || [];
+  const allMemberIds = useMemo(
+    () => membersForEdit?.map((member: any) => member.id) || [],
+    [membersForEdit]
+  );
 
-  const homeVenues = Array.isArray(teamSettings?.home_venues)
-    ? teamSettings.home_venues.filter((venue: any) => venue && typeof venue === 'object' && String(venue.name || '').trim())
-    : [];
+  const homeVenues = useMemo(
+    () => Array.isArray(teamSettings?.home_venues)
+      ? teamSettings.home_venues.filter((venue: any) => venue && typeof venue === 'object' && String(venue.name || '').trim())
+      : [],
+    [teamSettings?.home_venues]
+  );
 
-  const defaultHomeVenue = (() => {
+  const defaultHomeVenue = useMemo(() => {
     if (!homeVenues.length) return null;
     const defaultHomeVenueName = String(teamSettings?.default_home_venue_name || '').trim();
     if (!defaultHomeVenueName) {
       return homeVenues[0];
     }
     return homeVenues.find((venue: any) => String(venue?.name || '').trim() === defaultHomeVenueName) || homeVenues[0];
-  })();
+  }, [homeVenues, teamSettings?.default_home_venue_name]);
   const isAwayMatch = event?.type === 'match' && normalizeMatchFlag(event?.is_home_match, false);
 
-  const matchesHomeVenue = (venueName: unknown, street: unknown, zipCity: unknown): boolean => {
+  const matchesHomeVenue = useCallback((venueName: unknown, street: unknown, zipCity: unknown): boolean => {
     const normalizedVenueName = String(venueName || '').trim().toLowerCase();
     const normalizedStreet = String(street || '').trim().toLowerCase();
     const normalizedZipCity = String(zipCity || '').trim().toLowerCase();
@@ -278,7 +284,7 @@ export default function EventEditPage() {
         && (!homeZipCity || normalizedZipCity === homeZipCity)
       );
     });
-  };
+  }, [homeVenues]);
 
   const applyHomeVenueByIndex = (indexValue: string) => {
     const index = parseInt(indexValue, 10);
@@ -379,7 +385,7 @@ export default function EventEditPage() {
     setSeriesRepeatUntil(repeatUntilFromEvent);
     setSaveWholeSeries(false);
     setSeriesValidationMessage('');
-  }, [event, teamSettings?.home_venues]);
+  }, [event, matchesHomeVenue]);
 
   useEffect(() => {
     if (!eventData.invite_all || !allMemberIds.length) {
@@ -390,7 +396,7 @@ export default function EventEditPage() {
     if (!hasAllMembersSelected) {
       setEventData((prev) => ({ ...prev, invited_user_ids: allMemberIds }));
     }
-  }, [eventData.invite_all, eventData.invited_user_ids.length, allMemberIds.length]);
+  }, [eventData.invite_all, eventData.invited_user_ids.length, allMemberIds]);
 
   useEffect(() => {
     if (!eventData.start_time || !eventData.duration_minutes) {
@@ -455,6 +461,8 @@ export default function EventEditPage() {
     eventData.start_time,
     eventData.rsvp_deadline,
     eventData.type,
+    teamSettings,
+    applyRsvpDeadlineOffsetHours,
     teamSettings?.default_rsvp_deadline_hours,
     teamSettings?.default_rsvp_deadline_hours_training,
     teamSettings?.default_rsvp_deadline_hours_match,

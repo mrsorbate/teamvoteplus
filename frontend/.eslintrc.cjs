@@ -32,8 +32,6 @@ module.exports = {
       varsIgnorePattern: '^_',
       caughtErrorsIgnorePattern: '^_',
     }],
-    'no-mixed-spaces-and-tabs': 'off',
-    'react-hooks/exhaustive-deps': 'off',
     'react-refresh/only-export-components': 'off',
   },
 };

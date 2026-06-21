@@ -6,6 +6,7 @@ import {
   Archive,
   ArrowLeft,
   BarChart3,
+  CalendarClock,
   CheckCircle2,
   Download,
   Edit3,
@@ -307,8 +308,21 @@ export default function TeamPostsPage() {
   const getPostTypeMeta = (post: PostItem) => {
     if (post.type === 'poll') return { label: 'Umfrage', icon: <BarChart3 className="h-3.5 w-3.5 text-primary-300" /> };
     if (post.type === 'document') return { label: 'Dokument', icon: <FileText className="h-3.5 w-3.5 text-primary-300" /> };
-    if (post.type === 'event') return { label: 'Termin', icon: <MessageSquare className="h-3.5 w-3.5 text-primary-300" /> };
+    if (post.type === 'event') return { label: 'Termin', icon: <CalendarClock className="h-3.5 w-3.5 text-primary-300" /> };
     return { label: 'Nachricht', icon: <Megaphone className="h-3.5 w-3.5 text-primary-300" /> };
+  };
+
+  const getEventActionLabel = (action?: string | null) => {
+    if (action === 'created') return 'Neu erstellt';
+    if (action === 'updated') return 'Geändert';
+    if (action === 'cancelled') return 'Abgesagt';
+    return 'Termininfo';
+  };
+
+  const getEventActionClass = (action?: string | null) => {
+    if (action === 'cancelled') return 'border-red-700/70 bg-red-950/35 text-red-100';
+    if (action === 'updated') return 'border-amber-700/70 bg-amber-950/30 text-amber-100';
+    return 'border-primary-700/70 bg-primary-950/30 text-primary-100';
   };
 
   const formatFileSize = (size: number) => {
@@ -547,7 +561,19 @@ export default function TeamPostsPage() {
                   )}
                 </div>
 
-                {post.content && (
+                {post.type === 'event' && (
+                  <div className={`mt-4 rounded-2xl border p-3 sm:p-4 ${getEventActionClass(post.event_action)}`}>
+                    <div className="mb-2 flex items-center gap-2">
+                      <CalendarClock className="h-5 w-5 shrink-0" aria-hidden="true" />
+                      <span className="text-sm font-heading font-semibold">{getEventActionLabel(post.event_action)}</span>
+                    </div>
+                    {post.content && (
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-current/90">{post.content}</p>
+                    )}
+                  </div>
+                )}
+
+                {post.content && post.type !== 'event' && (
                   <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed text-gray-100">{post.content}</p>
                 )}
 
