@@ -68,7 +68,59 @@ const commitHighlights = rawSubjects
 const fileIncludes = (patterns) =>
   changedFiles.some((file) => patterns.some((pattern) => file.toLowerCase().includes(pattern)));
 
+const fileMatches = (patterns) =>
+  changedFiles.some((file) => patterns.some((pattern) => pattern.test(file.toLowerCase())));
+
 const derivedHighlights = [];
+
+const specificRules = [
+  {
+    patterns: [/teamrosterpage/, /routes\/teams\.ts/, /database\/init\.ts/],
+    message: 'Kader: Trainer können Spielerprofile inklusive Eltern-, Kontakt- und Notfallinformationen pflegen.',
+  },
+  {
+    patterns: [/eventsquadpage/],
+    message: 'Kader: Die Navigation zwischen Termin und Kaderseite wurde robuster gemacht.',
+  },
+  {
+    patterns: [/pwaupdatebanner/, /useserviceworker/],
+    message: 'App-Update: Neue Versionen werden bei offener App früher erkannt und die Update-Ansicht bleibt besser bedienbar.',
+  },
+  {
+    patterns: [/release-notes/],
+    message: 'App-Update: Die Änderungsanzeige beschreibt Updates konkreter und kompakter.',
+  },
+  {
+    patterns: [/calendar-token/, /teamsettingspage/, /ical|webcal/],
+    message: 'Kalender: Kalenderlinks, Token-Verwaltung oder Freigabeoptionen wurden verbessert.',
+  },
+  {
+    patterns: [/routes\/posts/, /teampostspage/],
+    message: 'Team Feed: Beiträge, Umfragen, Leselisten, Archiv oder Dokumente wurden verbessert.',
+  },
+  {
+    patterns: [/routes\/events/, /eventdetailpage/, /eventeditpage/, /eventcreatepage/],
+    message: 'Termine: Termin-Details, Bearbeitung, Rückmeldungen oder automatische Feed-Einträge wurden angepasst.',
+  },
+  {
+    patterns: [/fussballde/, /import-next-games/, /mytablepage/],
+    message: 'Spielimport und Tabelle: fussball.de-Import, Badges, Wappen oder Tabellenansicht wurden stabilisiert.',
+  },
+  {
+    patterns: [/docker/, /compose/, /nginx/, /caddy/],
+    message: 'Deployment: Produktionscontainer, Healthchecks oder Proxy-Konfiguration wurden angepasst.',
+  },
+  {
+    patterns: [/eslint/],
+    message: 'Stabilität: Frontend-Linting wurde als Qualitätscheck vorbereitet.',
+  },
+];
+
+for (const rule of specificRules) {
+  if (fileMatches(rule.patterns)) {
+    derivedHighlights.push(rule.message);
+  }
+}
 
 if (fileIncludes(['teamposts', 'routes/posts', 'teamfeed'])) {
   derivedHighlights.push('Team Feed: Nachrichten, Umfragen und Feed-Beiträge wurden verbessert.');
