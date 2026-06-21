@@ -53,11 +53,15 @@ const upload = (0, multer_1.default)({
         cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
     }
 });
+const normalizeAccentColor = (value) => {
+    const normalized = String(value || '').trim();
+    return /^#[0-9a-f]{6}$/i.test(normalized) ? normalized.toLowerCase() : '#dc2626';
+};
 // First-time setup endpoint (no auth required)
 // This creates the first admin user and completes organization setup
 router.post('/first-setup', firstSetupLimiter, async (req, res) => {
     try {
-        const { organizationName, organizationShortName, adminUsername, adminEmail, adminPassword, timezone } = req.body;
+        const { organizationName, organizationShortName, adminUsername, adminEmail, adminPassword, timezone, accentColor } = req.body;
         // Validate input
         if (!organizationName || !adminUsername || !adminEmail || !adminPassword) {
             return res.status(400).json({ error: 'Organization name, username, email and password are required' });
@@ -96,9 +100,9 @@ router.post('/first-setup', firstSetupLimiter, async (req, res) => {
         // Update organization
         init_1.default.prepare(`
       UPDATE organizations 
-      SET name = ?, short_name = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, short_name = ?, accent_color = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
-    `).run(organizationName, typeof organizationShortName === 'string' && organizationShortName.trim().length > 0 ? organizationShortName.trim() : null, timezone || 'Europe/Berlin');
+    `).run(organizationName, typeof organizationShortName === 'string' && organizationShortName.trim().length > 0 ? organizationShortName.trim() : null, normalizeAccentColor(accentColor), timezone || 'Europe/Berlin');
         // Generate token
         const token = jsonwebtoken_1.default.sign({ id: userResult.lastInsertRowid, username: normalizedUsername, email: adminEmail, role: 'admin' }, config_1.JWT_SECRET, { expiresIn: config_1.JWT_EXPIRES_IN });
         res.status(201).json({
@@ -763,7 +767,7 @@ router.delete('/teams/:teamId/members/:userId', (req, res) => {
 // Get organization settings
 router.get('/settings', (req, res) => {
     try {
-        const org = init_1.default.prepare('SELECT id, name, short_name, logo, timezone, setup_completed, created_at, updated_at FROM organizations LIMIT 1').get();
+        const org = init_1.default.prepare('SELECT id, name, short_name, logo, accent_color, timezone, setup_completed, created_at, updated_at FROM organizations LIMIT 1').get();
         res.json(org);
     }
     catch (error) {
@@ -774,16 +778,16 @@ router.get('/settings', (req, res) => {
 // Complete setup wizard
 router.post('/settings/setup', (req, res) => {
     try {
-        const { organizationName, organizationShortName, timezone } = req.body;
+        const { organizationName, organizationShortName, timezone, accentColor } = req.body;
         if (!organizationName) {
             return res.status(400).json({ error: 'Organization name is required' });
         }
         init_1.default.prepare(`
       UPDATE organizations 
-      SET name = ?, short_name = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, short_name = ?, accent_color = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
-    `).run(organizationName, typeof organizationShortName === 'string' && organizationShortName.trim().length > 0 ? organizationShortName.trim() : null, timezone || 'Europe/Berlin');
-        const org = init_1.default.prepare('SELECT id, name, short_name, logo, timezone, setup_completed, created_at, updated_at FROM organizations WHERE id = 1').get();
+    `).run(organizationName, typeof organizationShortName === 'string' && organizationShortName.trim().length > 0 ? organizationShortName.trim() : null, normalizeAccentColor(accentColor), timezone || 'Europe/Berlin');
+        const org = init_1.default.prepare('SELECT id, name, short_name, logo, accent_color, timezone, setup_completed, created_at, updated_at FROM organizations WHERE id = 1').get();
         res.json(org);
     }
     catch (error) {
@@ -806,7 +810,7 @@ router.delete('/organization', (req, res) => {
             init_1.default.prepare('DELETE FROM users').run();
             init_1.default.prepare(`
         UPDATE organizations
-        SET name = ?, short_name = NULL, logo = NULL, timezone = 'Europe/Berlin', setup_completed = 0, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, short_name = NULL, logo = NULL, accent_color = '#dc2626', timezone = 'Europe/Berlin', setup_completed = 0, updated_at = CURRENT_TIMESTAMP
         WHERE id = 1
       `).run('Neuer Verein');
         })();

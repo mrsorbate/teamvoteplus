@@ -301,7 +301,7 @@ export const adminAPI = {
   
   getSettings: () => api.get('/admin/settings'),
   
-  updateSettings: (data: { organizationName: string; organizationShortName?: string | null; timezone: string }) =>
+  updateSettings: (data: { organizationName: string; organizationShortName?: string | null; timezone: string; accentColor?: string }) =>
     api.post('/admin/settings/setup', data),
 
   deleteOrganization: () => api.delete('/admin/organization'),

@@ -9,6 +9,7 @@ import { useToast, type ToastType } from '../lib/useToast';
 import { resolveAssetUrl } from '../lib/utils';
 import AccessibleModal from '../components/AccessibleModal';
 import RefreshReloadOverlay from '../components/RefreshReloadOverlay';
+import { normalizeAccentColor } from '../lib/theme';
 
 const TIMEZONES = [
   'Europe/Berlin',
@@ -34,6 +35,7 @@ export default function AdminPage() {
   const [showOrganizationSettings, setShowOrganizationSettings] = useState(false);
   const [organizationName, setOrganizationName] = useState('');
   const [organizationShortName, setOrganizationShortName] = useState('');
+  const [accentColor, setAccentColor] = useState('#dc2626');
   const [timezone, setTimezone] = useState('Europe/Berlin');
   
   const [showCreateTeam, setShowCreateTeam] = useState(false);
@@ -100,6 +102,7 @@ export default function AdminPage() {
       const response = await adminAPI.getSettings();
       setOrganizationName(response.data.name || '');
       setOrganizationShortName(response.data.short_name || '');
+      setAccentColor(normalizeAccentColor(response.data.accent_color));
       setTimezone(response.data.timezone || 'Europe/Berlin');
       return response.data;
     },
@@ -161,7 +164,7 @@ export default function AdminPage() {
   });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: (data: { organizationName: string; organizationShortName?: string | null; timezone: string }) =>
+    mutationFn: (data: { organizationName: string; organizationShortName?: string | null; timezone: string; accentColor?: string }) =>
       adminAPI.updateSettings(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
@@ -322,6 +325,7 @@ export default function AdminPage() {
     updateSettingsMutation.mutate({
       organizationName,
       organizationShortName: organizationShortName.trim() ? organizationShortName.trim() : null,
+      accentColor: normalizeAccentColor(accentColor),
       timezone,
     });
   };
@@ -983,6 +987,44 @@ export default function AdminPage() {
             </div>
 
             <div>
+              <label htmlFor="admin-organization-accent-color" className="block text-sm font-medium text-gray-300 mb-1">
+                Vereinsfarbe
+              </label>
+              <div className="flex flex-col gap-3 rounded-xl border border-gray-700 bg-gray-900/60 p-3 sm:flex-row sm:items-center">
+                <input
+                  id="admin-organization-accent-color"
+                  type="color"
+                  value={normalizeAccentColor(accentColor)}
+                  onChange={(event) => setAccentColor(event.target.value)}
+                  className="h-12 w-full cursor-pointer rounded-lg border border-gray-600 bg-gray-800 p-1 sm:w-20"
+                  title="Vereinsfarbe auswählen"
+                  aria-label="Vereinsfarbe auswählen"
+                />
+                <input
+                  type="text"
+                  value={accentColor}
+                  onChange={(event) => setAccentColor(event.target.value)}
+                  onBlur={() => setAccentColor(normalizeAccentColor(accentColor))}
+                  className="input font-mono uppercase sm:max-w-40"
+                  placeholder="#dc2626"
+                  aria-label="Vereinsfarbe als Hex-Code"
+                />
+                <div className="flex min-h-12 flex-1 items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/50 px-3">
+                  <span className="text-sm text-gray-300">Vorschau</span>
+                  <span
+                    className="rounded-full px-3 py-1 text-sm font-semibold text-white"
+                    style={{ backgroundColor: normalizeAccentColor(accentColor) }}
+                  >
+                    TeamVote+
+                  </span>
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                Diese Farbe ersetzt die dominante rote Akzentfarbe in Buttons, aktiven Tabs und Hervorhebungen.
+              </p>
+            </div>
+
+            <div>
               <label htmlFor="admin-organization-timezone" className="block text-sm font-medium text-gray-300 mb-1">
                 Zeitzone
               </label>
@@ -1034,6 +1076,17 @@ export default function AdminPage() {
                 <div>
                   <span className="text-sm font-medium text-gray-400">Zeitzone:</span>
                   <p className="text-white">{settings?.timezone || 'Europe/Berlin'}</p>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-400">Vereinsfarbe:</span>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span
+                      className="h-6 w-6 rounded-full border border-gray-600"
+                      style={{ backgroundColor: normalizeAccentColor(settings?.accent_color) }}
+                      aria-hidden="true"
+                    />
+                    <p className="font-mono text-white">{normalizeAccentColor(settings?.accent_color)}</p>
+                  </div>
                 </div>
               </div>
             </div>

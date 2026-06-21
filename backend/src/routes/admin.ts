@@ -54,11 +54,16 @@ const upload = multer({
   }
 });
 
+const normalizeAccentColor = (value: unknown): string => {
+  const normalized = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(normalized) ? normalized.toLowerCase() : '#dc2626';
+};
+
 // First-time setup endpoint (no auth required)
 // This creates the first admin user and completes organization setup
 router.post('/first-setup', firstSetupLimiter, async (req, res) => {
   try {
-    const { organizationName, organizationShortName, adminUsername, adminEmail, adminPassword, timezone } = req.body;
+    const { organizationName, organizationShortName, adminUsername, adminEmail, adminPassword, timezone, accentColor } = req.body;
 
     // Validate input
     if (!organizationName || !adminUsername || !adminEmail || !adminPassword) {
@@ -109,11 +114,12 @@ router.post('/first-setup', firstSetupLimiter, async (req, res) => {
     // Update organization
     db.prepare(`
       UPDATE organizations 
-      SET name = ?, short_name = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, short_name = ?, accent_color = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `).run(
       organizationName,
       typeof organizationShortName === 'string' && organizationShortName.trim().length > 0 ? organizationShortName.trim() : null,
+      normalizeAccentColor(accentColor),
       timezone || 'Europe/Berlin'
     );
 
@@ -955,7 +961,7 @@ router.delete('/teams/:teamId/members/:userId', (req: AuthRequest, res) => {
 router.get('/settings', (req: AuthRequest, res) => {
   try {
     const org = db.prepare(
-      'SELECT id, name, short_name, logo, timezone, setup_completed, created_at, updated_at FROM organizations LIMIT 1'
+      'SELECT id, name, short_name, logo, accent_color, timezone, setup_completed, created_at, updated_at FROM organizations LIMIT 1'
     ).get();
     res.json(org);
   } catch (error) {
@@ -967,7 +973,7 @@ router.get('/settings', (req: AuthRequest, res) => {
 // Complete setup wizard
 router.post('/settings/setup', (req: AuthRequest, res) => {
   try {
-    const { organizationName, organizationShortName, timezone } = req.body;
+    const { organizationName, organizationShortName, timezone, accentColor } = req.body;
 
     if (!organizationName) {
       return res.status(400).json({ error: 'Organization name is required' });
@@ -975,16 +981,17 @@ router.post('/settings/setup', (req: AuthRequest, res) => {
 
     db.prepare(`
       UPDATE organizations 
-      SET name = ?, short_name = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, short_name = ?, accent_color = ?, timezone = ?, setup_completed = 1, updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `).run(
       organizationName,
       typeof organizationShortName === 'string' && organizationShortName.trim().length > 0 ? organizationShortName.trim() : null,
+      normalizeAccentColor(accentColor),
       timezone || 'Europe/Berlin'
     );
 
     const org = db.prepare(
-      'SELECT id, name, short_name, logo, timezone, setup_completed, created_at, updated_at FROM organizations WHERE id = 1'
+      'SELECT id, name, short_name, logo, accent_color, timezone, setup_completed, created_at, updated_at FROM organizations WHERE id = 1'
     ).get();
     res.json(org);
   } catch (error) {
@@ -1009,7 +1016,7 @@ router.delete('/organization', (req: AuthRequest, res) => {
       db.prepare('DELETE FROM users').run();
       db.prepare(`
         UPDATE organizations
-        SET name = ?, short_name = NULL, logo = NULL, timezone = 'Europe/Berlin', setup_completed = 0, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, short_name = NULL, logo = NULL, accent_color = '#dc2626', timezone = 'Europe/Berlin', setup_completed = 0, updated_at = CURRENT_TIMESTAMP
         WHERE id = 1
       `).run('Neuer Verein');
     })();

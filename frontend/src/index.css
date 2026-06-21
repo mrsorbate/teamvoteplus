@@ -18,6 +18,17 @@
   --color-subtle:         #6b7280;
 
   --color-primary:        #dc2626;
+  --color-primary-50:     254 242 242;
+  --color-primary-100:    254 226 226;
+  --color-primary-200:    254 202 202;
+  --color-primary-300:    252 165 165;
+  --color-primary-400:    248 113 113;
+  --color-primary-500:    239 68 68;
+  --color-primary-600:    220 38 38;
+  --color-primary-700:    185 28 28;
+  --color-primary-800:    153 27 27;
+  --color-primary-900:    127 29 29;
+  --color-primary-950:    69 10 10;
   --color-primary-dim:    rgba(220, 38, 38, 0.15);
   --color-accent:         #fbbf24;
   --color-accent-dim:     rgba(251, 191, 36, 0.15);
@@ -102,7 +113,7 @@
   }
 
   :where(a, button, input, textarea, select, [role='button'], [role='switch']):focus-visible {
-    outline: 2px solid #dc2626;
+    outline: 2px solid rgb(var(--color-primary-600));
     outline-offset: 2px;
   }
 
@@ -424,7 +435,7 @@
   .bottom-nav-item.active {
     @apply text-primary-400;
     /* Top accent line — signals active tab on mobile */
-    box-shadow: inset 0 2px 0 0 #dc2626;
+    box-shadow: inset 0 2px 0 0 rgb(var(--color-primary-600));
   }
 
   .bottom-nav-label {

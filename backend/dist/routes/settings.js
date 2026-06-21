@@ -11,7 +11,7 @@ const router = (0, express_1.Router)();
 // Public endpoint to get organization settings
 router.get('/organization', (req, res) => {
     try {
-        const org = init_1.default.prepare('SELECT name, short_name, logo, timezone, setup_completed FROM organizations LIMIT 1').get();
+        const org = init_1.default.prepare('SELECT name, short_name, logo, accent_color, timezone, setup_completed FROM organizations LIMIT 1').get();
         if (!org) {
             return res.status(404).json({ error: 'Organization not found' });
         }

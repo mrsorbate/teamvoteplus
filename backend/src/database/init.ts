@@ -20,6 +20,7 @@ db.exec(`
     name TEXT NOT NULL DEFAULT 'Dein Verein',
     short_name TEXT,
     logo TEXT,
+    accent_color TEXT DEFAULT '#dc2626',
     timezone TEXT DEFAULT 'Europe/Berlin',
     setup_completed INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -748,6 +749,12 @@ try {
   if (!hasOrganizationShortName) {
     db.exec('ALTER TABLE organizations ADD COLUMN short_name TEXT');
     logger.info('✅ Added short_name column to organizations table');
+  }
+
+  const hasOrganizationAccentColor = organizationColumns.some((col) => col.name === 'accent_color');
+  if (!hasOrganizationAccentColor) {
+    db.exec("ALTER TABLE organizations ADD COLUMN accent_color TEXT DEFAULT '#dc2626'");
+    logger.info('✅ Added accent_color column to organizations table');
   }
 
   // Add trainer_custom_team_name to team_members for personalized team names

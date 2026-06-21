@@ -7,6 +7,7 @@ import { useDarkMode } from './hooks/useDarkMode';
 import { useServiceWorker } from './hooks/useServiceWorker';
 import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 import { useQuery } from '@tanstack/react-query';
+import { applyOrganizationTheme } from './lib/theme';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -125,6 +126,10 @@ function App() {
     retry: 1,
     staleTime: Infinity,
   });
+
+  useEffect(() => {
+    applyOrganizationTheme(organization?.accent_color);
+  }, [organization?.accent_color]);
 
   useEffect(() => {
     if (!isLoading) {
