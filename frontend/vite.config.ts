@@ -27,6 +27,14 @@ export default defineConfig({
         // no push listener and notifications stopped until the user re-toggled.
         // push-sw.js also handles the SKIP_WAITING message sent by the app.
         importScripts: ['/push-sw.js'],
+        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/uploads/'),
+            handler: 'NetworkOnly',
+            method: 'GET',
+          },
+        ],
       },
       manifest: {
         name: 'teamvote+',
