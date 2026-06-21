@@ -34,7 +34,6 @@ module.exports = {
     }],
     'no-mixed-spaces-and-tabs': 'off',
     'react-hooks/exhaustive-deps': 'off',
-    'react-hooks/rules-of-hooks': 'off',
     'react-refresh/only-export-components': 'off',
   },
 };

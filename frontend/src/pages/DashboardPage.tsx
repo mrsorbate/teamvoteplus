@@ -30,11 +30,6 @@ export default function DashboardPage() {
     'Verletzung',
   ];
 
-  // Admin wird zum Admin-Panel weitergeleitet
-  if (user?.role === 'admin') {
-    return <Navigate to="/admin" replace />;
-  }
-
   const { data: teams, isLoading: teamsLoading, isFetching: teamsFetching } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
@@ -50,6 +45,7 @@ export default function DashboardPage() {
       const response = await eventsAPI.getMyUpcoming();
       return response.data;
     },
+    enabled: user?.role !== 'admin',
   });
 
   const { data: openPosts, isFetching: postsFetching } = useQuery({
@@ -150,6 +146,12 @@ export default function DashboardPage() {
       setManualRefreshActive(false);
     }
   };
+
+  // Admin wird zum Admin-Panel weitergeleitet. Der Redirect bleibt nach den
+  // Hooks, damit React immer dieselbe Hook-Reihenfolge sieht.
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
   if (eventsLoading || (user?.role !== 'admin' && teamsLoading)) {
     return (

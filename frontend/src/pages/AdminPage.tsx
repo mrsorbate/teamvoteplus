@@ -92,11 +92,7 @@ export default function AdminPage() {
   const showToast = (message: string, type: ToastType = 'error') => {
     showGlobalToast(message, type, { position: 'bottom-right' });
   };
-
-  // Redirect if not admin
-  if (user?.role !== 'admin') {
-    return <Navigate to="/" />;
-  }
+  const isAdmin = user?.role === 'admin';
 
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['admin-settings'],
@@ -107,6 +103,7 @@ export default function AdminPage() {
       setTimezone(response.data.timezone || 'Europe/Berlin');
       return response.data;
     },
+    enabled: isAdmin,
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
@@ -115,6 +112,7 @@ export default function AdminPage() {
       const response = await adminAPI.getAllTeams();
       return response.data;
     },
+    enabled: isAdmin,
   });
 
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -123,6 +121,7 @@ export default function AdminPage() {
       const response = await adminAPI.getAllUsers();
       return response.data;
     },
+    enabled: isAdmin,
   });
 
   const { data: auditLogs, isLoading: auditLogsLoading, refetch: refetchAuditLogs, isFetching: auditLogsFetching } = useQuery({
@@ -132,6 +131,7 @@ export default function AdminPage() {
       return response.data;
     },
     refetchInterval: 60000,
+    enabled: isAdmin,
   });
 
   const handleAuditLogRefresh = async () => {
@@ -157,7 +157,7 @@ export default function AdminPage() {
       const response = await adminAPI.getTeamTrainers(selectedTeam);
       return response.data;
     },
-    enabled: (showAssignTrainer || showRemoveTrainer) && !!selectedTeam,
+    enabled: isAdmin && (showAssignTrainer || showRemoveTrainer) && !!selectedTeam,
   });
 
   const updateSettingsMutation = useMutation({
@@ -694,6 +694,11 @@ export default function AdminPage() {
     setTimeout(() => setCopiedGeneratedPassword(false), 2000);
     showToast('Neues Passwort wurde in die Zwischenablage kopiert', 'info');
   };
+
+  // Redirect after all hooks so the hook order remains stable.
+  if (!isAdmin) {
+    return <Navigate to="/" />;
+  }
 
   if (teamsLoading || usersLoading || settingsLoading) {
     return <div className="loading-card">Admin-Daten werden geladen...</div>;
