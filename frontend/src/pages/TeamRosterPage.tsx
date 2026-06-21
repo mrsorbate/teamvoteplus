@@ -31,6 +31,15 @@ type TeamMember = {
   parent_contact_email?: string | null;
   emergency_contact?: string | null;
   medical_notes?: string | null;
+  contacts?: Array<{
+    id?: number;
+    name: string;
+    relation?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    is_emergency?: number | boolean | null;
+    notes?: string | null;
+  }>;
   is_registered?: number | boolean | null;
   role: 'trainer' | 'player' | string;
   joined_at?: string | null;
@@ -954,7 +963,8 @@ export default function TeamRosterPage() {
                   const hasParentEmail = Boolean(selectedMember.parent_contact_email);
                   const hasEmergencyContact = Boolean(selectedMember.emergency_contact);
                   const hasMedicalNotes = Boolean(selectedMember.medical_notes);
-                  const hasAnyContactInfo = hasParentName || hasParentPhone || hasParentEmail || hasEmergencyContact || hasMedicalNotes;
+                  const structuredContacts = Array.isArray(selectedMember.contacts) ? selectedMember.contacts : [];
+                  const hasAnyContactInfo = structuredContacts.length > 0 || hasParentName || hasParentPhone || hasParentEmail || hasEmergencyContact || hasMedicalNotes;
 
                   return (
                     <div className="space-y-4">
@@ -978,13 +988,40 @@ export default function TeamRosterPage() {
                           )}
                         </div>
                         {hasAnyContactInfo ? (
-                          <div className="grid grid-cols-1 gap-2">
-                            {hasParentName && renderInfoCard('Ansprechpartner', selectedMember.parent_contact_name)}
-                            {hasParentPhone && renderInfoCard('Telefon', selectedMember.parent_contact_phone)}
-                            {hasParentEmail && renderInfoCard('E-Mail', selectedMember.parent_contact_email)}
-                            {hasEmergencyContact && renderInfoCard('Notfallkontakt', selectedMember.emergency_contact)}
-                            {hasMedicalNotes && renderInfoCard('Medizinische Hinweise', selectedMember.medical_notes)}
-                          </div>
+                          structuredContacts.length > 0 ? (
+                            <div className="space-y-2">
+                              {structuredContacts.map((contact, index) => {
+                                const isEmergency = contact.is_emergency === true || contact.is_emergency === 1 || contact.relation === 'emergency';
+                                return (
+                                  <div key={contact.id || `${contact.name}-${index}`} className="rounded-xl border border-gray-700/40 bg-gray-900/60 p-3">
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                      <p className="font-semibold text-white">{contact.name}</p>
+                                      <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                                        isEmergency
+                                          ? 'border-red-700/60 bg-red-900/20 text-red-200'
+                                          : 'border-gray-700 bg-gray-950/50 text-gray-300'
+                                      }`}>
+                                        {isEmergency ? 'Notfall' : contact.relation || 'Kontakt'}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                                      {contact.phone && renderInfoCard('Telefon', contact.phone)}
+                                      {contact.email && renderInfoCard('E-Mail', contact.email)}
+                                      {contact.notes && renderInfoCard('Hinweise', contact.notes, 'sm:col-span-2')}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-2">
+                              {hasParentName && renderInfoCard('Ansprechpartner', selectedMember.parent_contact_name)}
+                              {hasParentPhone && renderInfoCard('Telefon', selectedMember.parent_contact_phone)}
+                              {hasParentEmail && renderInfoCard('E-Mail', selectedMember.parent_contact_email)}
+                              {hasEmergencyContact && renderInfoCard('Notfallkontakt', selectedMember.emergency_contact)}
+                              {hasMedicalNotes && renderInfoCard('Medizinische Hinweise', selectedMember.medical_notes)}
+                            </div>
+                          )
                         ) : (
                           <p className="text-sm text-gray-400">Noch keine Kontaktinformationen gepflegt.</p>
                         )}

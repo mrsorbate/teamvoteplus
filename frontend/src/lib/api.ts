@@ -113,6 +113,7 @@ export const teamsAPI = {
     parent_contact_email?: string;
     emergency_contact?: string;
     medical_notes?: string;
+    contacts?: Array<{ name: string; relation?: string; phone?: string; email?: string; is_emergency?: boolean; notes?: string }>;
   }) =>
     api.post(`/teams/${id}/players`, data),
 
@@ -126,6 +127,7 @@ export const teamsAPI = {
     parent_contact_email?: string;
     emergency_contact?: string;
     medical_notes?: string;
+    contacts?: Array<{ name: string; relation?: string; phone?: string; email?: string; is_emergency?: boolean; notes?: string }>;
   }) => api.put(`/teams/${id}/players/${userId}`, data),
 
   uploadTeamPicture: (id: number, file: File) => {

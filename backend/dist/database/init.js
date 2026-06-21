@@ -100,6 +100,22 @@ db.exec(`
     UNIQUE(team_id, user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS team_member_contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    player_user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    relation TEXT NOT NULL DEFAULT 'parent',
+    phone TEXT,
+    email TEXT,
+    is_emergency INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   -- Events table (trainings and matches)
   CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -298,6 +314,7 @@ db.exec(`
   -- Create indexes for better performance
   CREATE INDEX IF NOT EXISTS idx_team_members_team ON team_members(team_id);
   CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+  CREATE INDEX IF NOT EXISTS idx_team_member_contacts_player ON team_member_contacts(team_id, player_user_id);
   CREATE INDEX IF NOT EXISTS idx_events_team ON events(team_id);
   CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
   -- Composite replaces separate (team_id) + (start_time) for range scans in stats/calendar queries
@@ -676,6 +693,67 @@ try {
         db.exec('ALTER TABLE team_members ADD COLUMN trainer_custom_team_name TEXT');
         logger_1.logger.info('✅ Added trainer_custom_team_name column to team_members table');
     }
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS team_member_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL,
+      player_user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      relation TEXT NOT NULL DEFAULT 'parent',
+      phone TEXT,
+      email TEXT,
+      is_emergency INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+      FOREIGN KEY (player_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_member_contacts_player ON team_member_contacts(team_id, player_user_id);
+  `);
+    db.exec(`
+    INSERT INTO team_member_contacts (team_id, player_user_id, name, relation, phone, email, is_emergency, notes)
+    SELECT tm.team_id,
+           u.id,
+           TRIM(u.parent_contact_name),
+           'parent',
+           NULLIF(TRIM(COALESCE(u.parent_contact_phone, '')), ''),
+           NULLIF(TRIM(COALESCE(u.parent_contact_email, '')), ''),
+           0,
+           NULL
+    FROM team_members tm
+    INNER JOIN users u ON u.id = tm.user_id
+    WHERE tm.role != 'trainer'
+      AND NULLIF(TRIM(COALESCE(u.parent_contact_name, '')), '') IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM team_member_contacts c
+        WHERE c.team_id = tm.team_id
+          AND c.player_user_id = u.id
+          AND c.relation = 'parent'
+      );
+
+    INSERT INTO team_member_contacts (team_id, player_user_id, name, relation, phone, email, is_emergency, notes)
+    SELECT tm.team_id,
+           u.id,
+           TRIM(u.emergency_contact),
+           'emergency',
+           NULL,
+           NULL,
+           1,
+           NULLIF(TRIM(COALESCE(u.medical_notes, '')), '')
+    FROM team_members tm
+    INNER JOIN users u ON u.id = tm.user_id
+    WHERE tm.role != 'trainer'
+      AND NULLIF(TRIM(COALESCE(u.emergency_contact, '')), '') IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM team_member_contacts c
+        WHERE c.team_id = tm.team_id
+          AND c.player_user_id = u.id
+          AND c.relation = 'emergency'
+      );
+  `);
     // Ensure at least one organization exists
     const orgCount = db.prepare('SELECT COUNT(*) as count FROM organizations').get();
     if (orgCount.count === 0) {

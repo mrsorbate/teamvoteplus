@@ -11,6 +11,10 @@ const actionTitle = {
     updated: 'Termin geändert',
     cancelled: 'Termin abgesagt',
 };
+const supportsEventPostType = () => {
+    const row = init_1.default.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'team_posts'").get();
+    return Boolean(row?.sql?.includes("'event'"));
+};
 const createEventFeedPosts = ({ teamIds, eventId, action, eventTitle, eventDate, createdBy, details, }) => {
     const uniqueTeamIds = [...new Set(teamIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
     if (uniqueTeamIds.length === 0)
@@ -27,8 +31,9 @@ const createEventFeedPosts = ({ teamIds, eventId, action, eventTitle, eventDate,
        AND is_active = 1
        AND datetime(created_at) >= datetime('now', '-2 minutes')
      LIMIT 1`);
+    const storedType = supportsEventPostType() ? 'event' : 'announcement';
     const insertPost = init_1.default.prepare(`INSERT INTO team_posts (team_id, type, title, content, poll_options, is_important, created_by, event_id, event_action)
-     VALUES (?, 'announcement', ?, ?, NULL, ?, ?, ?, ?)`);
+     VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)`);
     const isImportant = action === 'updated' || action === 'cancelled' ? 1 : 0;
     try {
         init_1.default.transaction(() => {
@@ -36,7 +41,7 @@ const createEventFeedPosts = ({ teamIds, eventId, action, eventTitle, eventDate,
                 if (eventId && existingPost.get(teamId, eventId, action)) {
                     continue;
                 }
-                insertPost.run(teamId, actionTitle[action], contentParts.join('\n'), isImportant, createdBy, eventId, action);
+                insertPost.run(teamId, storedType, actionTitle[action], contentParts.join('\n'), isImportant, createdBy, eventId, action);
             }
         })();
     }

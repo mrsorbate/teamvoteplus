@@ -2,11 +2,17 @@ import db from '../database/init';
 import { logger } from '../utils/logger';
 
 type EventFeedAction = 'created' | 'updated' | 'cancelled';
+type StoredFeedPostType = 'announcement' | 'event';
 
 const actionTitle: Record<EventFeedAction, string> = {
   created: 'Termin erstellt',
   updated: 'Termin geändert',
   cancelled: 'Termin abgesagt',
+};
+
+const supportsEventPostType = (): boolean => {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'team_posts'").get() as { sql?: string } | undefined;
+  return Boolean(row?.sql?.includes("'event'"));
 };
 
 export const createEventFeedPosts = ({
@@ -44,9 +50,10 @@ export const createEventFeedPosts = ({
        AND datetime(created_at) >= datetime('now', '-2 minutes')
      LIMIT 1`
   );
+  const storedType: StoredFeedPostType = supportsEventPostType() ? 'event' : 'announcement';
   const insertPost = db.prepare(
     `INSERT INTO team_posts (team_id, type, title, content, poll_options, is_important, created_by, event_id, event_action)
-     VALUES (?, 'announcement', ?, ?, NULL, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)`
   );
   const isImportant = action === 'updated' || action === 'cancelled' ? 1 : 0;
 
@@ -59,6 +66,7 @@ export const createEventFeedPosts = ({
 
         insertPost.run(
           teamId,
+          storedType,
           actionTitle[action],
           contentParts.join('\n'),
           isImportant,

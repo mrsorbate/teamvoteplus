@@ -8,6 +8,7 @@ const frontendDir = resolve(scriptDir, '..');
 const repoRoot = resolve(frontendDir, '..');
 const outputPath = resolve(frontendDir, 'public', 'release-notes.json');
 const packageJson = JSON.parse(readFileSync(resolve(frontendDir, 'package.json'), 'utf8'));
+const manualReleaseNotesPath = resolve(repoRoot, 'RELEASE_NOTES.md');
 
 const runGit = (args) => {
   try {
@@ -64,6 +65,26 @@ const commitHighlights = rawSubjects
   .filter((entry) => !genericSubjectPatterns.some((pattern) => pattern.test(entry)))
   .map((entry) => entry.replace(/^(feat|fix|chore|refactor|docs|style|test)(\(.+\))?:\s*/i, ''))
   .slice(0, 4);
+
+const readManualHighlights = () => {
+  try {
+    const content = readFileSync(manualReleaseNotesPath, 'utf8');
+    const lines = content.split('\n');
+    const firstSection = [];
+    for (const line of lines) {
+      if (firstSection.length > 0 && /^#{1,3}\s+/.test(line)) break;
+      firstSection.push(line);
+    }
+    return firstSection
+      .map((line) => line.trim())
+      .filter((line) => /^[-*]\s+/.test(line))
+      .map((line) => line.replace(/^[-*]\s+/, '').trim())
+      .filter(Boolean)
+      .slice(0, 6);
+  } catch {
+    return [];
+  }
+};
 
 const fileIncludes = (patterns) =>
   changedFiles.some((file) => patterns.some((pattern) => file.toLowerCase().includes(pattern)));
@@ -147,7 +168,8 @@ if (fileIncludes(['squad', 'roster', 'kader'])) {
   derivedHighlights.push('Kader: Spieler-, Trainer- oder Aufstellungsfunktionen wurden angepasst.');
 }
 
-const highlights = [...new Set([...derivedHighlights, ...commitHighlights])]
+const manualHighlights = readManualHighlights();
+const highlights = [...new Set([...manualHighlights, ...derivedHighlights, ...commitHighlights])]
   .filter(Boolean)
   .slice(0, 6);
 

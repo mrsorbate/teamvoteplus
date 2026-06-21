@@ -23,6 +23,7 @@ export default function TeamSettingsPage() {
   const [fussballDeId, setFussballDeId] = useState('');
   const [fussballDeTeamName, setFussballDeTeamName] = useState('');
   const [showDeleteImportedGamesConfirm, setShowDeleteImportedGamesConfirm] = useState(false);
+  const [lastImportResult, setLastImportResult] = useState<any | null>(null);
   const [defaultResponse, setDefaultResponse] = useState<'pending' | 'accepted' | 'tentative' | 'declined'>('pending');
   const [defaultRsvpDeadlineHoursTraining, setDefaultRsvpDeadlineHoursTraining] = useState('');
   const [defaultRsvpDeadlineDaysMatch, setDefaultRsvpDeadlineDaysMatch] = useState('');
@@ -205,6 +206,7 @@ export default function TeamSettingsPage() {
       return response.data;
     },
     onSuccess: (result: any) => {
+      setLastImportResult(result);
       queryClient.invalidateQueries({ queryKey: ['events', teamId] });
       queryClient.invalidateQueries({ queryKey: ['all-events'] });
       const imported = Number(result?.imported || 0);
@@ -225,6 +227,9 @@ export default function TeamSettingsPage() {
       showToast(`Nächste Spiele importiert: ${imported}, aktualisiert: ${updated}, übersprungen: ${skipped}`, 'success');
     },
     onError: (mutationError: any) => {
+      setLastImportResult({
+        error: mutationError?.response?.data?.error || 'Fehler beim Import der nächsten Spiele',
+      });
       showToast(mutationError?.response?.data?.error || 'Fehler beim Import der nächsten Spiele', 'error');
     },
   });
@@ -1013,6 +1018,35 @@ export default function TeamSettingsPage() {
                 {deleteImportedGamesMutation.isPending ? 'Löscht...' : 'Importierte Spiele löschen'}
               </button>
             </div>
+
+            {lastImportResult && (
+              <div className={`rounded-xl border p-3 text-sm ${
+                lastImportResult.error
+                  ? 'border-red-700/60 bg-red-900/20 text-red-100'
+                  : 'border-gray-700 bg-gray-900/60 text-gray-200'
+              }`}>
+                <p className="font-semibold text-white">Letzter Import</p>
+                {lastImportResult.error ? (
+                  <p className="mt-1 text-red-100">{lastImportResult.error}</p>
+                ) : (
+                  <>
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <span className="rounded-lg border border-green-800/50 bg-green-900/20 px-2 py-1">Importiert: {Number(lastImportResult.imported || 0)}</span>
+                      <span className="rounded-lg border border-primary-800/50 bg-primary-900/20 px-2 py-1">Aktualisiert: {Number(lastImportResult.updated || 0)}</span>
+                      <span className="rounded-lg border border-amber-800/50 bg-amber-900/20 px-2 py-1">Übersprungen: {Number(lastImportResult.skipped || 0)}</span>
+                      <span className="rounded-lg border border-red-800/50 bg-red-900/20 px-2 py-1">Abgesagt: {Number(lastImportResult.cancelled || 0)}</span>
+                    </div>
+                    {Array.isArray(lastImportResult.skippedDetails) && lastImportResult.skippedDetails.length > 0 && (
+                      <div className="mt-2 space-y-1 text-xs text-gray-300">
+                        {lastImportResult.skippedDetails.slice(0, 4).map((detail: string, index: number) => (
+                          <p key={`${detail}-${index}`} className="break-words">• {detail}</p>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {showDeleteImportedGamesConfirm && (
               <AccessibleModal

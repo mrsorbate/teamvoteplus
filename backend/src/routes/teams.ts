@@ -97,6 +97,136 @@ const parseFussballDeTeamNames = (value: unknown): string[] => {
   )];
 };
 
+type TeamMemberContactInput = {
+  name?: unknown;
+  relation?: unknown;
+  phone?: unknown;
+  email?: unknown;
+  is_emergency?: unknown;
+  notes?: unknown;
+};
+
+type TeamMemberContactRow = {
+  id: number;
+  team_id: number;
+  player_user_id: number;
+  name: string;
+  relation: string;
+  phone: string | null;
+  email: string | null;
+  is_emergency: number;
+  notes: string | null;
+};
+
+const normalizeOptionalText = (value: unknown, maxLength: number): string | null => {
+  const normalized = String(value || '').trim();
+  return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized || null;
+};
+
+const normalizeTeamMemberContacts = (value: unknown): Array<{
+  name: string;
+  relation: string;
+  phone: string | null;
+  email: string | null;
+  is_emergency: number;
+  notes: string | null;
+}> => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry: TeamMemberContactInput) => {
+      const name = normalizeOptionalText(entry?.name, 120);
+      if (!name) return null;
+      return {
+        name,
+        relation: normalizeOptionalText(entry?.relation, 40) || 'parent',
+        phone: normalizeOptionalText(entry?.phone, 80),
+        email: normalizeOptionalText(entry?.email, 160),
+        is_emergency: entry?.is_emergency === true || entry?.is_emergency === 1 ? 1 : 0,
+        notes: normalizeOptionalText(entry?.notes, 1000),
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .slice(0, 6);
+};
+
+const buildLegacyContacts = ({
+  parent_contact_name,
+  parent_contact_phone,
+  parent_contact_email,
+  emergency_contact,
+  medical_notes,
+}: {
+  parent_contact_name?: unknown;
+  parent_contact_phone?: unknown;
+  parent_contact_email?: unknown;
+  emergency_contact?: unknown;
+  medical_notes?: unknown;
+}) => {
+  const contacts: ReturnType<typeof normalizeTeamMemberContacts> = [];
+  const parentName = normalizeOptionalText(parent_contact_name, 120);
+  if (parentName) {
+    contacts.push({
+      name: parentName,
+      relation: 'parent',
+      phone: normalizeOptionalText(parent_contact_phone, 80),
+      email: normalizeOptionalText(parent_contact_email, 160),
+      is_emergency: 0,
+      notes: null,
+    });
+  }
+
+  const emergencyName = normalizeOptionalText(emergency_contact, 240);
+  if (emergencyName) {
+    contacts.push({
+      name: emergencyName,
+      relation: 'emergency',
+      phone: null,
+      email: null,
+      is_emergency: 1,
+      notes: normalizeOptionalText(medical_notes, 1000),
+    });
+  }
+
+  return contacts;
+};
+
+const replaceTeamMemberContacts = (teamId: number, playerUserId: number, contacts: ReturnType<typeof normalizeTeamMemberContacts>) => {
+  db.prepare('DELETE FROM team_member_contacts WHERE team_id = ? AND player_user_id = ?').run(teamId, playerUserId);
+  if (contacts.length === 0) return;
+
+  const insertContact = db.prepare(`
+    INSERT INTO team_member_contacts (team_id, player_user_id, name, relation, phone, email, is_emergency, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const contact of contacts) {
+    insertContact.run(teamId, playerUserId, contact.name, contact.relation, contact.phone, contact.email, contact.is_emergency, contact.notes);
+  }
+};
+
+const getContactsForMembers = (teamId: number, userIds: number[]) => {
+  const uniqueUserIds = [...new Set(userIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  const contactsByUserId = new Map<number, TeamMemberContactRow[]>();
+  if (uniqueUserIds.length === 0) return contactsByUserId;
+
+  const placeholders = uniqueUserIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT id, team_id, player_user_id, name, relation, phone, email, is_emergency, notes
+    FROM team_member_contacts
+    WHERE team_id = ?
+      AND player_user_id IN (${placeholders})
+    ORDER BY is_emergency DESC, relation COLLATE NOCASE ASC, name COLLATE NOCASE ASC
+  `).all(teamId, ...uniqueUserIds) as TeamMemberContactRow[];
+
+  for (const row of rows) {
+    const existing = contactsByUserId.get(row.player_user_id) || [];
+    existing.push(row);
+    contactsByUserId.set(row.player_user_id, existing);
+  }
+
+  return contactsByUserId;
+};
+
 const normalizeTeamNameInternal = (value: unknown): string => {
   return String(value ?? '')
     .toLowerCase()
@@ -2403,9 +2533,13 @@ router.get('/:id/members', (req: AuthRequest, res) => {
       INNER JOIN users u ON tm.user_id = u.id
       WHERE tm.team_id = ?
       ORDER BY tm.role, u.name
-    `).all(teamId);
+    `).all(teamId) as Array<Record<string, unknown> & { id: number }>;
 
-    res.json(members);
+    const contactsByUserId = getContactsForMembers(teamId, members.map((member) => Number(member.id)));
+    res.json(members.map((member) => ({
+      ...member,
+      contacts: contactsByUserId.get(Number(member.id)) || [],
+    })));
   } catch (error) {
     logger.error('Get team members error:', error);
     res.status(500).json({ error: 'Failed to fetch team members' });
@@ -2510,13 +2644,14 @@ router.post('/:id/players', async (req: AuthRequest, res) => {
       parent_contact_email,
       emergency_contact,
       medical_notes,
+      contacts,
     } = req.body;
     const normalizedName = String(name || '').trim();
     const normalizedPosition = String(position || '').trim();
-    const normalizeOptionalText = (value: unknown, maxLength: number) => {
-      const normalized = String(value || '').trim();
-      return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized || null;
-    };
+    const normalizedContacts = normalizeTeamMemberContacts(contacts);
+    const effectiveContacts = normalizedContacts.length > 0
+      ? normalizedContacts
+      : buildLegacyContacts({ parent_contact_name, parent_contact_phone, parent_contact_email, emergency_contact, medical_notes });
     const parsedJerseyNumber = jersey_number === null || jersey_number === undefined || String(jersey_number).trim() === ''
       ? null
       : Number(jersey_number);
@@ -2585,6 +2720,8 @@ router.post('/:id/players', async (req: AuthRequest, res) => {
         'INSERT INTO team_members (team_id, user_id, role, jersey_number, position) VALUES (?, ?, ?, ?, ?)'
       ).run(teamId, userId, 'player', parsedJerseyNumber, normalizedPosition || null);
 
+      replaceTeamMemberContacts(teamId, userId, effectiveContacts);
+
       const upcomingEvents = db.prepare(`
         SELECT DISTINCT e.id
         FROM events e
@@ -2613,6 +2750,7 @@ router.post('/:id/players', async (req: AuthRequest, res) => {
         parent_contact_email: normalizeOptionalText(parent_contact_email, 160),
         emergency_contact: normalizeOptionalText(emergency_contact, 240),
         medical_notes: normalizeOptionalText(medical_notes, 1000),
+        contacts: effectiveContacts,
         role: 'player',
         is_registered: 0,
       };
@@ -2660,6 +2798,7 @@ router.put('/:id/players/:userId', (req: AuthRequest, res) => {
       parent_contact_email,
       emergency_contact,
       medical_notes,
+      contacts,
     } = req.body;
 
     const normalizedName = String(name || '').trim();
@@ -2675,11 +2814,11 @@ router.put('/:id/players/:userId', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid jersey number' });
     }
 
-    const normalizeOptionalText = (value: unknown, maxLength: number) => {
-      const normalized = String(value || '').trim();
-      return normalized.length > maxLength ? normalized.slice(0, maxLength) : normalized || null;
-    };
     const normalizedPosition = normalizeOptionalText(position, 40);
+    const normalizedContacts = normalizeTeamMemberContacts(contacts);
+    const effectiveContacts = normalizedContacts.length > 0
+      ? normalizedContacts
+      : buildLegacyContacts({ parent_contact_name, parent_contact_phone, parent_contact_email, emergency_contact, medical_notes });
 
     db.transaction(() => {
       db.prepare(`
@@ -2711,6 +2850,8 @@ router.put('/:id/players/:userId', (req: AuthRequest, res) => {
       db.prepare(
         'UPDATE team_members SET jersey_number = ?, position = ? WHERE team_id = ? AND user_id = ?'
       ).run(parsedJerseyNumber, normalizedPosition, teamId, userId);
+
+      replaceTeamMemberContacts(teamId, userId, effectiveContacts);
     })();
 
     return res.json({ success: true });
